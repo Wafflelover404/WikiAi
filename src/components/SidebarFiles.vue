@@ -1,8 +1,11 @@
 <template>
   <div class="sidebar-files">
-    <h3>Files</h3>
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-right: 16px;">
+      <h3 style="margin-bottom: 0;">Files</h3>
+      <slot name="actions"></slot>
+    </div>
     <ul>
-      <li v-for="file in files" :key="file">{{ file }}</li>
+      <li v-for="file in files" :key="file" @click="$emit('file-click', file)">{{ file }}</li>
     </ul>
   </div>
 </template>

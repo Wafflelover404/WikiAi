@@ -9,8 +9,14 @@
       </button>
     </div>
     <div class="app-layout">
-      <SidebarFiles :files="files" />
-      <FileTabs :openedFiles="openedFiles" />
+      <SidebarFiles :files="files" @file-click="handleFileClick">
+        <template #actions>
+          <button class="reload-btn" @click="updateFiles">
+            🔄 Update
+          </button>
+        </template>
+      </SidebarFiles>
+      <FileTabs :openedFiles="openedFiles" :fileContents="fileContents" />
       <SearchSidebar :visible="searchVisible" />
       <SettingsModal
         :visible="settingsVisible"
@@ -39,8 +45,9 @@ export default {
   },
   data() {
     return {
-      files: ['README.md', 'index.html', 'main.js', 'App.vue', 'user.vue'],
-      openedFiles: ['README.md'],
+  files: [],
+  openedFiles: [],
+  fileContents: {},
       searchVisible: false,
       settingsVisible: false,
       token: '',
@@ -51,16 +58,104 @@ export default {
     toggleSearch() {
       this.searchVisible = !this.searchVisible;
     },
-    saveSettings({ token, serverUrl }) {
+    async saveSettings({ token, serverUrl }) {
       this.token = token;
       this.serverUrl = serverUrl;
       this.settingsVisible = false;
+      // First check server without token
+      try {
+        const { apiRequest } = await import('./api.js');
+        const res = await apiRequest({
+          url: `${serverUrl}/`,
+          method: 'GET'
+        });
+        if (typeof res === 'object' && res.app) {
+          // Server is up, now load files list
+          await this.reloadFiles();
+        } else {
+          this.files = [];
+        }
+      } catch (e) {
+        this.files = [];
+      }
+    },
+    async reloadFiles() {
+      // Deprecated: use updateFiles instead
+      await this.updateFiles();
+    },
+    async updateFiles() {
+      if (this.token && this.serverUrl) {
+        try {
+          const { apiRequest } = await import('./api.js');
+          // Get the list of files
+          const res = await apiRequest({
+            url: `${this.serverUrl}/files/list`,
+            method: 'GET',
+            token: this.token
+          });
+          if (res.status === 'success' && res.response && Array.isArray(res.response.files)) {
+            this.files = res.response.files.map(f => f.filename);
+            // For each opened file, update its content
+            for (const filename of this.openedFiles) {
+              try {
+                const fileRes = await apiRequest({
+                  url: `${this.serverUrl}/files/file_content`,
+                  method: 'GET',
+                  token: this.token,
+                  params: { filename }
+                });
+                if (fileRes.status === 'success' && fileRes.response && fileRes.response.content) {
+                  this.fileContents[filename] = fileRes.response.content;
+                }
+              } catch (e) {
+                // Ignore errors for individual files
+              }
+            }
+          } else {
+            this.files = [];
+          }
+        } catch (e) {
+          this.files = [];
+        }
+      }
+    },
+    async handleFileClick(filename) {
+      if (!this.token || !this.serverUrl) return;
+      if (this.openedFiles.includes(filename)) return;
+      try {
+        const { apiRequest } = await import('./api.js');
+        const res = await apiRequest({
+          url: `${this.serverUrl}/files/file_content`,
+          method: 'GET',
+          token: this.token,
+          params: { filename }
+        });
+        if (res.status === 'success' && res.response && res.response.content) {
+          this.fileContents[filename] = res.response.content;
+        } else {
+          this.fileContents[filename] = 'Unable to load file content.';
+        }
+        this.openedFiles.unshift(filename);
+      } catch (e) {
+        this.fileContents[filename] = 'Error loading file.';
+        this.openedFiles.unshift(filename);
+      }
     }
   }
 }
 </script>
 
 <style>
+.reload-btn {
+  padding: 8px 16px;
+  background: #fff;
+  color: #0078d4;
+  border: 1px solid #0078d4;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
 .top-bar {
   display: flex;
   flex-direction: row;

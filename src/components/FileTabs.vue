@@ -9,7 +9,9 @@
       <p v-if="openedFiles.length === 0">No file opened</p>
       <div v-else>
         <h4>{{ openedFiles[0] }}</h4>
-        <div class="content-placeholder">File content goes here...</div>
+        <div class="content-placeholder">
+          <pre style="white-space: pre-wrap; word-break: break-word;">{{ fileContents[openedFiles[0]] || 'Loading...' }}</pre>
+        </div>
       </div>
     </div>
   </div>
@@ -22,6 +24,10 @@ export default {
     openedFiles: {
       type: Array,
       default: () => []
+    },
+    fileContents: {
+      type: Object,
+      default: () => ({})
     }
   }
 }
