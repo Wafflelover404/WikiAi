@@ -85,9 +85,13 @@ export default {
 .tab-move-enter-active, .tab-move-leave-active {
   transition: all 0.3s cubic-bezier(.55,0,.1,1);
 }
-.tab-move-enter, .tab-move-leave-to {
+.tab-move-enter-from, .tab-move-leave-to {
   opacity: 0;
   transform: translateY(-10px);
+}
+.tab-move-enter-to, .tab-move-leave-from {
+  opacity: 1;
+  transform: translateY(0);
 }
 .file-content {
   flex: 1;

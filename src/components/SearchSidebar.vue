@@ -142,6 +142,18 @@ export default {
   </script>
 
 <style scoped>
+  /* Animation for sidebar appearance */
+  .sidebar-slide-enter-active, .sidebar-slide-leave-active {
+    transition: all 0.3s cubic-bezier(.55,0,.1,1);
+  }
+  .sidebar-slide-enter-from, .sidebar-slide-leave-to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  .sidebar-slide-enter-to, .sidebar-slide-leave-from {
+    transform: translateX(0);
+    opacity: 1;
+  }
   .search-sidebar {
     width: 320px;
     background: #f9f9f9;
