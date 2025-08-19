@@ -11,7 +11,7 @@
       </button>
     </div>
     <div class="app-layout">
-      <SidebarFiles :files="files" @file-click="handleFileClick">
+      <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
         <template #actions>
           <button class="reload-btn" @click="updateFiles">
             🔄 Update
@@ -19,7 +19,7 @@
         </template>
       </SidebarFiles>
       <FileTabs :openedFiles="openedFiles" :fileContents="fileContents" @close-file="closeFile" />
-      <SearchSidebar :visible="searchVisible" />
+  <SearchSidebar :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
       <SettingsModal
         :visible="settingsVisible"
         :initialToken="token"
