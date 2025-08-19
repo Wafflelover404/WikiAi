@@ -13,10 +13,18 @@
     <div class="search-results">
       <div v-if="!aiOverviewLoading && searchResults.length">
         <div v-for="(result, idx) in searchResults" :key="idx" class="search-result">
-          {{ result }}
+          <div v-html="cleanResult(result)"></div>
+          <button v-if="extractUploadId(result)" class="open-file-btn" @click="openFile(extractUploadId(result))">Open document</button>
         </div>
       </div>
       <p v-if="!aiOverviewLoading && !searchResults.length">No results yet.</p>
+    </div>
+    <div v-if="fileModalVisible" class="file-modal">
+      <div class="file-modal-content">
+        <button class="close-file-modal" @click="fileModalVisible = false">✖</button>
+        <h4>{{ fileModalName }}</h4>
+        <pre style="white-space: pre-wrap; word-break: break-word;">{{ fileModalContent }}</pre>
+      </div>
     </div>
   </div>
 </template>
@@ -43,10 +51,51 @@ export default {
       searchText: '',
       searchResults: [],
       aiOverview: '',
-      aiOverviewLoading: false
+      aiOverviewLoading: false,
+      fileModalVisible: false,
+      fileModalContent: '',
+      fileModalName: ''
     };
   },
   methods: {
+    cleanResult(result) {
+      // Remove Link Content, <id>, <main_keyword> tags
+      let text = result;
+      text = text.replace(/Link Content:/g, '');
+      text = text.replace(/<id>.*?<\/id>/g, '');
+      text = text.replace(/<main_keyword>.*?<\/main_keyword>/g, '');
+      text = text.replace(/<upload_id>(.*?)<\/upload_id>/g, '');
+      return text.trim();
+    },
+    extractUploadId(result) {
+      const match = result.match(/<upload_id>(.*?)<\/upload_id>/);
+      return match ? match[1] : null;
+    },
+    async openFile(uploadId) {
+      if (!uploadId || !this.token || !this.serverUrl) return;
+      try {
+        const { apiRequest } = await import('../api.js');
+        // Try with filename 'sc-machine.txt' (could be improved to fetch available filenames)
+        const res = await apiRequest({
+          url: `${this.serverUrl}/files/file_content?file_id=${uploadId}&filename=sc-machine.txt`,
+          method: 'GET',
+          token: this.token
+        });
+        if (res.status === 'success' && res.response) {
+          this.fileModalContent = res.response.content;
+          this.fileModalName = res.response.filename;
+          this.fileModalVisible = true;
+        } else {
+          this.fileModalContent = 'Unable to load file content.';
+          this.fileModalName = '';
+          this.fileModalVisible = true;
+        }
+      } catch (e) {
+        this.fileModalContent = 'Error loading file.';
+        this.fileModalName = '';
+        this.fileModalVisible = true;
+      }
+    },
     async runSearch() {
       if (!this.searchText || !this.token || !this.serverUrl) return;
       this.searchResults = [];
@@ -87,10 +136,10 @@ export default {
         this.aiOverview = '';
         this.aiOverviewLoading = false;
       }
+      }
     }
-  }
-}
-</script>
+  };
+  </script>
 
 <style scoped>
   .search-sidebar {
@@ -143,5 +192,48 @@ export default {
     color: #0078d4;
     font-size: 15px;
     box-shadow: 0 1px 2px rgba(0,120,212,0.04);
+  }
+</style>
+
+<style>
+  .open-file-btn {
+    background: #0078d4;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 8px;
+  }
+  .file-modal {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.2);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .file-modal-content {
+    background: #fff;
+    padding: 32px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+    min-width: 320px;
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative;
+  }
+  .close-file-modal {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #888;
+    cursor: pointer;
   }
 </style>
