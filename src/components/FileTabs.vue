@@ -2,7 +2,8 @@
   <div class="file-tabs">
     <div class="tabs">
       <div v-for="file in openedFiles" :key="file" class="tab">
-        {{ file }}
+        <span>{{ file }}</span>
+        <button class="close-tab-btn" @click="$emit('close-file', file)" title="Close" style="margin-left: 8px;">✖</button>
       </div>
     </div>
     <div class="file-content">
@@ -63,5 +64,19 @@ export default {
 .content-placeholder {
   color: #888;
   font-style: italic;
+}
+.close-tab-btn {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0 4px;
+  border-radius: 2px;
+  transition: background 0.2s;
+}
+.close-tab-btn:hover {
+  background: #f2dede;
+  color: #c00;
 }
 </style>

@@ -1,11 +1,13 @@
 <template>
   <div>
     <div class="top-bar">
-      <button class="toggle-search" @click="toggleSearch">
-        {{ searchVisible ? 'Close Search' : 'Open Search' }}
+      <div style="flex: 1;"></div>
+      <button class="search-sidebar-btn" @click="toggleSearch">
+        <span v-if="!searchVisible" style="font-size: 22px;">▶</span>
+        <span v-else style="font-size: 22px;">◀</span>
       </button>
-      <button class="settings-btn" @click="settingsVisible = true">
-        ⚙️ Settings
+      <button class="settings-icon-btn" @click="settingsVisible = true">
+        <span style="font-size: 22px;">⚙️</span>
       </button>
     </div>
     <div class="app-layout">
@@ -16,7 +18,7 @@
           </button>
         </template>
       </SidebarFiles>
-      <FileTabs :openedFiles="openedFiles" :fileContents="fileContents" />
+      <FileTabs :openedFiles="openedFiles" :fileContents="fileContents" @close-file="closeFile" />
       <SearchSidebar :visible="searchVisible" />
       <SettingsModal
         :visible="settingsVisible"
@@ -45,9 +47,9 @@ export default {
   },
   data() {
     return {
-  files: [],
-  openedFiles: [],
-  fileContents: {},
+      files: [],
+      openedFiles: [],
+      fileContents: {},
       searchVisible: false,
       settingsVisible: false,
       token: '',
@@ -140,6 +142,10 @@ export default {
         this.fileContents[filename] = 'Error loading file.';
         this.openedFiles.unshift(filename);
       }
+    },
+    closeFile(filename) {
+      this.openedFiles = this.openedFiles.filter(f => f !== filename);
+      // Optionally remove fileContents[filename] if you want to free memory
     }
   }
 }
@@ -180,14 +186,18 @@ export default {
   border-radius: 4px;
   cursor: pointer;
 }
-.settings-btn {
-  padding: 8px 16px;
-  background: #fff;
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.settings-icon-btn {
+  background: none;
+  border: none;
   cursor: pointer;
-  font-size: 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  padding: 8px;
+  margin-left: 8px;
+}
+.search-sidebar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  margin-left: 8px;
 }
 </style>
