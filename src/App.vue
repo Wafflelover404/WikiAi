@@ -1,6 +1,7 @@
 <template>
   <div>
     <div class="top-bar">
+      <h1 class="logo">KBSage</h1>
       <div style="flex: 1;"></div>
       <button class="search-sidebar-btn" @click="toggleSearch">
         <span v-if="!searchVisible" style="font-size: 22px;">▶</span>
@@ -152,6 +153,14 @@ export default {
 </script>
 
 <style>
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+  color: #333;
+  margin-left: 16px;
+  left: 0;
+}
 .reload-btn {
   padding: 8px 16px;
   background: #fff;
