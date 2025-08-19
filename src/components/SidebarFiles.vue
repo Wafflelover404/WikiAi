@@ -26,9 +26,11 @@ export default {
 .sidebar-files {
   width: 220px;
   background: #f4f4f4;
-  height: 100vh;
+  height: 100%;
+  min-height: 0;
   padding: 16px 0 0 0;
   border-right: 1px solid #ddd;
+  overflow: hidden;
 }
 .sidebar-files h3 {
   margin: 0 0 12px 16px;

@@ -145,7 +145,8 @@ export default {
   .search-sidebar {
     width: 320px;
     background: #f9f9f9;
-    height: 100vh;
+    height: 100%;
+    min-height: 0;
     border-left: 1px solid #ddd;
     padding: 16px;
     position: relative;

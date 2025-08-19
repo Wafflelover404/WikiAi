@@ -12,15 +12,23 @@
       </button>
     </div>
     <div class="app-layout">
-      <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
-        <template #actions>
-          <button class="reload-btn" @click="updateFiles">
-            🔄 Update
-          </button>
-        </template>
-      </SidebarFiles>
-      <FileTabs :openedFiles="openedFiles" :fileContents="fileContents" @close-file="closeFile" />
-  <SearchSidebar :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
+        <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
+          <template #actions>
+            <button class="reload-btn" @click="updateFiles">
+              🔄 Update
+            </button>
+          </template>
+        </SidebarFiles>
+        <FileTabs
+          :openedFiles="openedFiles"
+          :fileContents="fileContents"
+          :activeTab="activeTab"
+          @close-file="closeFile"
+          @switch-tab="switchTab"
+        />
+        <transition name="sidebar-slide">
+          <SearchSidebar v-if="searchVisible" :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
+        </transition>
       <SettingsModal
         :visible="settingsVisible"
         :initialToken="token"
@@ -47,15 +55,16 @@ export default {
     SettingsModal
   },
   data() {
-    return {
-      files: [],
-      openedFiles: [],
-      fileContents: {},
-      searchVisible: false,
-      settingsVisible: false,
-      token: '',
-      serverUrl: ''
-    };
+      return {
+        files: [],
+        openedFiles: [],
+        fileContents: {},
+        searchVisible: false,
+        settingsVisible: false,
+        token: '',
+        serverUrl: '',
+        activeTab: null
+      };
   },
   methods: {
     toggleSearch() {
@@ -123,36 +132,55 @@ export default {
       }
     },
     async handleFileClick(filename) {
-      if (!this.token || !this.serverUrl) return;
-      if (this.openedFiles.includes(filename)) return;
-      try {
-        const { apiRequest } = await import('./api.js');
-        const res = await apiRequest({
-          url: `${this.serverUrl}/files/file_content`,
-          method: 'GET',
-          token: this.token,
-          params: { filename }
-        });
-        if (res.status === 'success' && res.response && res.response.content) {
-          this.fileContents[filename] = res.response.content;
-        } else {
-          this.fileContents[filename] = 'Unable to load file content.';
+        if (!this.token || !this.serverUrl) return;
+        if (this.openedFiles.includes(filename)) {
+          this.activeTab = filename;
+          return;
         }
-        this.openedFiles.unshift(filename);
-      } catch (e) {
-        this.fileContents[filename] = 'Error loading file.';
-        this.openedFiles.unshift(filename);
-      }
+        try {
+          const { apiRequest } = await import('./api.js');
+          const res = await apiRequest({
+            url: `${this.serverUrl}/files/file_content`,
+            method: 'GET',
+            token: this.token,
+            params: { filename }
+          });
+          if (res.status === 'success' && res.response && res.response.content) {
+            this.fileContents[filename] = res.response.content;
+          } else {
+            this.fileContents[filename] = 'Unable to load file content.';
+          }
+          this.openedFiles.unshift(filename);
+          this.activeTab = filename;
+        } catch (e) {
+          this.fileContents[filename] = 'Error loading file.';
+          this.openedFiles.unshift(filename);
+          this.activeTab = filename;
+        }
     },
     closeFile(filename) {
-      this.openedFiles = this.openedFiles.filter(f => f !== filename);
-      // Optionally remove fileContents[filename] if you want to free memory
+        this.openedFiles = this.openedFiles.filter(f => f !== filename);
+        if (this.activeTab === filename) {
+          this.activeTab = this.openedFiles[0] || null;
+        }
+        // Optionally remove fileContents[filename] if you want to free memory
+      },
+      switchTab(filename) {
+        this.activeTab = filename;
     }
   }
 }
 </script>
 
 <style>
+/* Sidebar slide animation */
+.sidebar-slide-enter-active, .sidebar-slide-leave-active {
+  transition: all 0.3s cubic-bezier(.55,0,.1,1);
+}
+.sidebar-slide-enter, .sidebar-slide-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
+}
 
 .logo {
   font-size: 24px;
@@ -186,6 +214,8 @@ export default {
   flex-direction: row;
   height: calc(100vh - 56px);
   position: relative;
+  min-height: 0;
+  overflow: hidden;
 }
 .toggle-search {
   padding: 8px 16px;
