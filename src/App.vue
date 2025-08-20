@@ -1,42 +1,45 @@
 <template>
   <div>
-    <div class="top-bar">
-      <h1 class="logo">KBSage</h1>
-      <div style="flex: 1;"></div>
-      <button class="search-sidebar-btn" @click="toggleSearch">
-        <span v-if="!searchVisible" style="font-size: 22px;">▶</span>
-        <span v-else style="font-size: 22px;">◀</span>
-      </button>
-      <button class="settings-icon-btn" @click="settingsVisible = true">
-        <span style="font-size: 22px;">⚙️</span>
-      </button>
-    </div>
-    <div class="app-layout">
-        <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
-          <template #actions>
-            <button class="reload-btn" @click="updateFiles">
-              🔄 Update
-            </button>
-          </template>
-        </SidebarFiles>
-        <FileTabs
-          :openedFiles="openedFiles"
-          :fileContents="fileContents"
-          :activeTab="activeTab"
-          @close-file="closeFile"
-          @switch-tab="switchTab"
+    <LoginPage v-if="!token" @login-success="onLoginSuccess" />
+    <template v-else>
+      <div class="top-bar">
+        <h1 class="logo">KBSage</h1>
+        <div style="flex: 1;"></div>
+        <span v-if="user && user.nickname" class="user-nickname">{{ user.nickname }}</span>
+        <button class="search-sidebar-btn" @click="toggleSearch">
+          <span v-if="!searchVisible" style="font-size: 22px;">▶</span>
+          <span v-else style="font-size: 22px;">◀</span>
+        </button>
+        <button class="settings-icon-btn" @click="settingsVisible = true">
+          <span style="font-size: 22px;">⚙️</span>
+        </button>
+      </div>
+      <div class="app-layout">
+          <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
+            <template #actions>
+              <button class="reload-btn" @click="updateFiles">
+                🔄 Update
+              </button>
+            </template>
+          </SidebarFiles>
+          <FileTabs
+            :openedFiles="openedFiles"
+            :fileContents="fileContents"
+            :activeTab="activeTab"
+            @close-file="closeFile"
+            @switch-tab="switchTab"
+          />
+          <transition name="sidebar-slide">
+            <SearchSidebar v-if="searchVisible" :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
+          </transition>
+        <SettingsModal
+          :visible="settingsVisible"
+          :initialServerUrl="serverUrl"
+          @close="settingsVisible = false"
+          @save="saveSettings"
         />
-        <transition name="sidebar-slide">
-          <SearchSidebar v-if="searchVisible" :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
-        </transition>
-      <SettingsModal
-        :visible="settingsVisible"
-        :initialToken="token"
-        :initialServerUrl="serverUrl"
-        @close="settingsVisible = false"
-        @save="saveSettings"
-      />
-    </div>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -45,6 +48,7 @@ import SidebarFiles from './components/SidebarFiles.vue';
 import FileTabs from './components/FileTabs.vue';
 import SearchSidebar from './components/SearchSidebar.vue';
 import SettingsModal from './components/SettingsModal.vue';
+import LoginPage from './components/LoginPage.vue';
 
 export default {
   name: 'App',
@@ -52,7 +56,8 @@ export default {
     SidebarFiles,
     FileTabs,
     SearchSidebar,
-    SettingsModal
+    SettingsModal,
+    LoginPage
   },
   data() {
       return {
@@ -67,14 +72,17 @@ export default {
       };
   },
   methods: {
+    onLoginSuccess() {
+      // After login, load files
+      this.updateFiles();
+    },
     toggleSearch() {
       this.searchVisible = !this.searchVisible;
     },
-    async saveSettings({ token, serverUrl }) {
-      this.token = token;
+    async saveSettings({ serverUrl }) {
       this.serverUrl = serverUrl;
       this.settingsVisible = false;
-      // First check server without token
+      // First check server
       try {
         const { apiRequest } = await import('./api.js');
         const res = await apiRequest({
@@ -82,8 +90,9 @@ export default {
           method: 'GET'
         });
         if (typeof res === 'object' && res.app) {
-          // Server is up, now load files list
-          await this.reloadFiles();
+          if (this.token) {
+            await this.reloadFiles();
+          }
         } else {
           this.files = [];
         }
@@ -132,41 +141,41 @@ export default {
       }
     },
     async handleFileClick(filename) {
-        if (!this.token || !this.serverUrl) return;
-        if (this.openedFiles.includes(filename)) {
-          this.activeTab = filename;
-          return;
+      if (!this.token || !this.serverUrl) return;
+      if (this.openedFiles.includes(filename)) {
+        this.activeTab = filename;
+        return;
+      }
+      try {
+        const { apiRequest } = await import('./api.js');
+        const res = await apiRequest({
+          url: `${this.serverUrl}/files/file_content`,
+          method: 'GET',
+          token: this.token,
+          params: { filename }
+        });
+        if (res.status === 'success' && res.response && res.response.content) {
+          this.fileContents[filename] = res.response.content;
+        } else {
+          this.fileContents[filename] = 'Unable to load file content.';
         }
-        try {
-          const { apiRequest } = await import('./api.js');
-          const res = await apiRequest({
-            url: `${this.serverUrl}/files/file_content`,
-            method: 'GET',
-            token: this.token,
-            params: { filename }
-          });
-          if (res.status === 'success' && res.response && res.response.content) {
-            this.fileContents[filename] = res.response.content;
-          } else {
-            this.fileContents[filename] = 'Unable to load file content.';
-          }
-          this.openedFiles.unshift(filename);
-          this.activeTab = filename;
-        } catch (e) {
-          this.fileContents[filename] = 'Error loading file.';
-          this.openedFiles.unshift(filename);
-          this.activeTab = filename;
-        }
+        this.openedFiles.unshift(filename);
+        this.activeTab = filename;
+      } catch (e) {
+        this.fileContents[filename] = 'Error loading file.';
+        this.openedFiles.unshift(filename);
+        this.activeTab = filename;
+      }
     },
     closeFile(filename) {
-        this.openedFiles = this.openedFiles.filter(f => f !== filename);
-        if (this.activeTab === filename) {
-          this.activeTab = this.openedFiles[0] || null;
-        }
-        // Optionally remove fileContents[filename] if you want to free memory
-      },
-      switchTab(filename) {
-        this.activeTab = filename;
+      this.openedFiles = this.openedFiles.filter(f => f !== filename);
+      if (this.activeTab === filename) {
+        this.activeTab = this.openedFiles[0] || null;
+      }
+      // Optionally remove fileContents[filename] if you want to free memory
+    },
+    switchTab(filename) {
+      this.activeTab = filename;
     }
   }
 }
