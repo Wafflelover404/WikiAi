@@ -51,7 +51,7 @@ export default {
         });
         if (res.status === 'success' && res.token) {
           this.$root.token = res.token;
-          this.$emit('login-success');
+          this.$emit('login-success', { username: this.username, password: this.password });
         } else {
           this.error = res.message || 'Login failed.';
         }

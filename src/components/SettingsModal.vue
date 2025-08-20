@@ -5,17 +5,25 @@
       <div class="modal-content">
         <h3>Configuration</h3>
         <label>
-          Token:
-          <input v-model="token" type="text" placeholder="Enter token" />
+          Username:
+          <input v-model="username" type="text" placeholder="Current username" disabled />
+        </label>
+        <label>
+          Password:
+          <div style="display: flex; align-items: center;">
+            <input :type="showPassword ? 'text' : 'password'" v-model="password" placeholder="Current password" disabled />
+            <button type="button" @click="showPassword = !showPassword" style="margin-left:8px;">{{ showPassword ? 'Hide' : 'Show' }}</button>
+          </div>
         </label>
         <label>
           Server URL:
           <input v-model="serverUrl" type="text" placeholder="Enter server URL" />
         </label>
         <div class="modal-actions">
-          <button @click="$emit('save', { token, serverUrl })">Save</button>
+          <button @click="$emit('save', { serverUrl })">Save</button>
           <button @click="$emit('close')">Cancel</button>
           <button @click="checkServer" :disabled="checking">Check Server</button>
+          <button @click="logout" style="background:#d32f2f;color:#fff;">Logout</button>
         </div>
         <div v-if="checkResult" class="check-result">{{ checkResult }}</div>
       </div>
@@ -31,7 +39,11 @@ export default {
       type: Boolean,
       default: false
     },
-    initialToken: {
+    initialUsername: {
+      type: String,
+      default: ''
+    },
+    initialPassword: {
       type: String,
       default: ''
     },
@@ -42,15 +54,20 @@ export default {
   },
   data() {
     return {
-      token: this.initialToken,
-      serverUrl: this.initialServerUrl,
-      checking: false,
-      checkResult: ''
+    username: this.initialUsername,
+    password: this.initialPassword,
+    serverUrl: this.initialServerUrl,
+    showPassword: false,
+    checking: false,
+    checkResult: ''
     };
   },
   watch: {
-    initialToken(val) {
-      this.token = val;
+    initialUsername(val) {
+      this.username = val;
+    },
+    initialPassword(val) {
+      this.password = val;
     },
     initialServerUrl(val) {
       this.serverUrl = val;
@@ -64,18 +81,20 @@ export default {
         const { apiRequest } = await import('../api.js');
         const res = await apiRequest({
           url: `${this.serverUrl}/`,
-          method: 'GET',
-          token: this.token
+          method: 'GET'
         });
         if (typeof res === 'object' && res.status === 'success') {
-          this.checkResult = 'Server is reachable and token is valid.';
+          this.checkResult = 'Server is reachable.';
         } else {
-          this.checkResult = 'Server responded, but token may be invalid.';
+          this.checkResult = 'Server responded.';
         }
       } catch (e) {
-        this.checkResult = 'Failed to reach server or invalid token.';
+        this.checkResult = 'Failed to reach server.';
       }
       this.checking = false;
+    },
+    logout() {
+      this.$emit('logout');
     }
   }
 }
@@ -126,5 +145,6 @@ input[type="text"] {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  flex-wrap: wrap;
 }
 </style>

@@ -34,9 +34,12 @@
           </transition>
         <SettingsModal
           :visible="settingsVisible"
+          :initialUsername="username"
+          :initialPassword="password"
           :initialServerUrl="serverUrl"
           @close="settingsVisible = false"
           @save="saveSettings"
+          @logout="handleLogout"
         />
       </div>
     </template>
@@ -68,13 +71,28 @@ export default {
         settingsVisible: false,
         token: '',
         serverUrl: '',
-        activeTab: null
+        activeTab: null,
+        username: '',
+        password: ''
       };
   },
   methods: {
-    onLoginSuccess() {
-      // After login, load files
+    onLoginSuccess({ username, password }) {
+      // After login, store username and password and load files
+      this.username = username;
+      this.password = password;
       this.updateFiles();
+    },
+    handleLogout() {
+      this.token = '';
+      this.username = '';
+      this.password = '';
+      this.files = [];
+      this.openedFiles = [];
+      this.fileContents = {};
+      this.activeTab = null;
+      this.searchVisible = false;
+      this.settingsVisible = false;
     },
     toggleSearch() {
       this.searchVisible = !this.searchVisible;
