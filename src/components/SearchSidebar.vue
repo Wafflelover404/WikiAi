@@ -11,19 +11,19 @@
       <div v-else>{{ aiOverview }}</div>
     </div>
     <div class="search-results">
-      <div v-if="!aiOverviewLoading && searchResults.length">
+      <div v-if="aiOverviewLoaded && searchResults.length">
         <div v-for="(result, idx) in searchResults" :key="idx" class="search-result">
           <div v-html="cleanResult(result)"></div>
-          <button v-if="extractUploadId(result)" class="open-file-btn" @click="openFile(extractUploadId(result))">Open document</button>
+          <button v-if="extractUploadId(result)" class="open-file-btn" @click="openFile(extractUploadId(result), cleanResult(result))">Open document</button>
         </div>
       </div>
-      <p v-if="!aiOverviewLoading && !searchResults.length">No results yet.</p>
+      <p v-if="aiOverviewLoaded && !searchResults.length">No results yet.</p>
     </div>
     <div v-if="fileModalVisible" class="file-modal">
       <div class="file-modal-content">
         <button class="close-file-modal" @click="fileModalVisible = false">✖</button>
         <h4>{{ fileModalName }}</h4>
-        <pre style="white-space: pre-wrap; word-break: break-word;">{{ fileModalContent }}</pre>
+        <pre style="white-space: pre-wrap; word-break: break-word;"><span v-html="fileModalContent"></span></pre>
       </div>
     </div>
   </div>
@@ -52,6 +52,7 @@ export default {
       searchResults: [],
       aiOverview: '',
       aiOverviewLoading: false,
+      aiOverviewLoaded: false,
       fileModalVisible: false,
       fileModalContent: '',
       fileModalName: ''
@@ -71,18 +72,23 @@ export default {
       const match = result.match(/<upload_id>(.*?)<\/upload_id>/);
       return match ? match[1] : null;
     },
-    async openFile(uploadId) {
+    async openFile(uploadId, segmentText) {
       if (!uploadId || !this.token || !this.serverUrl) return;
       try {
         const { apiRequest } = await import('../api.js');
-        // Try with filename 'sc-machine.txt' (could be improved to fetch available filenames)
         const res = await apiRequest({
           url: `${this.serverUrl}/files/file_content?file_id=${uploadId}&filename=sc-machine.txt`,
           method: 'GET',
           token: this.token
         });
         if (res.status === 'success' && res.response) {
-          this.fileModalContent = res.response.content;
+          let content = res.response.content;
+          if (segmentText) {
+            const escaped = segmentText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escaped, 'g');
+            content = content.replace(regex, '<mark style="background: #0078d4; color: #fff;">$&</mark>');
+          }
+          this.fileModalContent = content;
           this.fileModalName = res.response.filename;
           this.fileModalVisible = true;
         } else {
@@ -101,18 +107,23 @@ export default {
       this.searchResults = [];
       this.aiOverview = '';
       this.aiOverviewLoading = false;
+      this.aiOverviewLoaded = false;
       try {
         const { apiRequest } = await import('../api.js');
-        // First request: get results only
-        this.aiOverviewLoading = true;
+        // Request unhumanized results first
         const res = await apiRequest({
           url: `${this.serverUrl}/query?humanize=false`,
           method: 'POST',
           token: this.token,
           data: { text: this.searchText }
         });
-        // Do not show results yet, only blue field
-        // Second request: get AI overview
+        if (res.status === 'success' && Array.isArray(res.response)) {
+          this.searchResults = res.response;
+        } else {
+          this.searchResults = ['No results found.'];
+        }
+        this.aiOverviewLoading = true;
+        // Now request humanized (AI overview)
         const res2 = await apiRequest({
           url: `${this.serverUrl}/query?humanize=true`,
           method: 'POST',
@@ -125,20 +136,16 @@ export default {
           this.aiOverview = '';
         }
         this.aiOverviewLoading = false;
-        // Now show results
-        if (res.status === 'success' && Array.isArray(res.response)) {
-          this.searchResults = res.response;
-        } else {
-          this.searchResults = ['No results found.'];
-        }
+        this.aiOverviewLoaded = true;
       } catch (e) {
         this.searchResults = ['Error searching knowledge base.'];
         this.aiOverview = '';
         this.aiOverviewLoading = false;
-      }
+        this.aiOverviewLoaded = true;
       }
     }
-  };
+  }
+}
   </script>
 
 <style scoped>
@@ -157,7 +164,7 @@ export default {
   .search-sidebar {
     width: 320px;
     background: #f9f9f9;
-    height: 100%;
+    height: 95%;
     min-height: 0;
     border-left: 1px solid #ddd;
     padding: 16px;
