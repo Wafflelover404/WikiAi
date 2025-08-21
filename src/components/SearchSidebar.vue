@@ -7,11 +7,11 @@
     </div>
     <div class="ai-overview" v-if="aiOverviewLoading || aiOverview">
       <strong>AI Overview:</strong>
-      <div v-if="aiOverviewLoading" style="color:#0078d4;">Loading AI overview...</div>
+      <div class="loading-ai-overview" v-if="aiOverviewLoading">Loading AI overview...</div>
       <div v-else>{{ aiOverview }}</div>
     </div>
     <div class="search-results">
-      <div v-if="aiOverviewLoaded && searchResults.length">
+      <div v-if="searchResults.length">
         <div v-for="(result, idx) in searchResults" :key="idx" class="search-result">
           <div v-html="cleanResult(result)"></div>
           <button v-if="extractUploadId(result)" class="open-file-btn" @click="openFile(extractUploadId(result), cleanResult(result))">Open document</button>
@@ -213,6 +213,19 @@ export default {
     font-size: 15px;
     box-shadow: 0 1px 2px rgba(0,120,212,0.04);
   }
+
+  .loading-ai-overview {
+    color: #0078d4;
+    font-style: italic bold;
+    opacity: 1;
+    animation: blinker 2.5s linear infinite;
+  }
+
+  @keyframes blinker {
+  50% {
+    opacity: 0.5;
+  }
+}
 </style>
 
 <style>

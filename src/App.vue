@@ -3,7 +3,7 @@
     <LoginPage v-if="!token" @login-success="onLoginSuccess" />
     <template v-else>
       <div class="top-bar">
-        <h1 class="logo">KBSage</h1>
+        <h1 class="logo">KBS.0.1</h1>
         <div style="flex: 1;"></div>
         <span v-if="user && user.nickname" class="user-nickname">{{ user.nickname }}</span>
         <button class="search-sidebar-btn" @click="toggleSearch">
@@ -200,7 +200,73 @@ export default {
 </script>
 
 <style>
-/* Sidebar slide animation */
+body {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  background: #f5f5f5;
+  margin: 0;
+}
+.logo {
+  font-size: 26px;
+  font-weight: 500;
+  color: #1976d2;
+  margin-left: 8px;
+  letter-spacing: 1px;
+}
+.top-bar {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 64px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+  border-bottom: 1px solid #e0e0e0;
+  padding: 0 32px;
+  gap: 16px;
+}
+.user-nickname {
+  font-size: 16px;
+  color: #1976d2;
+  background: #e3f2fd;
+  padding: 4px 12px;
+  border-radius: 20px;
+  margin-right: 8px;
+}
+.app-layout {
+  display: flex;
+  flex-direction: row;
+  height: calc(100vh - 64px);
+  background: #f5f5f5;
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+.reload-btn {
+  padding: 8px 20px;
+  background: #fff;
+  color: #1976d2;
+  border: 1.5px solid #1976d2;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+  transition: background 0.2s, color 0.2s;
+}
+.reload-btn:hover {
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.settings-icon-btn, .search-sidebar-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 10px;
+  margin-left: 8px;
+  border-radius: 50%;
+  transition: background 0.2s;
+}
+.settings-icon-btn:hover, .search-sidebar-btn:hover {
+  background: #e3f2fd;
+}
 .sidebar-slide-enter-active, .sidebar-slide-leave-active {
   transition: all 0.3s cubic-bezier(.55,0,.1,1);
 }
@@ -208,62 +274,31 @@ export default {
   transform: translateX(100%);
   opacity: 0;
 }
-
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  color: #333;
-  margin-left: 16px;
-  left: 0;
-}
-.reload-btn {
-  padding: 8px 16px;
-  background: #fff;
-  color: #0078d4;
-  border: 1px solid #0078d4;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-}
-.top-bar {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  height: 56px;
-  background: #f7f7f7;
-  border-bottom: 1px solid #ddd;
-  padding: 0 24px;
-  gap: 12px;
-}
-.app-layout {
-  display: flex;
-  flex-direction: row;
-  height: calc(100vh - 56px);
-  position: relative;
-  min-height: 0;
-  overflow: hidden;
-}
 .toggle-search {
-  padding: 8px 16px;
-  background: #0078d4;
+  padding: 8px 20px;
+  background: #1976d2;
   color: #fff;
   border: none;
-  border-radius: 4px;
+  border-radius: 24px;
   cursor: pointer;
+  font-size: 16px;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
+  transition: background 0.2s;
 }
-.settings-icon-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  margin-left: 8px;
+.toggle-search:hover {
+  background: #1565c0;
 }
-.search-sidebar-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 8px;
-  margin-left: 8px;
+/* Card style for main content */
+.file-tabs-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(33, 150, 243, 0.10);
+  margin: 24px;
+  padding: 24px;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
+/* You may want to add similar card style to SidebarFiles and SearchSidebar */
 </style>
