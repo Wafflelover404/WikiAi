@@ -3,7 +3,7 @@
     <LoginPage v-if="!token" @login-success="onLoginSuccess" />
     <template v-else>
       <div class="top-bar">
-        <h1 class="logo">KBS.0.1</h1>
+        <h1 class="logo">KBSage v0.1</h1>
         <div style="flex: 1;"></div>
         <span v-if="user && user.nickname" class="user-nickname">{{ user.nickname }}</span>
         <button class="search-sidebar-btn" @click="toggleSearch">
@@ -15,13 +15,17 @@
         </button>
       </div>
       <div class="app-layout">
-          <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
-            <template #actions>
-              <button class="reload-btn" @click="updateFiles">
-                🔄 Update
-              </button>
-            </template>
-          </SidebarFiles>
+        <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
+          <template #actions>
+            <button class="reload-btn" @click="updateFiles">
+              🔄 Update
+            </button>
+          </template>
+        </SidebarFiles>
+        <div
+          class="main-content"
+          :class="{ 'main-content-shifted': searchVisible }"
+        >
           <FileTabs
             :openedFiles="openedFiles"
             :fileContents="fileContents"
@@ -29,9 +33,12 @@
             @close-file="closeFile"
             @switch-tab="switchTab"
           />
-          <transition name="sidebar-slide">
-            <SearchSidebar v-if="searchVisible" :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
-          </transition>
+        </div>
+        <transition name="sidebar-slide">
+          <div v-if="searchVisible" class="search-sidebar-animated">
+            <SearchSidebar :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
+          </div>
+        </transition>
         <SettingsModal
           :visible="settingsVisible"
           :initialUsername="username"
@@ -231,6 +238,7 @@ body {
   border-radius: 20px;
   margin-right: 8px;
 }
+/* Animate sidebar and main content shift */
 .app-layout {
   display: flex;
   flex-direction: row;
@@ -239,6 +247,32 @@ body {
   position: relative;
   min-height: 0;
   overflow: hidden;
+}
+
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  transition: margin-right 0.6s cubic-bezier(.23,1,.32,1);
+  margin-right: 0;
+  display: flex;
+  flex-direction: column;
+}
+.main-content-shifted {
+  margin-right: 320px; /* Same as sidebar width */
+  transition: margin-right 0.6s cubic-bezier(.23,1,.32,1);
+}
+
+
+.search-sidebar-animated {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 320px;
+  z-index: 10;
+  transition: width 0.6s cubic-bezier(.23,1,.32,1);
+  /* Let the transition handle appearance */
 }
 .reload-btn {
   padding: 8px 20px;
@@ -262,13 +296,15 @@ body {
   padding: 10px;
   margin-left: 8px;
   border-radius: 50%;
-  transition: background 0.2s;
+  transition: background 0.5s;
 }
 .settings-icon-btn:hover, .search-sidebar-btn:hover {
   background: #e3f2fd;
 }
+/* Sidebar slide animation for transition */
+
 .sidebar-slide-enter-active, .sidebar-slide-leave-active {
-  transition: all 0.3s cubic-bezier(.55,0,.1,1);
+  transition: all 0.6s cubic-bezier(.23,1,.32,1);
 }
 .sidebar-slide-enter, .sidebar-slide-leave-to {
   transform: translateX(100%);
@@ -283,7 +319,7 @@ body {
   cursor: pointer;
   font-size: 16px;
   box-shadow: 0 2px 8px rgba(33, 150, 243, 0.08);
-  transition: background 0.2s;
+  transition: background 0.5s;
 }
 .toggle-search:hover {
   background: #1565c0;
@@ -300,5 +336,7 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+
 /* You may want to add similar card style to SidebarFiles and SearchSidebar */
 </style>

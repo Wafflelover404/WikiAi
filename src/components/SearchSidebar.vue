@@ -8,7 +8,7 @@
     <div class="ai-overview" v-if="aiOverviewLoading || aiOverview">
       <strong>AI Overview:</strong>
       <div class="loading-ai-overview" v-if="aiOverviewLoading">Loading AI overview...</div>
-      <div v-else>{{ aiOverview }}</div>
+      <div v-else v-html="markedOverview"></div>
     </div>
     <div class="search-results">
       <div v-if="searchResults.length">
@@ -30,6 +30,8 @@
 </template>
 
 <script>
+import { marked } from 'marked';
+
 export default {
   name: 'SearchSidebar',
   props: {
@@ -57,6 +59,19 @@ export default {
       fileModalContent: '',
       fileModalName: ''
     };
+  },
+  computed: {
+    markedOverview() {
+      if (!this.aiOverview) return '';
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        sanitize: false,
+        smartLists: true,
+        smartypants: true
+      });
+      return marked(this.aiOverview);
+    }
   },
   methods: {
     cleanResult(result) {
@@ -146,7 +161,7 @@ export default {
     }
   }
 }
-  </script>
+</script>
 
 <style scoped>
   /* Animation for sidebar appearance */
@@ -218,7 +233,7 @@ export default {
     color: #0078d4;
     font-style: italic bold;
     opacity: 1;
-    animation: blinker 2.5s linear infinite;
+    animation: blinker 3s linear infinite;
   }
 
   @keyframes blinker {
