@@ -4,6 +4,10 @@
     <template v-else>
       <div class="top-bar">
         <h1 class="logo">KBSage v0.1</h1>
+        <nav class="main-nav">
+          <a href="#" :class="{active: !showAdminDashboard}" @click.prevent="showAdminDashboard = false">Home</a>
+          <a v-if="isAdmin" href="#" :class="{active: showAdminDashboard}" @click.prevent="showAdminDashboard = true">Admin</a>
+        </nav>
         <div style="flex: 1;"></div>
         <span v-if="user && user.nickname" class="user-nickname">{{ user.nickname }}</span>
         <button class="search-sidebar-btn" @click="toggleSearch">
@@ -15,39 +19,44 @@
         </button>
       </div>
       <div class="app-layout">
-        <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
-          <template #actions>
-            <button class="reload-btn" @click="updateFiles">
-              🔄 Update
-            </button>
-          </template>
-        </SidebarFiles>
-        <div
-          class="main-content"
-          :class="{ 'main-content-shifted': searchVisible }"
-        >
-          <FileTabs
-            :openedFiles="openedFiles"
-            :fileContents="fileContents"
-            :activeTab="activeTab"
-            @close-file="closeFile"
-            @switch-tab="switchTab"
-          />
-        </div>
-        <transition name="sidebar-slide">
-          <div v-if="searchVisible" class="search-sidebar-animated">
-            <SearchSidebar :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
+        <template v-if="showAdminDashboard">
+          <AdminDashboard @close="showAdminDashboard = false" />
+        </template>
+        <template v-else>
+          <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
+            <template #actions>
+              <button class="reload-btn" @click="updateFiles">
+                🔄 Update
+              </button>
+            </template>
+          </SidebarFiles>
+          <div
+            class="main-content"
+            :class="{ 'main-content-shifted': searchVisible }"
+          >
+            <FileTabs
+              :openedFiles="openedFiles"
+              :fileContents="fileContents"
+              :activeTab="activeTab"
+              @close-file="closeFile"
+              @switch-tab="switchTab"
+            />
           </div>
-        </transition>
-        <SettingsModal
-          :visible="settingsVisible"
-          :initialUsername="username"
-          :initialPassword="password"
-          :initialServerUrl="serverUrl"
-          @close="settingsVisible = false"
-          @save="saveSettings"
-          @logout="handleLogout"
-        />
+          <transition name="sidebar-slide">
+            <div v-if="searchVisible" class="search-sidebar-animated">
+              <SearchSidebar :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
+            </div>
+          </transition>
+          <SettingsModal
+            :visible="settingsVisible"
+            :initialUsername="username"
+            :initialPassword="password"
+            :initialServerUrl="serverUrl"
+            @close="settingsVisible = false"
+            @save="saveSettings"
+            @logout="handleLogout"
+          />
+        </template>
       </div>
     </template>
   </div>
@@ -59,6 +68,7 @@ import FileTabs from './components/FileTabs.vue';
 import SearchSidebar from './components/SearchSidebar.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import LoginPage from './components/LoginPage.vue';
+import AdminDashboard from './components/AdminDashboard.vue';
 
 export default {
   name: 'App',
@@ -67,7 +77,8 @@ export default {
     FileTabs,
     SearchSidebar,
     SettingsModal,
-    LoginPage
+    LoginPage,
+    AdminDashboard
   },
   data() {
       return {
@@ -80,14 +91,24 @@ export default {
         serverUrl: '',
         activeTab: null,
         username: '',
-        password: ''
+        password: '',
+        user: null,
+        showAdminDashboard: false
       };
   },
+  computed: {
+    isAdmin() {
+      // You may want to fetch user info from API or decode token
+      // For now, assume user info is available in this.user
+      return this.user && this.user.role === 'admin';
+    }
+  },
   methods: {
-    onLoginSuccess({ username, password }) {
-      // After login, store username and password and load files
+    onLoginSuccess({ username, password, role }) {
+      // After login, store username, password, role and load files
       this.username = username;
       this.password = password;
+      this.user = { username, role };
       this.updateFiles();
     },
     handleLogout() {
@@ -237,6 +258,24 @@ body {
   padding: 4px 12px;
   border-radius: 20px;
   margin-right: 8px;
+}
+.main-nav {
+  display: flex;
+  gap: 16px;
+  margin-left: 32px;
+}
+.main-nav a {
+  color: #1976d2;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 18px;
+  padding: 6px 18px;
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+.main-nav a.active, .main-nav a:hover {
+  background: #e3f2fd;
+  color: #1565c0;
 }
 /* Animate sidebar and main content shift */
 .app-layout {

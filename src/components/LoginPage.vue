@@ -51,7 +51,8 @@ export default {
         });
         if (res.status === 'success' && res.token) {
           this.$root.token = res.token;
-          this.$emit('login-success', { username: this.username, password: this.password });
+          // Pass role to parent
+          this.$emit('login-success', { username: this.username, password: this.password, role: res.role });
         } else {
           this.error = res.message || 'Login failed.';
         }
