@@ -9,18 +9,34 @@
           <a v-if="isAdmin" href="#" :class="{active: showAdminDashboard}" @click.prevent="showAdminDashboard = true">Admin</a>
         </nav>
         <div style="flex: 1;"></div>
-        <span v-if="user && user.nickname" class="user-nickname">{{ user.nickname }}</span>
-        <button class="search-sidebar-btn" @click="toggleSearch">
-          <span v-if="!searchVisible" style="font-size: 22px;">▶</span>
-          <span v-else style="font-size: 22px;">◀</span>
-        </button>
-        <button class="settings-icon-btn" @click="settingsVisible = true">
-          <span style="font-size: 22px;">⚙️</span>
-        </button>
+        <div v-if="!showAdminDashboard">
+          <span v-if="user && user.nickname" class="user-nickname">{{ user.nickname }}</span>
+          <button class="search-sidebar-btn" @click="toggleSearch">
+            <span v-if="!searchVisible" style="font-size: 22px;">▶</span>
+            <span v-else style="font-size: 22px;">◀</span>
+          </button>
+          <button class="settings-icon-btn" @click="settingsVisible = true">
+            <span style="font-size: 22px;">⚙️</span>
+          </button>
+        </div>
+        <div v-else>
+            <div class="token-section">
+            <label>Token</label>
+            <div class="token-box">
+              <span>{{ showToken ? token : maskedToken }}</span>
+              <div class="token-actions">
+                <button @click="toggleToken" :title="showToken ? 'Hide token' : 'Show token'">
+                  {{ showToken ? '🙈' : '👁' }}
+                </button>
+                <button @click="copyToken" title="Copy token">📋</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="app-layout">
         <template v-if="showAdminDashboard">
-          <AdminDashboard @close="showAdminDashboard = false" />
+          <AdminDashboard :token="this.token" :API_BASE_URL="this.serverUrl" :activeTabAdmin="this.activeTabAdmin" @close="showAdminDashboard = false" />
         </template>
         <template v-else>
           <SidebarFiles :files="files" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
@@ -90,10 +106,12 @@ export default {
         token: '',
         serverUrl: '',
         activeTab: null,
+        activeTabAdmin: 'users',
         username: '',
         password: '',
         user: null,
-        showAdminDashboard: false
+        showAdminDashboard: false,
+        showToken: false
       };
   },
   computed: {
@@ -101,9 +119,18 @@ export default {
       // You may want to fetch user info from API or decode token
       // For now, assume user info is available in this.user
       return this.user && this.user.role === 'admin';
+    },
+    maskedToken() {
+      return this.token ? '•'.repeat(this.token.length) : 'No token';
     }
   },
   methods: {
+    toggleToken() {
+      this.showToken = !this.showToken;
+    },
+    copyToken() {
+      navigator.clipboard.writeText(this.token).then(() => alert('Token copied!'));
+    },
     onLoginSuccess({ username, password, role }) {
       // After login, store username, password, role and load files
       this.username = username;
@@ -226,6 +253,8 @@ export default {
   }
 }
 </script>
+
+
 
 <style>
 body {
@@ -376,6 +405,35 @@ body {
   flex-direction: column;
 }
 
+.admin-dashboard-wrapper {
+  height: 100vh;
+  overflow: hidden; /* Prevent entire page from scrolling */
+  display: flex;
+  flex-direction: column;
+}
 
-/* You may want to add similar card style to SidebarFiles and SearchSidebar */
+.token-section {
+  margin-bottom: 32px;
+}
+
+.token-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fafafa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-top: 8px;
+  word-break: break-all;
+}
+
+.token-actions button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 6px;
+  color: #1976d2;
+}
 </style>

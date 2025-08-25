@@ -20,7 +20,7 @@
         <h4>{{ activeTab || openedFiles[0] }}</h4>
         <div class="content-scroll">
           <div class="content-placeholder">
-            <pre class="scroll-pre">{{ fileContents[activeTab || openedFiles[0]] || 'Loading...' }}</pre>
+            <pre class="scroll-pre"><span v-html="markedContents"></span></pre>
           </div>
         </div>
       </div>
@@ -29,6 +29,8 @@
 </template>
 
 <script>
+import { marked } from 'marked';
+
 export default {
   name: 'FileTabs',
   props: {
@@ -43,6 +45,17 @@ export default {
     activeTab: {
       type: String,
       default: null
+    }
+  },
+  computed: {
+    markedContents() {
+      if (!this.fileContents[this.activeTab]) return '';
+      marked.setOptions({
+        gfm: true,
+        smartLists: true,
+        smartypants: true
+      });
+      return marked(this.fileContents[this.activeTab]);
     }
   }
 }
