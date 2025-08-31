@@ -85,6 +85,7 @@ export default {
     async openFile(filename, segmentText) {
       if (!filename || !this.token || !this.serverUrl) return;
       try {
+        filename = filename.substring(5);
         const encodedFilename = encodeURIComponent(filename);
         const url = `${this.serverUrl}/files/content/${encodedFilename}`;
         const res = await fetch(url, {
