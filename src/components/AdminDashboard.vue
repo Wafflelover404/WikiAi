@@ -1,11 +1,12 @@
 
 <template>
-  <div class="admin-dashboard">
-    <div class="admin-tabs">
-      <button v-for="tab in tabs" :key="tab" :class="['admin-tab', {active: activeTab === tab}]" @click="activeTab = tab">{{ tab }}</button>
-    </div>
-    <div class="admin-tab-content">
-      <div v-if="activeTab === 'Users'">
+  <div>
+    <div class="admin-dashboard">
+      <div class="admin-tabs">
+        <button v-for="tab in tabs" :key="tab" :class="['admin-tab', {active: activeTab === tab}]" @click="activeTab = tab">{{ tab }}</button>
+      </div>
+      <div class="admin-tab-content">
+        <div v-if="activeTab === 'Users'">
         <div class="admin-section-header">
           <h2>Users</h2>
           <button @click="fetchUsers" class="refresh-btn">Refresh</button>
@@ -68,7 +69,7 @@
           <div v-if="userCreateMsg" class="msg">{{ userCreateMsg }}</div>
         </div>
       </div>
-      <div v-else-if="activeTab === 'Files'">
+  <div v-else-if="activeTab === 'Files'">
         <div class="admin-section-header">
           <h2>Files</h2>
           <button @click="fetchFiles" class="refresh-btn">Refresh</button>
@@ -79,21 +80,22 @@
               <button class="danger-btn" @click="deleteFile(file)">Delete</button>
             </li>
           </ul>
-          <!-- User Edit Modal: only show on Users tab -->
-          <UserEditModal
-            v-if="activeTab === 'Users' && editUserModal"
-            :editUserData="editUserData"
-            :editUserMsg="editUserMsg"
-            @save="saveEditUser"
-            @close="closeEditUser"
-          />
+          <!-- ...existing code... -->
+  <!-- User Edit Modal: always mounted at root for proper overlay -->
+  <UserEditModal
+    v-if="editUserModal && editUserData"
+    :editUserData="editUserData"
+    :editUserMsg="editUserMsg"
+    @save="saveEditUser"
+    @close="closeEditUser"
+  />
         <form @submit.prevent="uploadFile" class="file-form">
           <input type="file" ref="fileInput" />
           <button type="submit" class="upload-btn">Upload File</button>
         </form>
         <div v-if="fileUploadMsg" class="msg">{{ fileUploadMsg }}</div>
       </div>
-      <div v-else-if="activeTab === 'System'">
+  <div v-else-if="activeTab === 'System'">
         <div class="admin-section-header">
           <h2>System</h2>
         </div>
@@ -115,6 +117,15 @@
         </div>
       </div>
     </div>
+    </div>
+    <!-- User Edit Modal: always mounted at root for proper overlay -->
+    <UserEditModal
+      v-if="editUserModal && editUserData"
+      :editUserData="editUserData"
+      :editUserMsg="editUserMsg"
+      @save="saveEditUser"
+      @close="closeEditUser"
+    />
   </div>
 </template>
 
@@ -397,6 +408,22 @@ export default {
 }
 .danger-btn:hover {
   background: #b71c1c;
+}
+.edit-btn {
+  background: linear-gradient(90deg, #42a5f5 60%, #1976d2 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-weight: 500;
+  margin-left: 4px;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 4px rgba(33,150,243,0.08);
+}
+.edit-btn:hover {
+  background: linear-gradient(90deg, #1976d2 60%, #1565c0 100%);
+  box-shadow: 0 2px 8px rgba(33,150,243,0.13);
 }
 .empty-msg {
   margin-top: 16px;

@@ -69,6 +69,7 @@
             :initialUsername="username"
             :initialPassword="password"
             :initialServerUrl="serverUrl"
+            :accessToken="token"
             @close="settingsVisible = false"
             @save="saveSettings"
             @logout="handleLogout"
