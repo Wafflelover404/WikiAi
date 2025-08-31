@@ -176,6 +176,10 @@ export default {
 </script>
 
 <style scoped>
+  .search-sidebar {
+    box-sizing: border-box;
+    margin-right: 10px;
+  }
   /* Animation for sidebar appearance */
   .sidebar-slide-enter-active, .sidebar-slide-leave-active {
     transition: all 0.3s cubic-bezier(.55,0,.1,1);
