@@ -15,6 +15,11 @@
           <label for="password">Password</label>
           <input id="password" v-model="password" type="password" required />
         </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" v-model="rememberMe" /> Remember Me
+          </label>
+        </div>
         <button type="submit" :disabled="loading">Login</button>
         <div v-if="error" class="error-msg">{{ error }}</div>
       </form>
@@ -30,12 +35,28 @@ export default {
       serverUrl: this.$root.serverUrl || '',
       username: '',
       password: '',
+      rememberMe: false,
       loading: false,
       error: ''
     };
   },
+  mounted() {
+    // Check if credentials are stored
+    const stored = JSON.parse(localStorage.getItem('loginData'));
+    if (stored) {
+      this.serverUrl = stored.serverUrl;
+      this.username = stored.username;
+      this.password = stored.password;
+      this.rememberMe = true;
+      this.autoLogin();
+    }
+  },
   methods: {
-    async handleLogin() {
+    async autoLogin() {
+      // Automatically attempt login with stored credentials
+      await this.handleLogin(true);
+    },
+    async handleLogin(isAuto = false) {
       this.loading = true;
       this.error = '';
       this.$root.serverUrl = this.serverUrl;
@@ -49,15 +70,29 @@ export default {
             password: this.password
           }
         });
-        if (res.status === 'success' && res.token) {
+        if (res.token) {
           this.$root.token = res.token;
-          // Pass role to parent
-          this.$emit('login-success', { username: this.username, password: this.password, role: res.role });
+          // Store credentials if "Remember Me" is checked
+          if (this.rememberMe) {
+            localStorage.setItem(
+              'loginData',
+              JSON.stringify({
+                serverUrl: this.serverUrl,
+                username: this.username,
+                password: this.password
+              })
+            );
+          } else {
+            localStorage.removeItem('loginData');
+          }
+          // Pass role and token to parent
+          this.$emit('login-success', { username: this.username, password: this.password, role: res.role || 'user', token: res.token, serverUrl: this.serverUrl });
         } else {
-          this.error = res.message || 'Login failed.';
+          if (!isAuto) this.error = res.detail || res.message || 'Login failed.';
+          else localStorage.removeItem('loginData'); // remove invalid stored data
         }
       } catch (e) {
-        this.error = 'Network or server error.';
+        if (!isAuto) this.error = 'Network or server error.';
       }
       this.loading = false;
     }

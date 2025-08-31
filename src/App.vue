@@ -1,5 +1,6 @@
 <template>
   <div>
+  <!-- debug token output removed -->
     <LoginPage v-if="!token" @login-success="onLoginSuccess" />
     <template v-else>
       <div class="top-bar">
@@ -131,11 +132,13 @@ export default {
     copyToken() {
       navigator.clipboard.writeText(this.token).then(() => alert('Token copied!'));
     },
-    onLoginSuccess({ username, password, role }) {
-      // After login, store username, password, role and load files
+    onLoginSuccess({ username, password, role, token, serverUrl }) {
+      // After login, store username, password, role, token, and serverUrl, then load files
       this.username = username;
       this.password = password;
       this.user = { username, role };
+      this.token = token || this.$root.token;
+      this.serverUrl = serverUrl;
       this.updateFiles();
     },
     handleLogout() {
@@ -187,24 +190,9 @@ export default {
             method: 'GET',
             token: this.token
           });
-          if (res.status === 'success' && res.response && Array.isArray(res.response.files)) {
-            this.files = res.response.files.map(f => f.filename);
-            // For each opened file, update its content
-            for (const filename of this.openedFiles) {
-              try {
-                const fileRes = await apiRequest({
-                  url: `${this.serverUrl}/files/file_content`,
-                  method: 'GET',
-                  token: this.token,
-                  params: { filename }
-                });
-                if (fileRes.status === 'success' && fileRes.response && fileRes.response.content) {
-                  this.fileContents[filename] = fileRes.response.content;
-                }
-              } catch (e) {
-                // Ignore errors for individual files
-              }
-            }
+          // Handle backend response: { status, message, response: { documents: [...] } }
+          if (res && res.response && Array.isArray(res.response.documents)) {
+            this.files = res.response.documents.map(f => f.filename);
           } else {
             this.files = [];
           }
@@ -221,14 +209,23 @@ export default {
       }
       try {
         const { apiRequest } = await import('./api.js');
-        const res = await apiRequest({
-          url: `${this.serverUrl}/files/file_content`,
+        // URL-encode the filename for backend compatibility
+        const encodedFilename = encodeURIComponent(filename);
+        // Use the new backend endpoint: /files/content/{filename}
+        const url = `${this.serverUrl}/files/content/${encodedFilename}`;
+        const res = await fetch(url, {
           method: 'GET',
-          token: this.token,
-          params: { filename }
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
         });
-        if (res.status === 'success' && res.response && res.response.content) {
-          this.fileContents[filename] = res.response.content;
+        if (res.ok) {
+          const content = await res.text();
+          this.fileContents[filename] = content;
+        } else if (res.status === 404) {
+          this.fileContents[filename] = 'File not found.';
+        } else if (res.status === 403) {
+          this.fileContents[filename] = 'Access denied.';
         } else {
           this.fileContents[filename] = 'Unable to load file content.';
         }

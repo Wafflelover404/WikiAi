@@ -1,14 +1,15 @@
-// Query knowledge base
-export async function queryKnowledgeBase({ serverUrl, token, text, humanize = false }) {
+
+// Query knowledge base (POST /query)
+export async function queryKnowledgeBase({ serverUrl, token, question, session_id = null, model = null }) {
   return await apiRequest({
-    url: `${serverUrl}/query?humanize=${humanize}`,
+    url: `${serverUrl}/query`,
     method: 'POST',
     token,
-    data: { text }
+    data: { question, session_id, model }
   });
 }
 
-// Get files list
+// Get files list (GET /files/list)
 export async function getFilesList({ serverUrl, token }) {
   return await apiRequest({
     url: `${serverUrl}/files/list`,
@@ -17,15 +18,6 @@ export async function getFilesList({ serverUrl, token }) {
   });
 }
 
-// Get file content
-export async function getFileContent({ serverUrl, token, filename }) {
-  return await apiRequest({
-    url: `${serverUrl}/files/file_content`,
-    method: 'GET',
-    token,
-    params: { filename }
-  });
-}
 // API utility for kb-sage endpoints
 export async function apiRequest({ url, method = 'GET', token = '', data = null, params = {} }) {
   let fullUrl = url;

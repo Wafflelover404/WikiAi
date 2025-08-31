@@ -54,12 +54,12 @@ export default {
   },
   data() {
     return {
-    username: this.initialUsername,
-    password: this.initialPassword,
-    serverUrl: this.initialServerUrl,
-    showPassword: false,
-    checking: false,
-    checkResult: ''
+      username: this.initialUsername,
+      password: this.initialPassword,
+      serverUrl: this.initialServerUrl,
+      showPassword: false,
+      checking: false,
+      checkResult: ''
     };
   },
   watch: {
@@ -93,12 +93,26 @@ export default {
       }
       this.checking = false;
     },
+
     logout() {
+      // Reset all settings
+      this.username = '';
+      this.password = '';
+      this.serverUrl = '';
+      this.showPassword = false;
+      this.checkResult = '';
+      this.checking = false;
+
+      // Optionally remove saved credentials from localStorage
+      localStorage.removeItem('loginData');
+
+      // Emit logout event to parent
       this.$emit('logout');
     }
   }
-}
+};
 </script>
+
 
 <style scoped>
 .check-result {
