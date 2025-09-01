@@ -8,11 +8,26 @@
           <label>Username</label>
           <input v-model="editUserData.new_username" placeholder="New Username" />
           <label>Password</label>
-          <input v-model="editUserData.password" type="password" placeholder="New Password (leave blank to keep)" />
+          <div class="password-field">
+            <input
+              v-model="editUserData.password"
+              :type="showPassword ? 'text' : 'password'"
+              placeholder="New Password (leave blank to keep)"
+            />
+            <button type="button" class="view-password-btn" @click="showPassword = !showPassword" :aria-label="showPassword ? 'Hide password' : 'Show password'">
+              <span v-if="showPassword">🙈</span>
+              <span v-else>👁️</span>
+            </button>
+          </div>
           <label>Role</label>
           <select v-model="editUserData.role">
             <option value="user">User</option>
             <option value="admin">Admin</option>
+          </select>
+          <label>Allowed Files:</label>
+          <select v-model="editUserData.allowed_files" multiple>
+            <option v-for="file in files" :key="file.filename" :value="file.filename">{{ file.filename }}</option>
+            <option value="all">All Files</option>
           </select>
         </div>
         <div class="modal-actions">
@@ -30,9 +45,15 @@ export default {
   name: 'UserEditModal',
   props: {
     editUserData: { type: Object, required: true },
-    editUserMsg: { type: String, default: '' }
+    editUserMsg: { type: String, default: '' },
+    files: { type: Array, required: true }
   },
   emits: ['save', 'close'],
+  data() {
+    return {
+      showPassword: false
+    };
+  },
   methods: {
     saveEditUser() {
       this.$emit('save');
@@ -44,6 +65,10 @@ export default {
   mounted() {
     // Focus modal for ESC key
     this.$el.querySelector('.modal-content')?.focus();
+    // Debug: log files prop
+    console.log('DEBUG: UserEditModal files prop', this.files);
+    // Debug: log allowed_files
+    console.log('DEBUG: UserEditModal allowed_files', this.editUserData.allowed_files);
   }
 };
 </script>
@@ -94,7 +119,7 @@ export default {
   margin-top: 18px;
 }
 .modal-save-btn {
-  background: linear-gradient(90deg, #1976d2 60%, #42a5f5 100%);
+  background: #1976d2;
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -106,8 +131,26 @@ export default {
   transition: background 0.2s, box-shadow 0.2s;
 }
 .modal-save-btn:hover {
-  background: linear-gradient(90deg, #1565c0 60%, #1976d2 100%);
+  background: #1565c0;
   box-shadow: 0 2px 8px rgba(33,150,243,0.13);
+}
+
+.view-password-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  margin-left: 6px;
+  color: #1976d2;
+  padding: 0 4px;
+  transition: color 0.2s;
+}
+.view-password-btn:hover {
+  color: #1565c0;
+}
+.password-field {
+  display: flex;
+  align-items: center;
 }
 .modal-cancel-btn {
   background: #fff;

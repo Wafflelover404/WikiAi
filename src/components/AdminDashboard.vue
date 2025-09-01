@@ -1,4 +1,3 @@
-
 <template>
   <div>
     <div class="admin-dashboard">
@@ -7,68 +6,68 @@
       </div>
       <div class="admin-tab-content">
         <div v-if="activeTab === 'Users'">
-        <div class="admin-section-header">
-          <h2>Users</h2>
-          <button @click="fetchUsers" class="refresh-btn">Refresh</button>
+          <div class="admin-section-header">
+            <h2>Users</h2>
+            <button @click="fetchUsers" class="refresh-btn">Refresh</button>
+          </div>
+          <table v-if="users.length" class="users-table">
+            <thead>
+              <tr>
+                <th>Username</th>
+                <th>Role</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="user in users" :key="user.username">
+                <td>{{ user.username }}</td>
+                <td>{{ user.role }}</td>
+                <td>{{ user.last_login || 'Never' }}</td>
+                <td>
+                  <button class="danger-btn" @click="deleteUser(user.username)">Delete</button>
+                  <button class="edit-btn" @click="openEditUser(user)">Edit</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <div v-else class="empty-msg">No users found.</div>
+          <div class="admin-section-sub">
+            <h3>Create New User</h3>
+            <form @submit.prevent="createUser" class="user-form">
+              <input v-model="newUser.username" placeholder="Username" required />
+              <div style="position: relative; display: flex; align-items: center;">
+                <input
+                  v-model="newUser.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  placeholder="Password"
+                  required
+                  style="flex: 1;"
+                />
+                <button
+                  type="button"
+                  @click="showPassword = !showPassword"
+                  style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 16px; color: #1976d2;"
+                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                  tabindex="-1"
+                >
+                  {{ showPassword ? '🙈' : '👁️' }}
+                </button>
+              </div>
+              <select v-model="newUser.role">
+                <option value="user">User</option>
+                <option value="admin">Admin</option>
+              </select>
+              <label>Allowed Files:</label>
+              <select v-model="newUser.allowed_files" multiple>
+                <option v-for="file in files" :key="file.filename" :value="file.filename">{{ file.filename }}</option>
+                <option value="all">All Files</option>
+              </select>
+              <button type="submit" class="create-btn">Create User</button>
+            </form>
+            <div v-if="userCreateMsg" class="msg">{{ userCreateMsg }}</div>
+          </div>
         </div>
-        <table v-if="users.length" class="users-table">
-          <thead>
-            <tr>
-              <th>Username</th>
-              <th>Role</th>
-              <th>Last Login</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in users" :key="user.username">
-              <td>{{ user.username }}</td>
-              <td>{{ user.role }}</td>
-              <td>{{ user.last_login || 'Never' }}</td>
-              <td>
-                <button class="danger-btn" @click="deleteUser(user.username)">Delete</button>
-                <button class="edit-btn" @click="openEditUser(user)">Edit</button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div v-else class="empty-msg">No users found.</div>
-        <div class="admin-section-sub">
-          <h3>Create New User</h3>
-          <form @submit.prevent="createUser" class="user-form">
-            <input v-model="newUser.username" placeholder="Username" required />
-            <div style="position: relative; display: flex; align-items: center;">
-              <input
-                v-model="newUser.password"
-                :type="showPassword ? 'text' : 'password'"
-                placeholder="Password"
-                required
-                style="flex: 1;"
-              />
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 16px; color: #1976d2;"
-                :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                tabindex="-1"
-              >
-                {{ showPassword ? '🙈' : '👁️' }}
-              </button>
-            </div>
-            <select v-model="newUser.role">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-            <label>Allowed Files:</label>
-            <select v-model="newUser.allowed_files" multiple>
-              <option v-for="file in files" :key="file.filename" :value="file.filename">{{ file.filename }}</option>
-              <option value="all">All Files</option>
-            </select>
-            <button type="submit" class="create-btn">Create User</button>
-          </form>
-          <div v-if="userCreateMsg" class="msg">{{ userCreateMsg }}</div>
-        </div>
-      </div>
   <div v-else-if="activeTab === 'Files'">
         <div class="admin-section-header">
           <h2>Files</h2>
@@ -80,49 +79,56 @@
               <button class="danger-btn" @click="deleteFile(file)">Delete</button>
             </li>
           </ul>
-          <!-- ...existing code... -->
-  <!-- User Edit Modal: always mounted at root for proper overlay -->
-  <UserEditModal
-    v-if="editUserModal && editUserData"
-    :editUserData="editUserData"
-    :editUserMsg="editUserMsg"
-    @save="saveEditUser"
-    @close="closeEditUser"
-  />
         <form @submit.prevent="uploadFile" class="file-form">
           <input type="file" ref="fileInput" />
           <button type="submit" class="upload-btn">Upload File</button>
         </form>
         <div v-if="fileUploadMsg" class="msg">{{ fileUploadMsg }}</div>
       </div>
-  <div v-else-if="activeTab === 'System'">
-        <div class="admin-section-header">
-          <h2>System</h2>
-        </div>
-        <div class="system-actions">
-          <button @click="fetchUsers" class="refresh-btn">Reload Users</button>
-          <button @click="fetchFiles" class="refresh-btn">Reload Files</button>
-        </div>
-        <div class="system-info">
-          <h3>API Endpoints (Admin Only)</h3>
-          <ul>
-            <li><b>POST</b> /register — Create user</li>
-            <li><b>GET</b> /accounts — List users</li>
-            <li><b>DELETE</b> /user/delete — Delete user</li>
-            <li><b>POST</b> /user/edit — Edit user</li>
-            <li><b>POST</b> /upload — Upload file</li>
-            <li><b>DELETE</b> /files/delete_by_fileid — Delete file by file_id</li>
-            <li><b>DELETE</b> /files/delete_by_filename — Delete file by filename</li>
-          </ul>
-        </div>
+    <div v-else-if="activeTab === 'Reports'">
+      <div class="admin-section-header">
+        <h2>Reports</h2>
+        <button @click="fetchReports" class="refresh-btn">Refresh</button>
+      </div>
+      <div v-if="reportsMsg" class="msg">{{ reportsMsg }}</div>
+      <div class="reports-tabs">
+        <button :class="['report-tab', {active: reportTab === 'auto'}]" @click="reportTab = 'auto'">Automatic</button>
+        <button :class="['report-tab', {active: reportTab === 'manual'}]" @click="reportTab = 'manual'">Manual</button>
+      </div>
+      <div class="reports-section scrollable-reports">
+        <ReportTable v-if="reportTab === 'auto'" :reports="autoReports" empty-msg="No automatic reports found." />
+        <ReportTable v-else :reports="manualReports" empty-msg="No manual reports found." />
       </div>
     </div>
+    <div v-else-if="activeTab === 'System'">
+          <div class="admin-section-header">
+            <h2>System</h2>
+          </div>
+          <div class="system-actions">
+            <button @click="fetchUsers" class="refresh-btn">Reload Users</button>
+            <button @click="fetchFiles" class="refresh-btn">Reload Files</button>
+          </div>
+          <div class="system-info">
+            <h3>API Endpoints (Admin Only)</h3>
+            <ul>
+              <li><b>POST</b> /register — Create user</li>
+              <li><b>GET</b> /accounts — List users</li>
+              <li><b>DELETE</b> /user/delete — Delete user</li>
+              <li><b>POST</b> /user/edit — Edit user</li>
+              <li><b>POST</b> /upload — Upload file</li>
+              <li><b>DELETE</b> /files/delete_by_fileid — Delete file by file_id</li>
+              <li><b>DELETE</b> /files/delete_by_filename — Delete file by filename</li>
+            </ul>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- User Edit Modal: always mounted at root for proper overlay -->
     <UserEditModal
       v-if="editUserModal && editUserData"
       :editUserData="editUserData"
       :editUserMsg="editUserMsg"
+      :files="files"
       @save="saveEditUser"
       @close="closeEditUser"
     />
@@ -131,17 +137,18 @@
 
 <script>
 import UserEditModal from './UserEditModal.vue';
+import ReportTable from './ReportTable.vue';
 
 export default {
   name: 'AdminDashboard',
-  components: { UserEditModal },
+  components: { UserEditModal, ReportTable },
   props: {
     token: { type: String, required: true },
     API_BASE_URL: { type: String, required: true }
   },
   data() {
     return {
-      tabs: ['Users', 'Files', 'System'],
+      tabs: ['Users', 'Files', 'Reports', 'System'],
       activeTab: 'Users',
       users: [],
       files: [],
@@ -151,15 +158,40 @@ export default {
         role: 'user',
         allowed_files: []
       },
-  userCreateMsg: '',
-  fileUploadMsg: '',
-  editUserModal: false,
-  editUserData: null,
-  editUserMsg: '',
-  showPassword: false
+      userCreateMsg: '',
+      fileUploadMsg: '',
+      editUserModal: false,
+      editUserData: null,
+      editUserMsg: '',
+      showPassword: false,
+      autoReports: [],
+      manualReports: [],
+      reportsMsg: '',
+      reportTab: 'auto',
     };
   },
   methods: {
+    async fetchReports() {
+      this.reportsMsg = '';
+      try {
+        // Fetch auto reports
+        let res = await fetch(`${this.API_BASE_URL}/reports/get/auto`, {
+          headers: { Authorization: `Bearer ${this.token}` }
+        });
+        let data = await res.json();
+        this.autoReports = Array.isArray(data.reports) ? data.reports : [];
+        // Fetch manual reports
+        res = await fetch(`${this.API_BASE_URL}/reports/get/manual`, {
+          headers: { Authorization: `Bearer ${this.token}` }
+        });
+        data = await res.json();
+        this.manualReports = Array.isArray(data.reports) ? data.reports : [];
+      } catch (e) {
+        this.reportsMsg = 'Failed to fetch reports.';
+        this.autoReports = [];
+        this.manualReports = [];
+      }
+    },
     async fetchUsers() {
       try {
         const res = await fetch(`${this.API_BASE_URL}/accounts`, {
@@ -190,6 +222,7 @@ export default {
         if (res.ok && data.status === 'success' && data.response && Array.isArray(data.response.documents)) {
           // Ensure each file object has file_id, filename, etc.
           this.files = data.response.documents.map(doc => ({ ...doc }));
+          console.log('DEBUG: files after fetch', this.files);
         } else {
           this.files = [];
         }
@@ -299,7 +332,8 @@ export default {
         username: user.username,
         new_username: user.username,
         password: '',
-        role: user.role
+        role: user.role,
+        allowed_files: Array.isArray(user.allowed_files) ? [...user.allowed_files] : []
       };
       this.editUserMsg = '';
     },
@@ -332,6 +366,7 @@ export default {
   mounted() {
     this.fetchUsers();
     this.fetchFiles();
+    this.fetchReports();    
   }
 };
 </script>
@@ -486,6 +521,35 @@ export default {
 .system-info li {
   margin-bottom: 6px;
   font-size: 15px;
+}
+.reports-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 18px;
+}
+.report-tab {
+  padding: 10px 32px;
+  font-size: 16px;
+  font-weight: 500;
+  color: #1976d2;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-bottom 0.2s;
+}
+.report-tab.active {
+  border-bottom: 3px solid #1976d2;
+  background: #e3f2fd;
+  color: #1565c0;
+}
+.scrollable-reports {
+  max-height: 480px;
+  overflow-y: auto;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(33, 150, 243, 0.04);
+  padding: 12px 0;
 }
 </style>
 
