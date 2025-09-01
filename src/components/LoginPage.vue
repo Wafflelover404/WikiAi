@@ -1,11 +1,21 @@
 <template>
   <div class="login-page">
+    <AnimatedBackground class="background" />
     <div class="login-box">
       <h2>Login</h2>
       <form @submit.prevent="handleLogin">
         <div class="form-group">
           <label for="serverUrl">API URL</label>
-          <input id="serverUrl" v-model="serverUrl" type="text" placeholder="http://localhost:9001" required />
+          <input 
+            id="serverUrl" 
+            v-model="serverUrl" 
+            type="text" 
+            placeholder="http://localhost:9001" 
+            required 
+          />
+          <small v-if="showProxyWarning" class="proxy-warning">
+            Using proxy - set VITE_API_PROXY in .env
+          </small>
         </div>
         <div class="form-group">
           <label for="username">Username</label>
@@ -28,16 +38,20 @@
 </template>
 
 <script>
+import AnimatedBackground from './AnimatedBackground.vue';
+
 export default {
   name: 'LoginPage',
+  components: { AnimatedBackground },
   data() {
     return {
-      serverUrl: this.$root.serverUrl || '',
+      serverUrl: this.$root.serverUrl || import.meta.env.VITE_API_PROXY || '',
       username: '',
       password: '',
       rememberMe: false,
       loading: false,
-      error: ''
+      error: '',
+      showProxyWarning: false
     };
   },
   mounted() {
@@ -50,29 +64,52 @@ export default {
       this.rememberMe = true;
       this.autoLogin();
     }
+    
+    // Show proxy warning if using dev proxy
+    this.showProxyWarning = !!import.meta.env.VITE_API_PROXY;
   },
   methods: {
     async autoLogin() {
-      // Automatically attempt login with stored credentials
       await this.handleLogin(true);
     },
     async handleLogin(isAuto = false) {
       this.loading = true;
       this.error = '';
-      this.$root.serverUrl = this.serverUrl;
+      
       try {
+        // Clean and validate URL
+        let cleanUrl = this.serverUrl.trim();
+        
+        // Handle proxy configuration
+        if (import.meta.env.DEV && import.meta.env.VITE_API_PROXY) {
+          cleanUrl = '/api'; // Use proxy endpoint
+        } else {
+          // Ensure proper URL format
+          if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+            cleanUrl = 'http://' + cleanUrl;
+          }
+          cleanUrl = cleanUrl.replace(/\/+$/, ''); // Remove trailing slashes
+        }
+
+        this.$root.serverUrl = cleanUrl;
+        
         const { apiRequest } = await import('../api.js');
         const res = await apiRequest({
-          url: `${this.serverUrl}/login`,
+          url: `${cleanUrl}/login`,
           method: 'POST',
           data: {
-            username: this.username,
-            password: this.password
+            username: this.username.trim(),
+            password: this.password.trim()
+          },
+          // Critical: Add CORS headers
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Origin': window.location.origin
           }
         });
-        if (res.token) {
-          this.$root.token = res.token;
-          // Store credentials if "Remember Me" is checked
+
+        if (res.token || (res.status && res.session_id)) {
           if (this.rememberMe) {
             localStorage.setItem(
               'loginData',
@@ -85,14 +122,38 @@ export default {
           } else {
             localStorage.removeItem('loginData');
           }
-          // Pass role and token to parent
-          this.$emit('login-success', { username: this.username, password: this.password, role: res.role || 'user', token: res.token, serverUrl: this.serverUrl });
+          
+          if (res.token) {
+            this.$root.token = res.token;
+            this.$emit('login-success', { 
+              username: this.username, 
+              password: this.password, 
+              role: res.role || 'user', 
+              token: res.token, 
+              serverUrl: cleanUrl 
+            });
+          } else {
+            this.$root.session_id = res.session_id;
+            this.$emit('login-success', { 
+              username: this.username, 
+              password: this.password, 
+              role: res.role || 'user', 
+              session_id: res.session_id, 
+              status: res.status, 
+              serverUrl: cleanUrl 
+            });
+          }
         } else {
           if (!isAuto) this.error = res.detail || res.message || 'Login failed.';
-          else localStorage.removeItem('loginData'); // remove invalid stored data
+          else localStorage.removeItem('loginData');
         }
       } catch (e) {
-        if (!isAuto) this.error = 'Network or server error.';
+        console.error('Login error:', e);
+        if (!isAuto) {
+          this.error = e.message.includes('CORS') 
+            ? 'CORS error - configure server or use dev proxy' 
+            : 'Network or server error.';
+        }
       }
       this.loading = false;
     }
@@ -107,8 +168,17 @@ export default {
   justify-content: center;
   height: 100vh;
   background: #f7f7f7;
+  position: relative;
+  overflow: hidden;
+}
+.background {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  z-index: 0;
 }
 .login-box {
+  position: relative;
+  z-index: 1;
   background: #fff;
   padding: 32px 40px;
   border-radius: 8px;
@@ -143,5 +213,11 @@ button {
   color: #d32f2f;
   margin-top: 12px;
   font-size: 15px;
+}
+.proxy-warning {
+  display: block;
+  color: #ff9800;
+  font-size: 0.8em;
+  margin-top: 4px;
 }
 </style>
