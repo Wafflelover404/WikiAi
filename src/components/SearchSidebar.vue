@@ -75,45 +75,51 @@ export default {
   },
   methods: {
     cleanResult(result) {
-      // Remove Link Content, <id>, <main_keyword> tags
-      let text = result;
-      text = text.replace(/Link Content:/g, '');
-      text = text.replace(/<id>.*?<\/id>/g, '');
-      text = text.replace(/<main_keyword>.*?<\/main_keyword>/g, '');
-      text = text.replace(/<upload_id>(.*?)<\/upload_id>/g, '');
-      return text.trim();
+      // For new format, just return the text field
+      return result && result.text ? result.text : '';
     },
     extractUploadId(result) {
-      const match = result.match(/<upload_id>(.*?)<\/upload_id>/);
-      return match ? match[1] : null;
+      // For new format, return filename
+      return result && result.filename ? result.filename : null;
     },
-    async openFile(uploadId, segmentText) {
-      if (!uploadId || !this.token || !this.serverUrl) return;
+    async openFile(filename, segmentText) {
+      if (!filename || !this.token || !this.serverUrl) return;
       try {
-        const { apiRequest } = await import('../api.js');
-        const res = await apiRequest({
-          url: `${this.serverUrl}/files/file_content?file_id=${uploadId}&filename=sc-machine.txt`,
+        filename = filename.substring(5);
+        const encodedFilename = encodeURIComponent(filename);
+        const url = `${this.serverUrl}/files/content/${encodedFilename}`;
+        const res = await fetch(url, {
           method: 'GET',
-          token: this.token
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
         });
-        if (res.status === 'success' && res.response) {
-          let content = res.response.content;
+        if (res.ok) {
+          let content = await res.text();
           if (segmentText) {
             const escaped = segmentText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
             const regex = new RegExp(escaped, 'g');
             content = content.replace(regex, '<mark style="background: #0078d4; color: #fff;">$&</mark>');
           }
           this.fileModalContent = content;
-          this.fileModalName = res.response.filename;
+          this.fileModalName = filename;
+          this.fileModalVisible = true;
+        } else if (res.status === 404) {
+          this.fileModalContent = 'File not found.';
+          this.fileModalName = filename;
+          this.fileModalVisible = true;
+        } else if (res.status === 403) {
+          this.fileModalContent = 'Access denied.';
+          this.fileModalName = filename;
           this.fileModalVisible = true;
         } else {
           this.fileModalContent = 'Unable to load file content.';
-          this.fileModalName = '';
+          this.fileModalName = filename;
           this.fileModalVisible = true;
         }
       } catch (e) {
         this.fileModalContent = 'Error loading file.';
-        this.fileModalName = '';
+        this.fileModalName = filename;
         this.fileModalVisible = true;
       }
     },
@@ -125,35 +131,41 @@ export default {
       this.aiOverviewLoaded = false;
       try {
         const { apiRequest } = await import('../api.js');
-        // Request unhumanized results first
+        // Request pure RAG chunks (unhumanized)
         const res = await apiRequest({
-          url: `${this.serverUrl}/query?humanize=false`,
+          url: `${this.serverUrl}/query`,
           method: 'POST',
           token: this.token,
-          data: { text: this.searchText }
+          data: { question: this.searchText, humanize: false }
         });
-        if (res.status === 'success' && Array.isArray(res.response)) {
-          this.searchResults = res.response;
+        if (res.status === 'success' && res.response && Array.isArray(res.response.chunks)) {
+          // Parse each chunk to extract text and filename
+          this.searchResults = res.response.chunks.map(chunk => {
+            const match = chunk.match(/<filename>(.*?)<\/filename>/);
+            const filename = match ? match[1] : null;
+            const text = chunk.replace(/<filename>.*?<\/filename>/g, '').trim();
+            return { text, filename };
+          });
         } else {
-          this.searchResults = ['No results found.'];
+          this.searchResults = [];
         }
         this.aiOverviewLoading = true;
         // Now request humanized (AI overview)
         const res2 = await apiRequest({
-          url: `${this.serverUrl}/query?humanize=true`,
+          url: `${this.serverUrl}/query`,
           method: 'POST',
           token: this.token,
-          data: { text: this.searchText }
+          data: { question: this.searchText, humanize: true }
         });
-        if (res2.status === 'success' && res2.response) {
-          this.aiOverview = typeof res2.response === 'string' ? res2.response : res2.response.ai_overview || '';
+        if (res2.status === 'success' && res2.response && res2.response.answer) {
+          this.aiOverview = res2.response.answer;
         } else {
           this.aiOverview = '';
         }
         this.aiOverviewLoading = false;
         this.aiOverviewLoaded = true;
       } catch (e) {
-        this.searchResults = ['Error searching knowledge base.'];
+        this.searchResults = [];
         this.aiOverview = '';
         this.aiOverviewLoading = false;
         this.aiOverviewLoaded = true;
@@ -164,6 +176,10 @@ export default {
 </script>
 
 <style scoped>
+  .search-sidebar {
+    box-sizing: border-box;
+    margin-right: 10px;
+  }
   /* Animation for sidebar appearance */
   .sidebar-slide-enter-active, .sidebar-slide-leave-active {
     transition: all 0.3s cubic-bezier(.55,0,.1,1);
