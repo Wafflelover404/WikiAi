@@ -4,7 +4,7 @@
     <div class="login-box">
       <h2>Login</h2>
       <form @submit.prevent="handleLogin">
-        <div class="form-group">
+        <div class="form-group" v-if="!serverUrl">
           <label for="serverUrl">API URL</label>
           <input 
             id="serverUrl" 
@@ -45,7 +45,7 @@ export default {
   components: { AnimatedBackground },
   data() {
     return {
-      serverUrl: this.$root.serverUrl || import.meta.env.VITE_API_PROXY || '',
+      serverUrl: import.meta.env.VITE_API_PROXY || '',
       username: '',
       password: '',
       rememberMe: false,
