@@ -44,18 +44,20 @@ export default {
   name: 'LoginPage',
   components: { AnimatedBackground },
   data() {
+    // Read from VITE_API_URL first, fallback to proxy if needed
+    const defaultServerUrl = import.meta.env.VITE_API_URL?.trim() || import.meta.env.VITE_API_PROXY || '';
+
     return {
-      serverUrl: import.meta.env.VITE_API_PROXY || '',
+      serverUrl: defaultServerUrl,
       username: '',
       password: '',
       rememberMe: false,
       loading: false,
       error: '',
-      showProxyWarning: false
+      showProxyWarning: !!import.meta.env.VITE_API_PROXY
     };
   },
   mounted() {
-    // Check if credentials are stored
     const stored = JSON.parse(localStorage.getItem('loginData'));
     if (stored) {
       this.serverUrl = stored.serverUrl;
@@ -64,8 +66,7 @@ export default {
       this.rememberMe = true;
       this.autoLogin();
     }
-    
-    // Show proxy warning if using dev proxy
+
     this.showProxyWarning = !!import.meta.env.VITE_API_PROXY;
   },
   methods: {
@@ -75,24 +76,21 @@ export default {
     async handleLogin(isAuto = false) {
       this.loading = true;
       this.error = '';
-      
+
       try {
-        // Clean and validate URL
         let cleanUrl = this.serverUrl.trim();
-        
-        // Handle proxy configuration
+
         if (import.meta.env.DEV && import.meta.env.VITE_API_PROXY) {
-          cleanUrl = '/api'; // Use proxy endpoint
+          cleanUrl = '/api'; // Dev proxy
         } else {
-          // Ensure proper URL format
           if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
             cleanUrl = 'http://' + cleanUrl;
           }
-          cleanUrl = cleanUrl.replace(/\/+$/, ''); // Remove trailing slashes
+          cleanUrl = cleanUrl.replace(/\/+$/, '');
         }
 
         this.$root.serverUrl = cleanUrl;
-        
+
         const { apiRequest } = await import('../api.js');
         const res = await apiRequest({
           url: `${cleanUrl}/login`,
@@ -101,7 +99,6 @@ export default {
             username: this.username.trim(),
             password: this.password.trim()
           },
-          // Critical: Add CORS headers
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
@@ -122,25 +119,25 @@ export default {
           } else {
             localStorage.removeItem('loginData');
           }
-          
+
           if (res.token) {
             this.$root.token = res.token;
-            this.$emit('login-success', { 
-              username: this.username, 
-              password: this.password, 
-              role: res.role || 'user', 
-              token: res.token, 
-              serverUrl: cleanUrl 
+            this.$emit('login-success', {
+              username: this.username,
+              password: this.password,
+              role: res.role || 'user',
+              token: res.token,
+              serverUrl: cleanUrl
             });
           } else {
             this.$root.session_id = res.session_id;
-            this.$emit('login-success', { 
-              username: this.username, 
-              password: this.password, 
-              role: res.role || 'user', 
-              session_id: res.session_id, 
-              status: res.status, 
-              serverUrl: cleanUrl 
+            this.$emit('login-success', {
+              username: this.username,
+              password: this.password,
+              role: res.role || 'user',
+              session_id: res.session_id,
+              status: res.status,
+              serverUrl: cleanUrl
             });
           }
         } else {
@@ -150,8 +147,8 @@ export default {
       } catch (e) {
         console.error('Login error:', e);
         if (!isAuto) {
-          this.error = e.message.includes('CORS') 
-            ? 'CORS error - configure server or use dev proxy' 
+          this.error = e.message.includes('CORS')
+            ? 'CORS error - configure server or use dev proxy'
             : 'Network or server error.';
         }
       }
