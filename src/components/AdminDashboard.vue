@@ -24,9 +24,11 @@
                 <td>{{ user.username }}</td>
                 <td>{{ user.role }}</td>
                 <td>{{ user.last_login || 'Never' }}</td>
-                <td>
-                  <button class="danger-btn" @click="deleteUser(user.username)">Delete</button>
-                  <button class="edit-btn" @click="openEditUser(user)">Edit</button>
+                <td class="user-actions-cell">
+                  <span class="user-actions">
+                    <button class="danger-btn" @click="deleteUser(user.username)">Delete</button>
+                    <button class="edit-btn" @click="openEditUser(user)">Edit</button>
+                  </span>
                 </td>
               </tr>
             </tbody>
@@ -76,7 +78,10 @@
           <ul class="files-list">
             <li v-for="file in files" :key="file.file_id || file.filename">
               <span>{{ file.original_filename || file.filename }}</span>
-              <button class="danger-btn" @click="deleteFile(file)">Delete</button>
+              <span class="file-actions">
+                <button class="danger-btn" @click="deleteFile(file)">Delete</button>
+                <button class="edit-btn" @click="openEditFile(file)">Edit</button>
+              </span>
             </li>
           </ul>
         <form @submit.prevent="uploadFile" class="file-form">
@@ -132,16 +137,25 @@
       @save="saveEditUser"
       @close="closeEditUser"
     />
+    <FileEditModal
+      v-if="editFileModal && editFileName"
+      :filename="editFileName"
+      :token="token"
+      :API_BASE_URL="API_BASE_URL"
+      @save="onFileEditSaved"
+      @close="closeEditFile"
+    />
   </div>
 </template>
 
 <script>
 import UserEditModal from './UserEditModal.vue';
 import ReportTable from './ReportTable.vue';
+import FileEditModal from './FileEditModal.vue';
 
 export default {
   name: 'AdminDashboard',
-  components: { UserEditModal, ReportTable },
+  components: { UserEditModal, ReportTable, FileEditModal },
   props: {
     token: { type: String, required: true },
     API_BASE_URL: { type: String, required: true }
@@ -168,6 +182,8 @@ export default {
       manualReports: [],
       reportsMsg: '',
       reportTab: 'auto',
+      editFileModal: false,
+      editFileName: '',
     };
   },
   methods: {
@@ -361,6 +377,18 @@ export default {
       } catch (e) {
         this.editUserMsg = 'Failed to update user.';
       }
+    },
+    openEditFile(file) {
+      this.editFileName = file.filename;
+      this.editFileModal = true;
+    },
+    closeEditFile() {
+      this.editFileModal = false;
+      this.editFileName = '';
+    },
+    onFileEditSaved() {
+      this.closeEditFile();
+      this.fetchFiles();
     }
   },
   mounted() {
@@ -498,6 +526,10 @@ export default {
   align-items: center;
   justify-content: space-between;
 }
+.file-actions {
+  display: flex;
+  gap: 6px;
+}
 .msg {
   margin-top: 12px;
   color: #1976d2;
@@ -550,6 +582,14 @@ export default {
   border-radius: 8px;
   box-shadow: 0 1px 4px rgba(33, 150, 243, 0.04);
   padding: 12px 0;
+}
+.user-actions-cell {
+  text-align: right;
+}
+.user-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
 }
 </style>
 
