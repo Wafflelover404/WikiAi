@@ -1,39 +1,121 @@
 <template>
-  <div>
-    <div class="admin-dashboard">
-      <div class="admin-tabs">
-        <button v-for="tab in tabs" :key="tab" :class="['admin-tab', {active: activeTab === tab}]" @click="activeTab = tab">{{ tab }}</button>
-      </div>
-      <div class="admin-tab-content">
-        <div v-if="activeTab === 'Users'">
-          <div class="admin-section-header">
-            <h2>Users</h2>
-            <button @click="fetchUsers" class="refresh-btn">Refresh</button>
+  <div class="admin-dashboard">
+    <!-- Modern Header with Navigation -->
+    <div class="admin-header">
+      <div class="admin-header-content">
+        <div class="admin-title-section">
+          <h1 class="admin-title">🛠️ Administration</h1>
+          <p class="admin-subtitle">Manage users, files, and system settings</p>
+        </div>
+        <div class="admin-header-actions">
+          <div class="admin-stats-quick">
+            <div class="stat-item">
+              <span class="stat-number">{{ users.length }}</span>
+              <span class="stat-label">Users</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">{{ files.length }}</span>
+              <span class="stat-label">Files</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-number">{{ totalReports }}</span>
+              <span class="stat-label">Reports</span>
+            </div>
           </div>
-          <table v-if="users.length" class="users-table">
-            <thead>
-              <tr>
-                <th>Username</th>
-                <th>Role</th>
-                <th>Last Login</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="user in users" :key="user.username">
-                <td>{{ user.username }}</td>
-                <td>{{ user.role }}</td>
-                <td>{{ user.last_login || 'Never' }}</td>
-                <td class="user-actions-cell">
-                  <span class="user-actions">
-                    <button class="danger-btn" @click="deleteUser(user.username)">Delete</button>
-                    <button class="edit-btn" @click="openEditUser(user)">Edit</button>
-                  </span>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-          <div v-else class="empty-msg">No users found.</div>
+        </div>
+      </div>
+      <div class="admin-tabs">
+        <button v-for="tab in tabs" :key="tab" :class="['admin-tab', {active: activeTab === tab}]" @click="activeTab = tab">
+          <span class="tab-icon">{{ getTabIcon(tab) }}</span>
+          <span class="tab-text">{{ tab }}</span>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Content Area with better layout -->
+    <div class="admin-content">
+      <div class="admin-tab-content">
+        <div v-if="activeTab === 'Users'" class="users-section">
+          <div class="admin-section-header">
+            <h2>👥 User Management</h2>
+            <div class="header-actions">
+              <div class="search-users">
+                <input 
+                  v-model="userSearch" 
+                  placeholder="Search users..." 
+                  class="search-input"
+                  :disabled="loadingUsers"
+                />
+                <span v-if="userSearch" class="search-results-count">{{ filteredUsers.length }} results</span>
+              </div>
+              <button @click="fetchUsers" class="refresh-btn" :disabled="loadingUsers">
+                <span v-if="loadingUsers" class="spinner">⟳</span>
+                <span v-else>🔄</span>
+                Refresh
+              </button>
+            </div>
+          </div>
+          
+          <div v-if="loadingUsers" class="loading-state">
+            <div class="loading-spinner">⟳</div>
+            <p>Loading users...</p>
+          </div>
+          
+          <div v-else-if="filteredUsers.length" class="users-table-container">
+            <table class="modern-users-table">
+              <thead>
+                <tr>
+                  <th>Username</th>
+                  <th>Role</th>
+                  <th>Last Login</th>
+                  <th>Files Access</th>
+                  <th class="actions-header">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="user in filteredUsers" :key="user.username" class="user-row">
+                  <td class="username-cell">
+                    <div class="user-info">
+                      <span class="username">{{ user.username }}</span>
+                      <span v-if="user.username === 'admin'" class="admin-badge">Admin</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span :class="['role-badge', user.role]">{{ user.role }}</span>
+                  </td>
+                  <td class="last-login-cell">
+                    <span v-if="user.last_login" class="login-time">{{ formatLoginTime(user.last_login) }}</span>
+                    <span v-else class="never-logged">Never</span>
+                  </td>
+                  <td class="files-access-cell">
+                    <span class="files-count">{{ getFileAccessText(user) }}</span>
+                  </td>
+                  <td class="actions-cell">
+                    <div class="action-buttons">
+                      <button class="btn-edit" @click="openEditUser(user)" :disabled="loadingUsers">
+                        ✏️ Edit
+                      </button>
+                      <button 
+                        class="btn-delete" 
+                        @click="deleteUser(user.username)" 
+                        :disabled="loadingUsers || user.username === 'admin'"
+                        :title="user.username === 'admin' ? 'Cannot delete admin user' : 'Delete user'"
+                      >
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div v-else class="empty-state">
+            <div class="empty-icon">👥</div>
+            <h3>No users found</h3>
+            <p v-if="userSearch">Try adjusting your search terms</p>
+            <p v-else>Create your first user to get started</p>
+          </div>
           <div class="admin-section-sub">
             <h3>Create New User</h3>
             <form @submit.prevent="createUser" class="user-form">
@@ -184,9 +266,34 @@ export default {
       reportTab: 'auto',
       editFileModal: false,
       editFileName: '',
+      userSearch: '',
+      loadingUsers: false,
+      loadingFiles: false,
     };
   },
+  computed: {
+    totalReports() {
+      return this.autoReports.length + this.manualReports.length;
+    },
+    filteredUsers() {
+      if (!this.userSearch) return this.users;
+      const search = this.userSearch.toLowerCase();
+      return this.users.filter(user => 
+        user.username.toLowerCase().includes(search) ||
+        user.role.toLowerCase().includes(search)
+      );
+    }
+  },
   methods: {
+    getTabIcon(tab) {
+      const icons = {
+        Users: '👥',
+        Files: '📁',
+        Reports: '📊',
+        System: '⚙️'
+      };
+      return icons[tab] || '📄';
+    },
     async fetchReports() {
       this.reportsMsg = '';
       try {
@@ -389,6 +496,40 @@ export default {
     onFileEditSaved() {
       this.closeEditFile();
       this.fetchFiles();
+    },
+    formatLoginTime(loginTime) {
+      if (!loginTime) return 'Never';
+      const date = new Date(loginTime);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffHours / 24);
+      
+      if (diffHours < 24) {
+        return diffHours < 1 ? 'Just now' : `${diffHours}h ago`;
+      } else if (diffDays < 30) {
+        return `${diffDays}d ago`;
+      } else {
+        return date.toLocaleDateString();
+      }
+    },
+    getFileAccessText(user) {
+      if (!user.allowed_files || !Array.isArray(user.allowed_files)) {
+        return 'No access';
+      }
+      
+      if (user.allowed_files.includes('all')) {
+        return 'All files';
+      }
+      
+      const fileCount = user.allowed_files.length;
+      if (fileCount === 0) {
+        return 'No access';
+      } else if (fileCount === 1) {
+        return '1 file';
+      } else {
+        return `${fileCount} files`;
+      }
     }
   },
   mounted() {
@@ -401,36 +542,141 @@ export default {
 
 <style scoped>
 .admin-dashboard {
-  width: 100vw;
+  width: 100%;
   min-height: 100vh;
-  background: #f5f5f5;
-  padding: 0;
-  margin: 0;
+  background: #f8f9fa;
+  display: flex;
+  flex-direction: column;
 }
+
+/* Modern Header Styles */
+.admin-header {
+  background: white;
+  border-bottom: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.admin-header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.admin-title-section {
+  flex: 1;
+}
+
+.admin-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #212529;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-subtitle {
+  font-size: 16px;
+  color: #6c757d;
+  margin: 0;
+  font-weight: 400;
+}
+
+.admin-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.admin-stats-quick {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0d6efd;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  font-weight: 500;
+}
+/* Modern Tab Navigation */
 .admin-tabs {
   display: flex;
-  gap: 0;
-  background: #fff;
-  border-bottom: 1.5px solid #e0e0e0;
+  background: white;
+  border-bottom: 1px solid #e9ecef;
+  padding: 0 40px;
 }
+
 .admin-tab {
-  padding: 18px 36px;
-  font-size: 18px;
-  font-weight: 500;
-  color: #1976d2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6c757d;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-bottom 0.2s;
+  transition: all 0.3s ease;
+  text-decoration: none;
 }
+
+.admin-tab:hover {
+  color: #0d6efd;
+  background: rgba(13, 110, 253, 0.04);
+}
+
 .admin-tab.active {
-  border-bottom: 3px solid #1976d2;
-  background: #e3f2fd;
-  color: #1565c0;
+  color: #0d6efd;
+  border-bottom-color: #0d6efd;
+  background: rgba(13, 110, 253, 0.04);
 }
+
+.tab-icon {
+  font-size: 18px;
+}
+
+.tab-text {
+  font-weight: 600;
+}
+
+/* Content Area */
+.admin-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #f8f9fa;
+}
+
 .admin-tab-content {
-  padding: 32px 48px;
+  flex: 1;
+  padding: 32px 40px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
 }
 .admin-section-header {
   display: flex;
@@ -590,6 +836,303 @@ export default {
   display: flex;
   justify-content: flex-end;
   gap: 6px;
+}
+
+/* Enhanced User Management Styles */
+.users-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.search-users {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-input {
+  padding: 12px 16px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 16px;
+  width: 300px;
+  transition: all 0.3s ease;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #0d6efd;
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.search-input:disabled {
+  background: #f8f9fa;
+  color: #6c757d;
+}
+
+.search-results-count {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.loading-spinner {
+  font-size: 32px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+  color: #0d6efd;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.users-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.modern-users-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+
+.modern-users-table th {
+  background: #f8f9fa;
+  color: #495057;
+  font-weight: 600;
+  padding: 16px 20px;
+  text-align: left;
+  border-bottom: 2px solid #e9ecef;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modern-users-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f3f4;
+  vertical-align: middle;
+}
+
+.user-row {
+  transition: background-color 0.2s ease;
+}
+
+.user-row:hover {
+  background: #f8f9fa;
+}
+
+.user-row:last-child td {
+  border-bottom: none;
+}
+
+.username-cell {
+  font-weight: 600;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.username {
+  color: #212529;
+  font-weight: 600;
+}
+
+.admin-badge {
+  background: #dc3545;
+  color: white;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.role-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.role-badge.admin {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffeaa7;
+}
+
+.role-badge.user {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #bee5eb;
+}
+
+.login-time {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.never-logged {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.files-count {
+  color: #495057;
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-edit, .btn-delete {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-edit {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.btn-edit:hover:not(:disabled) {
+  background: #bbdefb;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(21, 101, 192, 0.2);
+}
+
+.btn-delete {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.btn-delete:hover:not(:disabled) {
+  background: #ffcdd2;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(198, 40, 40, 0.2);
+}
+
+.btn-edit:disabled, .btn-delete:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-state h3 {
+  color: #495057;
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.empty-state p {
+  color: #6c757d;
+  margin: 0;
+  font-size: 16px;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .admin-header-content {
+    flex-direction: column;
+    gap: 20px;
+    align-items: flex-start;
+  }
+  
+  .admin-stats-quick {
+    width: 100%;
+    justify-content: space-around;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 12px;
+  }
+  
+  .search-input {
+    width: 100%;
+  }
+  
+  .modern-users-table {
+    font-size: 14px;
+  }
+  
+  .modern-users-table th,
+  .modern-users-table td {
+    padding: 12px 8px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .btn-edit, .btn-delete {
+    justify-content: center;
+  }
 }
 </style>
 
