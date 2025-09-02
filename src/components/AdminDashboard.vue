@@ -1114,20 +1114,60 @@ export default {
       this.previewModalOpen = true;
       this.previewModalFile = file;
       this.previewModalLoading = true;
-      // Fetch file content from backend
+      
       try {
-        const filename = file.filename.startsWith('temp_') ? file.filename.slice(5) : file.filename;
-        const cleanFilename = filename.startsWith('file:') ? filename.slice(5) : filename;
-        const res = await fetch(`${this.API_BASE_URL}/files/content/${encodeURIComponent(cleanFilename)}`, {
-          headers: { Authorization: `Bearer ${this.token}` }
-        });
-        const data = await res.json();
-        this.previewModalContent = data.content || '';
-        if (data.segments) {
-          this.previewModalContent = this.highlightSegments(data.content, data.segments);
+        // Clean up the filename
+        let filename = file.filename;
+        if (filename.startsWith('temp_')) {
+          filename = filename.slice(5);
         }
-      } catch (e) {
-        this.previewModalContent = 'Failed to load file content.';
+        if (filename.startsWith('file:')) {
+          filename = filename.slice(5);
+        }
+        
+        const url = `${this.API_BASE_URL}/files/content/${encodeURIComponent(filename)}`;
+        console.log('Fetching file content from:', url);
+        
+        const res = await fetch(url, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`,
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+
+        // Check content type of response
+        const contentType = res.headers.get('content-type');
+        console.log('Response content type:', contentType);
+
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+          data = await res.json();
+          
+          if (data.status === 'error') {
+            throw new Error(data.message || 'Failed to load file content');
+          }
+
+          // Set the content and handle highlighting if segments are present
+          if (data.segments && Array.isArray(data.segments) && data.segments.length > 0) {
+            this.previewModalContent = this.highlightSegments(data.content, data.segments);
+          } else {
+            this.previewModalContent = data.content || '';
+          }
+        } else {
+          // If not JSON, treat as plain text
+          const textContent = await res.text();
+          this.previewModalContent = textContent;
+        }
+        
+      } catch (error) {
+        console.error('Error loading file content:', error);
+        // Log the full error for debugging
+        console.error('Full error:', error);
+        this.previewModalContent = `Failed to load file content. Please try again.`;
       } finally {
         this.previewModalLoading = false;
       }
@@ -1140,13 +1180,33 @@ export default {
     },
     
     highlightSegments(content, segments) {
-      if (!segments || segments.length === 0) return content;
-      let highlighted = content;
-      for (const segment of segments) {
-        const span = `<span class="highlight">${segment}</span>`;
-        highlighted = highlighted.replace(segment, span);
+      if (!content || !segments || !Array.isArray(segments) || segments.length === 0) {
+        return content;
       }
-      return highlighted;
+
+      try {
+        let highlighted = content;
+        // Sort segments by length in descending order to handle overlapping matches
+        const sortedSegments = [...segments].sort((a, b) => b.length - a.length);
+        
+        for (const segment of sortedSegments) {
+          if (typeof segment !== 'string' || segment.length === 0) {
+            continue;
+          }
+          
+          // Escape special characters in the segment for use in regex
+          const escapedSegment = segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(escapedSegment, 'g');
+          
+          // Replace with highlighted span, ensuring we don't replace inside already highlighted spans
+          highlighted = highlighted.replace(regex, match => `<span class="highlight">${match}</span>`);
+        }
+        
+        return highlighted;
+      } catch (error) {
+        console.error('Error highlighting segments:', error);
+        return content;
+      }
     },
     
     async testAPIConnection() {
