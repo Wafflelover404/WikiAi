@@ -25,10 +25,16 @@
             <option value="admin">Admin</option>
           </select>
           <label>Allowed Files:</label>
-          <select v-model="editUserData.allowed_files" multiple>
-            <option v-for="file in files" :key="file.filename" :value="file.filename">{{ file.filename }}</option>
-            <option value="all">All Files</option>
-          </select>
+          <div class="allowed-files-checkboxes">
+            <label class="file-checkbox-label">
+              <input type="checkbox" value="all" v-model="editUserData.allowed_files" @change="onAllowedFilesChange('all')" />
+              All Files
+            </label>
+            <label v-for="file in files" :key="file.filename" class="file-checkbox-label">
+              <input type="checkbox" :value="file.filename" v-model="editUserData.allowed_files" @change="onAllowedFilesChange(file.filename)" :disabled="editUserData.allowed_files.includes('all')" />
+              {{ file.filename }}
+            </label>
+          </div>
         </div>
         <div class="modal-actions">
           <button type="submit" class="modal-save-btn">💾 Save</button>
@@ -41,6 +47,8 @@
 </template>
 
 <script>
+import { marked } from 'marked';
+
 export default {
   name: 'UserEditModal',
   props: {
@@ -55,11 +63,41 @@ export default {
     };
   },
   methods: {
+    getMarkedContent(text) {
+      if (!text) return '';
+      marked.setOptions({
+        gfm: true,
+        smartLists: true,
+        smartypants: true,
+        breaks: true,
+        headerIds: true,
+        mangle: false
+      });
+      return marked(text);
+    },
     saveEditUser() {
+      // Ensure exclusivity: if 'all' is selected, only send ['all']
+      if (this.editUserData.allowed_files.includes('all')) {
+        this.editUserData.allowed_files = ['all'];
+      } else {
+        // Remove any accidental 'all'
+        this.editUserData.allowed_files = this.editUserData.allowed_files.filter(f => f !== 'all');
+      }
       this.$emit('save');
     },
     closeModal() {
       this.$emit('close');
+    },
+    onAllowedFilesChange(changedValue) {
+      if (changedValue === 'all') {
+        if (this.editUserData.allowed_files.includes('all')) {
+          // Uncheck all other files
+          this.editUserData.allowed_files = ['all'];
+        }
+      } else {
+        // If any file is checked, uncheck 'all'
+        this.editUserData.allowed_files = this.editUserData.allowed_files.filter(f => f !== 'all');
+      }
     }
   },
   mounted() {
@@ -195,5 +233,27 @@ export default {
   border-radius: 5px;
   font-size: 1rem;
   margin-bottom: 2px;
+}
+
+/* Allowed files checkboxes styles */
+.allowed-files-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.file-checkbox-label {
+  display: flex;
+  align-items: center;
+  font-size: 1rem;
+  cursor: pointer;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+.file-checkbox-label input[type="checkbox"] {
+  accent-color: #1976d2;
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
 }
 </style>
