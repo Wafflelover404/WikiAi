@@ -57,7 +57,10 @@
                   />
                   <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
                 </div>
-                <button class="reload-btn" @click="updateFiles" aria-label="Reload files">🔄 Update</button>
+                <div class="file-status">
+                  <span class="status-text">{{ loading ? 'Loading...' : `${filteredFiles.length} files` }}</span>
+                  <span v-if="!loading" class="last-update">Last updated: {{ getLastUpdateTime() }}</span>
+                </div>
               </div>
             </div>
             <div v-if="loading" class="loading-indicator" role="status" aria-live="polite">Loading...</div>
@@ -143,28 +146,32 @@ export default {
       pendingSearch: ''
     };
   },
-  computed: {
-    isAdmin() {
-      return this.user && this.user.role === 'admin';
-    },
-    maskedToken() {
-      return this.token ? '•'.repeat(this.token.length) : 'No token';
-    },
-    filteredFiles() {
-      if (!this.globalSearch) return this.files;
-      return this.files.filter(f => f.toLowerCase().includes(this.globalSearch.toLowerCase()));
+  watch: {
+    currentView(newView) {
+      if (newView === 'files' && this.files.length === 0 && this.token && this.serverUrl) {
+        this.updateFiles();
+      }
     }
   },
   computed: {
-    isAdmin() {
-      // You may want to fetch user info from API or decode token
-      // For now, assume user info is available in this.user
-      return this.user && this.user.role === 'admin';
+      isAdmin() {
+        // You may want to fetch user info from API or decode token
+        // For now, assume user info is available in this.user
+        return this.user && this.user.role === 'admin';
+      },
+      maskedToken() {
+        return this.token ? '•'.repeat(this.token.length) : 'No token';
+      },
+      filteredFiles() {
+        if (!this.globalSearch) return this.files;
+        const search = this.globalSearch.toLowerCase();
+        return this.files.filter(file => {
+          const name = (file.filename || file.original_filename || '').toLowerCase();
+          const description = (file.description || '').toLowerCase();
+          return name.includes(search) || description.includes(search);
+        });
+      }
     },
-    maskedToken() {
-      return this.token ? '•'.repeat(this.token.length) : 'No token';
-    }
-  },
   methods: {
     toggleToken() {
       this.showToken = !this.showToken;
@@ -234,23 +241,39 @@ export default {
           const { apiRequest } = await import('./api.js');
           const res = await apiRequest({ url: `${this.serverUrl}/files/list`, method: 'GET', token: this.token });
           if (res && res.response && Array.isArray(res.response.documents)) {
-            this.files = res.response.documents.map(f => f.filename);
+            // Store full file objects with metadata instead of just filenames
+            this.files = res.response.documents.map(doc => ({
+              filename: doc.filename || doc.original_filename,
+              original_filename: doc.original_filename,
+              file_id: doc.file_id,
+              size: doc.size || 0,
+              upload_date: doc.upload_date || doc.created_at,
+              file_type: doc.file_type || this.getFileTypeFromName(doc.filename || doc.original_filename),
+              description: doc.description || ''
+            }));
+            console.log('Files loaded:', this.files);
           } else {
             this.files = [];
           }
         } catch (e) {
+          console.error('Error fetching files:', e);
           this.files = [];
         } finally {
           this.loading = false;
         }
       }
     },
-    async handleFileClick(filename) {
+    async handleFileClick(fileOrFilename) {
       if (!this.token || !this.serverUrl) return;
+      
+      // Handle both file objects and filenames
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : fileOrFilename.filename;
+      
       if (this.openedFiles.includes(filename)) {
         this.activeTab = filename;
         return;
       }
+      
       try {
         this.loading = true;
         const encodedFilename = encodeURIComponent(filename);
@@ -259,20 +282,27 @@ export default {
           method: 'GET',
           headers: { 'Authorization': `Bearer ${this.token}` }
         });
+        
         if (res.ok) {
           const content = await res.text();
           this.fileContents[filename] = content;
+          console.log(`File content loaded for: ${filename}`);
         } else if (res.status === 404) {
           this.fileContents[filename] = 'File not found.';
+          console.warn(`File not found: ${filename}`);
         } else if (res.status === 403) {
           this.fileContents[filename] = 'Access denied.';
+          console.warn(`Access denied for file: ${filename}`);
         } else {
-          this.fileContents[filename] = 'Unable to load file content.';
+          this.fileContents[filename] = `Unable to load file content. Status: ${res.status}`;
+          console.error(`Failed to load file: ${filename}, status: ${res.status}`);
         }
+        
         this.openedFiles.unshift(filename);
         this.activeTab = filename;
       } catch (e) {
-        this.fileContents[filename] = 'Error loading file.';
+        console.error(`Error loading file ${filename}:`, e);
+        this.fileContents[filename] = 'Error loading file: ' + e.message;
         this.openedFiles.unshift(filename);
         this.activeTab = filename;
       } finally {
@@ -285,7 +315,10 @@ export default {
         this.activeTab = this.openedFiles[0] || null;
       }
     },
-    async switchTab(filename) {
+    async switchTab(fileOrFilename) {
+      // Handle both file objects and filenames
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : fileOrFilename.filename;
+      
       // Load file content if not already loaded
       if (!this.fileContents[filename]) {
         await this.handleFileClick(filename);
@@ -296,8 +329,11 @@ export default {
         }
       }
     },
-    async downloadFile(filename) {
+    async downloadFile(fileOrFilename) {
       if (!this.token || !this.serverUrl) return;
+      
+      // Handle both file objects and filenames
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : fileOrFilename.filename;
       
       try {
         const encodedFilename = encodeURIComponent(filename);
@@ -317,11 +353,12 @@ export default {
           a.click();
           window.URL.revokeObjectURL(downloadUrl);
           document.body.removeChild(a);
+          console.log(`File downloaded: ${filename}`);
         } else {
-          console.error('Failed to download file:', res.statusText);
+          console.error(`Failed to download file ${filename}:`, res.statusText);
         }
       } catch (e) {
-        console.error('Error downloading file:', e);
+        console.error(`Error downloading file ${filename}:`, e);
       }
     },
     
@@ -342,9 +379,9 @@ export default {
       this.currentView = 'search';
     },
     
-    async openFileFromHome(filename) {
+    async openFileFromHome(fileOrFilename) {
       this.currentView = 'files';
-      await this.handleFileClick(filename);
+      await this.handleFileClick(fileOrFilename);
     },
     
     handleFileUpload(files) {
@@ -352,6 +389,43 @@ export default {
       console.log('Files to upload:', files);
       // For now, just show an alert
       alert(`Selected ${files.length} file(s) for upload. Upload functionality needs to be implemented.`);
+    },
+    
+    getFileTypeFromName(filename) {
+      if (!filename) return 'unknown';
+      const extension = filename.split('.').pop()?.toLowerCase();
+      const typeMap = {
+        'md': 'markdown',
+        'txt': 'text',
+        'pdf': 'pdf',
+        'doc': 'word',
+        'docx': 'word',
+        'json': 'json',
+        'js': 'javascript',
+        'ts': 'typescript',
+        'html': 'html',
+        'css': 'css',
+        'py': 'python',
+        'java': 'java',
+        'cpp': 'cpp',
+        'c': 'c',
+        'go': 'go',
+        'rust': 'rust',
+        'php': 'php',
+        'rb': 'ruby',
+        'swift': 'swift',
+        'kt': 'kotlin',
+        'xml': 'xml',
+        'yml': 'yaml',
+        'yaml': 'yaml'
+      };
+      return typeMap[extension] || 'unknown';
+    },
+    
+    getLastUpdateTime() {
+      if (!this.files.length) return 'Never';
+      // For now, return a simple timestamp. In a real app, you'd track this
+      return new Date().toLocaleTimeString();
     }
   }
 }
@@ -675,6 +749,25 @@ body {
 
 .files-search-input::placeholder {
   color: #9aa0a6;
+}
+
+.file-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.last-update {
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
 }
 
 /* Accessibility: focus ring for keyboard navigation */

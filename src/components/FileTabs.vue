@@ -11,15 +11,21 @@
           <div class="file-icon">{{ getFileIcon(file.name) }}</div>
           <div class="file-info">
             <div class="file-name" :title="file.name">{{ file.name }}</div>
+            <div v-if="file.description" class="file-description" :title="file.description">
+              {{ file.description.length > 60 ? file.description.substring(0, 60) + '...' : file.description }}
+            </div>
             <div class="file-meta">
               <span class="file-size">{{ formatSize(file.size) }}</span>
               <span class="file-date">{{ formatDate(file.modified) }}</span>
-              <span class="file-type">{{ getFileType(file.name) }}</span>
+              <span class="file-type">{{ file.type }}</span>
             </div>
           </div>
           <div class="file-actions">
             <button class="action-btn" @click.stop="downloadFile(file.name)" title="Download">
               ⬇️
+            </button>
+            <button class="action-btn" @click.stop="openFile(file.name)" title="Open">
+              👁️
             </button>
           </div>
         </div>
@@ -58,7 +64,27 @@
             <div class="loading-spinner"></div>
             <div>Loading content...</div>
           </div>
-          <div v-else-if="currentContent" class="content-body" v-html="markedContent"></div>
+          <div v-else-if="currentContent" class="content-body">
+            <div v-if="isMarkdown" v-html="markedContent"></div>
+            <div v-else-if="isCode" class="code-content">
+              <div class="code-header">
+                <span class="code-language">{{ getCodeLanguage() }}</span>
+                <button class="copy-code-btn" @click="copyCode" title="Copy code">
+                  📋 Copy
+                </button>
+              </div>
+              <pre class="code-block"><code>{{ currentContent }}</code></pre>
+            </div>
+            <div v-else class="plain-text-content">
+              <div class="text-header">
+                <span class="text-type">Plain Text</span>
+                <button class="copy-text-btn" @click="copyContent" title="Copy text">
+                  📋 Copy
+                </button>
+              </div>
+              <pre class="text-block">{{ currentContent }}</pre>
+            </div>
+          </div>
           <div v-else class="error-state">
             <div class="error-icon">⚠️</div>
             <div>Failed to load file content</div>
@@ -99,17 +125,15 @@ export default {
   },
   computed: {
     fileList() {
-      // Convert simple file names to file objects with metadata
-      return this.files.map(fileName => {
-        // Mock file metadata - in a real app, this would come from the API
-        const extension = fileName.split('.').pop();
-        return {
-          name: fileName,
-          size: Math.floor(Math.random() * 50000) + 1000, // Mock size
-          modified: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000), // Mock date
-          type: extension
-        };
-      });
+      // Use real file metadata from the backend
+      return this.files.map(file => ({
+        name: file.filename || file.original_filename,
+        size: file.size || 0,
+        modified: file.upload_date || file.created_at || new Date(),
+        type: file.file_type || this.getFileType(file.filename || file.original_filename),
+        description: file.description || '',
+        file_id: file.file_id
+      }));
     },
     currentContent() {
       return this.activeTab ? this.fileContents[this.activeTab] : null;
@@ -127,20 +151,21 @@ export default {
         mangle: false
       });
       
-      // Simple check if content is markdown-like
-      if (this.currentContent.includes('#') || this.currentContent.includes('*') || this.currentContent.includes('[')) {
-        return marked(this.currentContent);
-      }
-      
-      // For plain text, preserve formatting but escape HTML
-      const escaped = this.currentContent
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-      
-      return `<pre class="plain-text">${escaped}</pre>`;
+      return marked(this.currentContent);
+    },
+    
+    isMarkdown() {
+      if (!this.currentContent || !this.activeTab) return false;
+      const filename = this.activeTab.toLowerCase();
+      return filename.endsWith('.md') || filename.endsWith('.markdown') || 
+             (this.currentContent.includes('#') && this.currentContent.includes('\n'));
+    },
+    
+    isCode() {
+      if (!this.activeTab) return false;
+      const filename = this.activeTab.toLowerCase();
+      const codeExtensions = ['.js', '.ts', '.py', '.java', '.cpp', '.c', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.html', '.css', '.xml', '.json', '.yml', '.yaml'];
+      return codeExtensions.some(ext => filename.endsWith(ext));
     }
   },
   methods: {
@@ -245,6 +270,53 @@ export default {
     downloadFile(fileName) {
       // Emit event to parent to handle file download
       this.$emit('download-file', fileName);
+    },
+    
+    getCodeLanguage() {
+      if (!this.activeTab) return 'Text';
+      const filename = this.activeTab.toLowerCase();
+      const languageMap = {
+        '.js': 'JavaScript',
+        '.ts': 'TypeScript',
+        '.py': 'Python',
+        '.java': 'Java',
+        '.cpp': 'C++',
+        '.c': 'C',
+        '.go': 'Go',
+        '.rs': 'Rust',
+        '.php': 'PHP',
+        '.rb': 'Ruby',
+        '.swift': 'Swift',
+        '.kt': 'Kotlin',
+        '.html': 'HTML',
+        '.css': 'CSS',
+        '.xml': 'XML',
+        '.json': 'JSON',
+        '.yml': 'YAML',
+        '.yaml': 'YAML'
+      };
+      
+      for (const [ext, lang] of Object.entries(languageMap)) {
+        if (filename.endsWith(ext)) return lang;
+      }
+      return 'Text';
+    },
+    
+    async copyCode() {
+      try {
+        await navigator.clipboard.writeText(this.currentContent);
+        // Show success feedback
+        const btn = event.target;
+        const originalText = btn.textContent;
+        btn.textContent = '✅ Copied!';
+        btn.style.background = '#28a745';
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.style.background = '';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy code:', err);
+      }
     }
   }
 }
@@ -345,15 +417,27 @@ export default {
   min-width: 0;
 }
 
-.file-name {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  .file-name {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .file-description {
+    font-size: 13px;
+    color: #6c757d;
+    margin-bottom: 8px;
+    line-height: 1.4;
+    word-break: break-word;
+    font-style: italic;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
 .file-meta {
   display: flex;
@@ -583,6 +667,115 @@ export default {
   margin: 0;
 }
 
+/* Code content styling */
+.code-content {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.code-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.code-language {
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.copy-code-btn {
+  background: #007BFF;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-code-btn:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.code-block {
+  margin: 0;
+  padding: 20px;
+  background: #2d3748;
+  color: #e2e8f0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Plain text content styling */
+.plain-text-content {
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.text-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.text-type {
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.copy-text-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copy-text-btn:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.text-block {
+  margin: 0;
+  padding: 20px;
+  background: #f8f9fa;
+  color: #495057;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* Loading and error states */
 .loading-state, .error-state {
   display: flex;
@@ -644,6 +837,28 @@ export default {
   
   .content-container {
     padding: 16px;
+  }
+  
+  .code-header,
+  .text-header {
+    padding: 10px 12px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .code-block,
+  .text-block {
+    padding: 16px;
+    font-size: 13px;
+  }
+  
+  .file-description {
+    display: none;
+  }
+  
+  .file-actions {
+    opacity: 1;
   }
 }
 </style>
