@@ -23,23 +23,45 @@ export default {
       const canvas = this.$refs.canvas;
       const ctx = canvas.getContext('2d');
       this.resizeCanvas();
-      const NODES = 90;
+      const NODES = 120;
       const nodes = Array.from({ length: NODES }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.7,
         vy: (Math.random() - 0.5) * 0.7
       }));
-      const connectDist = 160;
+      const connectDist = 200;
+      const repulsionDist = 50;
+      const repulsionFactor = 0.001; 
+
       const animate = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        // Move nodes
-        nodes.forEach(node => {
+        
+        // Move nodes and apply repulsion
+        nodes.forEach((node, index) => {
           node.x += node.vx;
           node.y += node.vy;
+
+          // Check for boundaries
           if (node.x < 0 || node.x > canvas.width) node.vx *= -1;
           if (node.y < 0 || node.y > canvas.height) node.vy *= -1;
+
+          // Apply repulsion from other nodes
+          nodes.forEach((otherNode, otherIndex) => {
+            if (index !== otherIndex) {
+              const dx = node.x - otherNode.x;
+              const dy = node.y - otherNode.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+
+              if (dist < repulsionDist) {
+                const force = repulsionFactor * (repulsionDist - dist);
+                node.vx += (dx / dist) * force;
+                node.vy += (dy / dist) * force;
+              }
+            }
+          });
         });
+
         // Draw connections
         for (let i = 0; i < NODES; i++) {
           for (let j = i + 1; j < NODES; j++) {
@@ -56,6 +78,7 @@ export default {
             }
           }
         }
+
         // Draw nodes
         nodes.forEach(node => {
           ctx.beginPath();
@@ -70,6 +93,7 @@ export default {
       };
       animate();
     }
+
   }
 };
 </script>
