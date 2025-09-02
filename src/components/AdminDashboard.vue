@@ -22,13 +22,34 @@
               <span class="stat-label">Reports</span>
             </div>
           </div>
+          <!-- <button @click="testAPIConnection" class="debug-btn" title="Test API Connection">
+            🔧 Test API
+          </button>
+          <button @click="toggleAutoRefresh" class="auto-refresh-toggle" :class="{ active: isAutoRefreshEnabled }" :title="isAutoRefreshEnabled ? 'Disable Auto-refresh' : 'Enable Auto-refresh'">
+            <span class="toggle-icon">{{ isAutoRefreshEnabled ? '⏸️' : '▶️' }}</span>
+            <span class="toggle-text">{{ isAutoRefreshEnabled ? 'Pause' : 'Resume' }}</span>
+          </button> -->
         </div>
       </div>
-      <div class="admin-tabs">
-        <button v-for="tab in tabs" :key="tab" :class="['admin-tab', {active: activeTab === tab}]" @click="activeTab = tab">
+      <div class="admin-tabs" role="tablist" aria-label="Admin sections">
+        <button
+          v-for="(tab, idx) in tabs"
+          :key="tab"
+          :id="`admin-tab-${tab}`"
+          :class="['admin-tab', {active: activeTab === tab}]"
+          :tabindex="activeTab === tab ? 0 : -1"
+          :aria-selected="activeTab === tab"
+          role="tab"
+          @click="switchTab(tab)"
+          @keydown.left.prevent="focusPrevTab(idx)"
+          @keydown.right.prevent="focusNextTab(idx)"
+          @keydown.enter.space.prevent="switchTab(tab)"
+          :title="tab"
+        >
           <span class="tab-icon">{{ getTabIcon(tab) }}</span>
           <span class="tab-text">{{ tab }}</span>
         </button>
+        <div class="tab-underline" :style="tabUnderline"></div>
       </div>
     </div>
     
@@ -48,11 +69,11 @@
                 />
                 <span v-if="userSearch" class="search-results-count">{{ filteredUsers.length }} results</span>
               </div>
-              <button @click="fetchUsers" class="refresh-btn" :disabled="loadingUsers">
-                <span v-if="loadingUsers" class="spinner">⟳</span>
-                <span v-else>🔄</span>
-                Refresh
-              </button>
+              <div class="auto-refresh-status">
+                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
+                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                <span class="last-update">Updated {{ getLastUpdateTime('users') }}</span>
+              </div>
             </div>
           </div>
           
@@ -143,69 +164,424 @@
                 <option value="admin">Admin</option>
               </select>
               <label>Allowed Files:</label>
-              <select v-model="newUser.allowed_files" multiple>
-                <option v-for="file in files" :key="file.filename" :value="file.filename">{{ file.filename }}</option>
-                <option value="all">All Files</option>
-              </select>
+              <div class="allowed-files-radio-group">
+                <label>
+                  <input type="radio" value="all" v-model="allowedFilesMode" />
+                  All Files
+                </label>
+                <label>
+                  <input type="radio" value="select" v-model="allowedFilesMode" />
+                  Select Files
+                </label>
+              </div>
+              <div v-if="allowedFilesMode === 'select'" class="allowed-files-checkboxes">
+                <label v-for="file in files" :key="file.filename" class="file-checkbox-label">
+                  <input type="checkbox" :value="file.filename" v-model="newUser.allowed_files" />
+                  {{ file.filename }}
+                </label>
+              </div>
               <button type="submit" class="create-btn">Create User</button>
             </form>
             <div v-if="userCreateMsg" class="msg">{{ userCreateMsg }}</div>
           </div>
         </div>
-  <div v-else-if="activeTab === 'Files'">
-        <div class="admin-section-header">
-          <h2>Files</h2>
-          <button @click="fetchFiles" class="refresh-btn">Refresh</button>
-        </div>
-          <ul class="files-list">
-            <li v-for="file in files" :key="file.file_id || file.filename">
-              <span>{{ file.original_filename || file.filename }}</span>
-              <span class="file-actions">
-                <button class="danger-btn" @click="deleteFile(file)">Delete</button>
-                <button class="edit-btn" @click="openEditFile(file)">Edit</button>
-              </span>
-            </li>
-          </ul>
-        <form @submit.prevent="uploadFile" class="file-form">
-          <input type="file" ref="fileInput" />
-          <button type="submit" class="upload-btn">Upload File</button>
-        </form>
-        <div v-if="fileUploadMsg" class="msg">{{ fileUploadMsg }}</div>
-      </div>
-    <div v-else-if="activeTab === 'Reports'">
-      <div class="admin-section-header">
-        <h2>Reports</h2>
-        <button @click="fetchReports" class="refresh-btn">Refresh</button>
-      </div>
-      <div v-if="reportsMsg" class="msg">{{ reportsMsg }}</div>
-      <div class="reports-tabs">
-        <button :class="['report-tab', {active: reportTab === 'auto'}]" @click="reportTab = 'auto'">Automatic</button>
-        <button :class="['report-tab', {active: reportTab === 'manual'}]" @click="reportTab = 'manual'">Manual</button>
-      </div>
-      <div class="reports-section scrollable-reports">
-        <ReportTable v-if="reportTab === 'auto'" :reports="autoReports" empty-msg="No automatic reports found." />
-        <ReportTable v-else :reports="manualReports" empty-msg="No manual reports found." />
-      </div>
-    </div>
-    <div v-else-if="activeTab === 'System'">
+        <div v-else-if="activeTab === 'Files'" class="files-section">
           <div class="admin-section-header">
-            <h2>System</h2>
+            <h2>📁 File Management</h2>
+            <div class="header-actions">
+              <div class="search-files">
+                <input 
+                  v-model="fileSearch" 
+                  placeholder="Search files..." 
+                  class="search-input"
+                  :disabled="loadingFiles"
+                />
+                <span v-if="fileSearch" class="search-results-count">{{ filteredFiles.length }} results</span>
+              </div>
+              <div class="auto-refresh-status">
+                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
+                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                <span class="last-update">Updated {{ getLastUpdateTime('files') }}</span>
+              </div>
+            </div>
           </div>
-          <div class="system-actions">
-            <button @click="fetchUsers" class="refresh-btn">Reload Users</button>
-            <button @click="fetchFiles" class="refresh-btn">Reload Files</button>
+
+          <!-- Drag and Drop Upload Area -->
+          <div 
+            class="upload-zone"
+            :class="{ 'drag-over': isDragOver }"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @drop.prevent="handleFileDrop"
+          >
+            <div class="upload-content">
+              <div class="upload-icon">📤</div>
+              <h3>Drag & Drop Files Here</h3>
+              <p>or <button class="upload-link" @click="$refs.fileInput.click()">browse files</button></p>
+              <input type="file" ref="fileInput" @change="handleFileSelect" multiple style="display: none;" />
+            </div>
           </div>
-          <div class="system-info">
-            <h3>API Endpoints (Admin Only)</h3>
-            <ul>
-              <li><b>POST</b> /register — Create user</li>
-              <li><b>GET</b> /accounts — List users</li>
-              <li><b>DELETE</b> /user/delete — Delete user</li>
-              <li><b>POST</b> /user/edit — Edit user</li>
-              <li><b>POST</b> /upload — Upload file</li>
-              <li><b>DELETE</b> /files/delete_by_fileid — Delete file by file_id</li>
-              <li><b>DELETE</b> /files/delete_by_filename — Delete file by filename</li>
-            </ul>
+
+          <div v-if="loadingFiles" class="loading-state">
+            <div class="loading-spinner">⟳</div>
+            <p>Loading files...</p>
+          </div>
+
+          <div v-else-if="filteredFiles.length" class="files-table-container">
+            <table class="modern-users-table">
+              <thead>
+                <tr>
+                  <th>File</th>
+                  <th>Type</th>
+                  <th>Size</th>
+                  <th>Uploaded</th>
+                  <th class="actions-header">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="file in filteredFiles" :key="file.file_id || file.filename" class="file-row">
+                  <td class="file-name-cell">
+                    <div class="file-name-info">
+                      <span class="file-icon-small">{{ getFileIcon(file) }}</span>
+                      <span class="file-name">{{ file.original_filename || file.filename }}</span>
+                    </div>
+                  </td>
+                  <td>
+                    <span class="file-type-badge">{{ getFileType(file) }}</span>
+                  </td>
+                  <td class="file-size-cell">
+                    {{ formatFileSize(file.size) }}
+                  </td>
+                  <td class="file-date-cell">
+                    {{ formatFileDate(file.created_at || file.uploaded_at) }}
+                  </td>
+                  <td class="actions-cell">
+                    <div class="action-buttons">
+                      <button class="btn-preview" @click="previewFile(file)" title="Preview">
+                        👁️ Preview
+                      </button>
+                      <button class="btn-edit" @click="openEditFile(file)" title="Edit">
+                        ✏️ Edit
+                      </button>
+                      <button class="btn-delete" @click="deleteFile(file)" title="Delete">
+                        🗑️ Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div v-else class="empty-state">
+            <div class="empty-icon">📁</div>
+            <h3>No files found</h3>
+            <p v-if="fileSearch">Try adjusting your search terms</p>
+            <p v-else>Upload your first file to get started</p>
+          </div>
+
+          <div v-if="fileUploadMsg" class="msg">{{ fileUploadMsg }}</div>
+        </div>
+        
+        <div v-else-if="activeTab === 'Reports'" class="reports-section">
+          <div class="admin-section-header">
+            <h2>📊 Reports & Analytics</h2>
+            <div class="header-actions">
+              <div class="reports-overview">
+                <div class="overview-card total">
+                  <div class="overview-icon">📊</div>
+                  <div class="overview-content">
+                    <div class="overview-number">{{ totalReports }}</div>
+                    <div class="overview-label">Total Reports</div>
+                  </div>
+                </div>
+                <div class="overview-card auto">
+                  <div class="overview-icon">🤖</div>
+                  <div class="overview-content">
+                    <div class="overview-number">{{ autoReports.length }}</div>
+                    <div class="overview-label">Auto Reports</div>
+                  </div>
+                </div>
+                <div class="overview-card manual">
+                  <div class="overview-icon">✍️</div>
+                  <div class="overview-content">
+                    <div class="overview-number">{{ manualReports.length }}</div>
+                    <div class="overview-label">Manual Reports</div>
+                  </div>
+                </div>
+              </div>
+              <div class="auto-refresh-status">
+                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
+                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                <span class="last-update">Updated {{ getLastUpdateTime('reports') }}</span>
+              </div>
+            </div>
+          </div>
+          
+          <div v-if="reportsMsg" class="message-banner" :class="reportsMsg.includes('error') ? 'error' : 'success'">
+            <span class="message-icon">{{ reportsMsg.includes('error') ? '⚠️' : '✅' }}</span>
+            {{ reportsMsg }}
+          </div>
+          
+          <div class="reports-navigation">
+            <div class="reports-tabs">
+              <button 
+                :class="['report-tab', {active: reportTab === 'auto'}]" 
+                @click="reportTab = 'auto'"
+              >
+                <span class="tab-icon">🤖</span>
+                <span class="tab-text">Automatic</span>
+                <span class="tab-count">{{ autoReports.length }}</span>
+              </button>
+              <button 
+                :class="['report-tab', {active: reportTab === 'manual'}]" 
+                @click="reportTab = 'manual'"
+              >
+                <span class="tab-icon">✍️</span>
+                <span class="tab-text">Manual</span>
+                <span class="tab-count">{{ manualReports.length }}</span>
+              </button>
+            </div>
+          </div>
+          
+          <div class="reports-content">
+            <div v-if="reportTab === 'auto'" class="report-category">
+              <div class="category-header">
+                <h3>🤖 Automatic System Reports</h3>
+                <p class="category-description">Reports generated automatically by the system for security, access control, and system health monitoring.</p>
+              </div>
+              
+              <div v-if="autoReports.length" class="reports-grid">
+                <div v-for="(report, index) in autoReports" :key="index" class="report-card auto">
+                  <div class="report-header">
+                    <div class="report-type">🤖 Auto</div>
+                    <div class="report-priority" :class="getReportPriority(report)">{{ getReportPriority(report) }}</div>
+                  </div>
+                  <div class="report-content">
+                    <h4 class="report-title">{{ report.issue || 'System Report' }}</h4>
+                    <p class="report-description">{{ report.description || 'Automated system report' }}</p>
+                    <div class="report-meta">
+                      <span class="meta-item">
+                        <span class="meta-icon">👤</span>
+                        {{ report.user || 'System' }}
+                      </span>
+                      <span class="meta-item">
+                        <span class="meta-icon">📅</span>
+                        {{ formatReportDate(report.timestamp || report.created_at) }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-else class="empty-reports">
+                <div class="empty-icon">🤖</div>
+                <h3>No Automatic Reports</h3>
+                <p>The system is running smoothly with no automatic reports to display.</p>
+              </div>
+            </div>
+            
+            <div v-else class="report-category">
+              <div class="category-header">
+                <h3>✍️ User-Submitted Reports</h3>
+                <p class="category-description">Reports submitted by users for issues, feature requests, or general feedback.</p>
+              </div>
+              
+              <div v-if="manualReports.length" class="reports-grid">
+                <div v-for="(report, index) in manualReports" :key="index" class="report-card manual">
+                  <div class="report-header">
+                    <div class="report-type">✍️ Manual</div>
+                    <div class="report-priority" :class="getReportPriority(report)">{{ getReportPriority(report) }}</div>
+                  </div>
+                  <div class="report-content">
+                    <h4 class="report-title">{{ report.issue || 'User Report' }}</h4>
+                    <p class="report-description">{{ report.description || 'User-submitted report' }}</p>
+                    <div class="report-meta">
+                      <span class="meta-item">
+                        <span class="meta-icon">👤</span>
+                        {{ report.user || 'Unknown User' }}
+                      </span>
+                      <span class="meta-item">
+                        <span class="meta-icon">📅</span>
+                        {{ formatReportDate(report.timestamp || report.created_at) }}
+                      </span>
+                      <span v-if="report.permitted_files && report.permitted_files.length" class="meta-item">
+                        <span class="meta-icon">📁</span>
+                        {{ report.permitted_files.length }} files
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div v-else class="empty-reports">
+                <div class="empty-icon">✍️</div>
+                <h3>No Manual Reports</h3>
+                <p>Users haven't submitted any reports yet.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div v-else-if="activeTab === 'System'" class="system-section">
+          <div class="admin-section-header">
+            <h2>⚙️ System Administration</h2>
+            <div class="header-actions">
+              <div class="system-status">
+                <span class="status-indicator online"></span>
+                <span class="status-text">System Online</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="system-grid">
+            <!-- System Actions Card -->
+            <div class="system-card">
+              <div class="card-header">
+                <h3>🔄 System Operations</h3>
+                <p>Manage system data and refresh information</p>
+              </div>
+              <div class="card-content">
+                <div class="action-grid">
+                  <div class="system-action-btn auto-refresh-control">
+                    <span class="action-icon">⏰</span>
+                    <span class="action-text">Auto-refresh</span>
+                    <span class="action-status" :class="{ active: isAutoRefreshEnabled }">
+                      {{ isAutoRefreshEnabled ? 'ON' : 'OFF' }}
+                    </span>
+                    <button @click="toggleAutoRefresh" class="mini-toggle" :title="isAutoRefreshEnabled ? 'Disable' : 'Enable'">
+                      {{ isAutoRefreshEnabled ? '⏸️' : '▶️' }}
+                    </button>
+                  </div>
+                  <div class="system-action-btn refresh-frequency">
+                    <span class="action-icon">⚡</span>
+                    <span class="action-text">Update Every</span>
+                    <span class="action-status">{{ updateFrequency / 1000 }}s</span>
+                  </div>
+                  <div class="system-action-btn last-updates">
+                    <span class="action-icon">📅</span>
+                    <span class="action-text">Last Updates</span>
+                    <div class="update-times">
+                      <span class="update-time">Users: {{ getLastUpdateTime('users') }}</span>
+                      <span class="update-time">Files: {{ getLastUpdateTime('files') }}</span>
+                      <span class="update-time">Reports: {{ getLastUpdateTime('reports') }}</span>
+                    </div>
+                  </div>
+                  <button @click="testAPIConnection" class="system-action-btn">
+                    <span class="action-icon">🔧</span>
+                    <span class="action-text">Test API</span>
+                    <span class="action-status">Test</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- API Documentation Card -->
+            <div class="system-card">
+              <div class="card-header">
+                <h3>📚 API Documentation</h3>
+                <p>Available endpoints and their usage</p>
+              </div>
+              <div class="card-content">
+                <div class="api-endpoints">
+                  <div class="endpoint-group">
+                    <h4>👥 User Management</h4>
+                    <div class="endpoint-list">
+                      <div class="endpoint-item">
+                        <span class="method post">POST</span>
+                        <span class="path">/register</span>
+                        <span class="description">Create new user</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <span class="path">/accounts</span>
+                        <span class="description">List all users</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method delete">DELETE</span>
+                        <span class="path">/user/delete</span>
+                        <span class="description">Delete user</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method post">POST</span>
+                        <span class="path">/user/edit</span>
+                        <span class="description">Edit user</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="endpoint-group">
+                    <h4>📁 File Management</h4>
+                    <div class="endpoint-list">
+                      <div class="endpoint-item">
+                        <span class="method post">POST</span>
+                        <span class="path">/upload</span>
+                        <span class="description">Upload file</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <span class="path">/files/list</span>
+                        <span class="description">List files</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method delete">DELETE</span>
+                        <span class="path">/files/delete_by_fileid</span>
+                        <span class="description">Delete by ID</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method delete">DELETE</span>
+                        <span class="path">/files/delete_by_filename</span>
+                        <span class="description">Delete by name</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="endpoint-group">
+                    <h4>📊 Reports</h4>
+                    <div class="endpoint-list">
+                      <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <span class="path">/reports/get/auto</span>
+                        <span class="description">Auto reports</span>
+                      </div>
+                      <div class="endpoint-item">
+                        <span class="method get">GET</span>
+                        <span class="path">/reports/get/manual</span>
+                        <span class="description">Manual reports</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- System Info Card -->
+            <div class="system-card">
+              <div class="card-header">
+                <h3>ℹ️ System Information</h3>
+                <p>Current system status and configuration</p>
+              </div>
+              <div class="card-content">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="info-label">API Base URL</span>
+                    <span class="info-value">{{ API_BASE_URL }}</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Authentication</span>
+                    <span class="info-value">Bearer Token</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Session Type</span>
+                    <span class="info-value">UUID-based</span>
+                  </div>
+                  <div class="info-item">
+                    <span class="info-label">Security</span>
+                    <span class="info-value">File Access Control</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -254,6 +630,7 @@ export default {
         role: 'user',
         allowed_files: []
       },
+      allowedFilesMode: 'all',
       userCreateMsg: '',
       fileUploadMsg: '',
       editUserModal: false,
@@ -269,6 +646,24 @@ export default {
       userSearch: '',
       loadingUsers: false,
       loadingFiles: false,
+      loadingReports: false,
+      fileSearch: '',
+      filesView: 'grid',
+      isDragOver: false,
+      tabUnderline: {
+        width: '0px',
+        left: '0px',
+        transition: 'all 0.3s cubic-bezier(.55,0,.1,1)'
+      },
+      // Auto-refresh settings
+      autoRefreshInterval: null,
+      lastUpdate: {
+        users: null,
+        files: null,
+        reports: null
+      },
+      updateFrequency: 30000, // 30 seconds
+      isAutoRefreshEnabled: true,
     };
   },
   computed: {
@@ -278,10 +673,37 @@ export default {
     filteredUsers() {
       if (!this.userSearch) return this.users;
       const search = this.userSearch.toLowerCase();
-      return this.users.filter(user => 
+      return this.users.filter(user =>
         user.username.toLowerCase().includes(search) ||
         user.role.toLowerCase().includes(search)
       );
+    },
+    filteredFiles() {
+      if (!this.fileSearch) return this.files;
+      const search = this.fileSearch.toLowerCase();
+      return this.files.filter(file => {
+        const name = (file.original_filename || file.filename || '').toLowerCase();
+        return name.includes(search);
+      });
+    }
+  },
+  watch: {
+    activeTab: {
+      immediate: true,
+      handler() {
+        this.$nextTick(() => {
+          const tabs = this.$el.querySelectorAll('.admin-tab');
+          const idx = this.tabs.indexOf(this.activeTab);
+          if (tabs && tabs[idx]) {
+            const tab = tabs[idx];
+            this.tabUnderline = {
+              width: tab.offsetWidth + 'px',
+              left: tab.offsetLeft + 'px',
+              transition: 'all 0.3s cubic-bezier(.55,0,.1,1)'
+            };
+          }
+        });
+      }
     }
   },
   methods: {
@@ -294,8 +716,12 @@ export default {
       };
       return icons[tab] || '📄';
     },
-    async fetchReports() {
-      this.reportsMsg = '';
+    async fetchReports(silent = false) {
+      if (!silent) {
+        this.reportsMsg = '';
+        this.loadingReports = true;
+      }
+      
       try {
         // Fetch auto reports
         let res = await fetch(`${this.API_BASE_URL}/reports/get/auto`, {
@@ -303,57 +729,113 @@ export default {
         });
         let data = await res.json();
         this.autoReports = Array.isArray(data.reports) ? data.reports : [];
+        
         // Fetch manual reports
         res = await fetch(`${this.API_BASE_URL}/reports/get/manual`, {
           headers: { Authorization: `Bearer ${this.token}` }
         });
         data = await res.json();
         this.manualReports = Array.isArray(data.reports) ? data.reports : [];
+        
+        console.log('Reports fetched:', { auto: this.autoReports, manual: this.manualReports });
+        this.lastUpdate.reports = new Date();
       } catch (e) {
-        this.reportsMsg = 'Failed to fetch reports.';
+        console.error('Error fetching reports:', e);
+        if (!silent) {
+          this.reportsMsg = 'Failed to fetch reports: ' + e.message;
+        }
         this.autoReports = [];
         this.manualReports = [];
+      } finally {
+        if (!silent) {
+          this.loadingReports = false;
+        }
       }
     },
-    async fetchUsers() {
+    async fetchUsers(silent = false) {
+      if (!silent) {
+        this.loadingUsers = true;
+      }
+      
       try {
+        console.log('Fetching users from:', `${this.API_BASE_URL}/accounts`);
         const res = await fetch(`${this.API_BASE_URL}/accounts`, {
           headers: { Authorization: `Bearer ${this.token}` }
         });
+        console.log('Users response status:', res.status);
+        
         if (!res.ok) {
+          console.warn('Users response not ok:', res.status, res.statusText);
           this.users = [];
-          this.userCreateMsg = 'Failed to fetch users.';
+          if (!silent) {
+            this.userCreateMsg = 'Failed to fetch users.';
+          }
           return;
         }
+        
         const data = await res.json();
+        console.log('Users response data:', data);
+        
         if (Array.isArray(data)) {
           this.users = data;
+          console.log('Users loaded:', this.users.length);
+          this.lastUpdate.users = new Date();
         } else {
+          console.warn('Users response not an array:', data);
           this.users = [];
         }
       } catch (e) {
+        console.error('Error fetching users:', e);
         this.users = [];
-        this.userCreateMsg = 'Error fetching users.';
+        if (!silent) {
+          this.userCreateMsg = 'Error fetching users: ' + e.message;
+        }
+      } finally {
+        if (!silent) {
+          this.loadingUsers = false;
+        }
       }
     },
-    async fetchFiles() {
+    async fetchFiles(silent = false) {
+      if (!silent) {
+        this.loadingFiles = true;
+      }
+      
       try {
+        console.log('Fetching files from:', `${this.API_BASE_URL}/files/list`);
         const res = await fetch(`${this.API_BASE_URL}/files/list`, {
           headers: { Authorization: `Bearer ${this.token}` }
         });
+        console.log('Files response status:', res.status);
         const data = await res.json();
+        console.log('Files response data:', data);
+        
         if (res.ok && data.status === 'success' && data.response && Array.isArray(data.response.documents)) {
           // Ensure each file object has file_id, filename, etc.
           this.files = data.response.documents.map(doc => ({ ...doc }));
           console.log('DEBUG: files after fetch', this.files);
+          this.lastUpdate.files = new Date();
         } else {
+          console.warn('Files response not in expected format:', data);
           this.files = [];
         }
       } catch (e) {
+        console.error('Error fetching files:', e);
         this.files = [];
+      } finally {
+        if (!silent) {
+          this.loadingFiles = false;
+        }
       }
     },
     async createUser() {
+      // Set allowed_files based on radio selection
+      if (this.allowedFilesMode === 'all') {
+        this.newUser.allowed_files = ['all'];
+      } else if (this.allowedFilesMode === 'select' && this.newUser.allowed_files.length === 0) {
+        this.userCreateMsg = 'Please select at least one file.';
+        return;
+      }
       try {
         const res = await fetch(`${this.API_BASE_URL}/register`, {
           method: 'POST',
@@ -367,6 +849,8 @@ export default {
         this.userCreateMsg = data.message || 'User created.';
         if (data.status === 'success') {
           this.fetchUsers();
+          this.newUser = { username: '', password: '', role: 'user', allowed_files: [] };
+          this.allowedFilesMode = 'all';
         }
       } catch (e) {
         this.userCreateMsg = 'Failed to create user.';
@@ -530,17 +1014,254 @@ export default {
       } else {
         return `${fileCount} files`;
       }
+    },
+    focusPrevTab(idx) {
+      const prev = (idx - 1 + this.tabs.length) % this.tabs.length;
+      this.$el.querySelectorAll('.admin-tab')[prev].focus();
+    },
+    focusNextTab(idx) {
+      const next = (idx + 1) % this.tabs.length;
+      this.$el.querySelectorAll('.admin-tab')[next].focus();
+    },
+    handleFileDrop(event) {
+      event.preventDefault();
+      this.isDragOver = false;
+      const files = Array.from(event.dataTransfer.files);
+      this.uploadFiles(files);
+    },
+    handleFileSelect(event) {
+      const files = Array.from(event.target.files);
+      this.uploadFiles(files);
+    },
+    async uploadFiles(fileList) {
+      if (!fileList || fileList.length === 0) return;
+      
+      this.loadingFiles = true;
+      try {
+        for (const file of fileList) {
+          const formData = new FormData();
+          formData.append('file', file);
+          
+          const res = await fetch(`${this.API_BASE_URL}/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${this.token}` },
+            body: formData
+          });
+          
+          const data = await res.json();
+          if (data.status === 'success') {
+            this.fileUploadMsg = `File ${file.name} uploaded successfully!`;
+          } else {
+            this.fileUploadMsg = `Failed to upload ${file.name}: ${data.message}`;
+          }
+        }
+        
+        // Refresh the files list
+        await this.fetchFiles();
+      } catch (e) {
+        this.fileUploadMsg = 'Failed to upload files.';
+      } finally {
+        this.loadingFiles = false;
+      }
+    },
+    getFileIcon(file) {
+      const filename = file.original_filename || file.filename || '';
+      if (filename.endsWith('.pdf')) return '📄';
+      if (filename.endsWith('.doc') || filename.endsWith('.docx')) return '📝';
+      if (filename.endsWith('.txt') || filename.endsWith('.md')) return '📄';
+      if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return '🖼️';
+      return '📁';
+    },
+    getFileType(file) {
+      const filename = file.original_filename || file.filename || '';
+      const ext = filename.split('.').pop()?.toLowerCase();
+      if (ext === 'pdf') return 'PDF';
+      if (ext === 'doc' || ext === 'docx') return 'Word';
+      if (ext === 'txt' || ext === 'md') return 'Text';
+      if (ext === 'jpg' || ext === 'png' || ext === 'gif') return 'Image';
+      return ext ? ext.toUpperCase() : 'Unknown';
+    },
+    formatFileSize(bytes) {
+      if (!bytes) return '0 B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    },
+    formatFileDate(dateString) {
+      if (!dateString) return 'Unknown';
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    },
+    previewFile(file) {
+      // For now, just show a message. You can implement actual file preview later
+      alert(`Previewing file: ${file.original_filename || file.filename}`);
+    },
+    
+    async testAPIConnection() {
+      try {
+        console.log('Testing API connection to:', this.API_BASE_URL);
+        const res = await fetch(`${this.API_BASE_URL}/`, {
+          headers: { Authorization: `Bearer ${this.token}` }
+        });
+        const data = await res.json();
+        console.log('API connection test successful:', data);
+        return true;
+      } catch (e) {
+        console.error('API connection test failed:', e);
+        return false;
+      }
+    },
+    
+    async switchTab(tabName) {
+      console.log('Switching to tab:', tabName);
+      this.activeTab = tabName;
+      
+      // Load data for the selected tab
+      if (tabName === 'Users') {
+        await this.fetchUsers();
+      } else if (tabName === 'Files') {
+        await this.fetchFiles();
+      } else if (tabName === 'Reports') {
+        await this.fetchReports();
+      }
+      
+      console.log('Tab switched to:', this.activeTab);
+    },
+    
+    getReportPriority(report) {
+      // Determine priority based on report content or type
+      if (report.issue && report.issue.toLowerCase().includes('error')) return 'high';
+      if (report.issue && report.issue.toLowerCase().includes('warning')) return 'medium';
+      return 'low';
+    },
+    
+    formatReportDate(dateString) {
+      if (!dateString) return 'Unknown';
+      try {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+        
+        if (diffHours < 1) return 'Just now';
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+        return date.toLocaleDateString();
+      } catch (e) {
+        return 'Invalid date';
+      }
+    },
+    
+    // Auto-refresh methods
+    startAutoRefresh() {
+      if (this.autoRefreshInterval) {
+        clearInterval(this.autoRefreshInterval);
+      }
+      
+      this.autoRefreshInterval = setInterval(() => {
+        if (this.isAutoRefreshEnabled) {
+          this.performAutoRefresh();
+        }
+      }, this.updateFrequency);
+      
+      console.log('Auto-refresh started with', this.updateFrequency / 1000, 'second intervals');
+    },
+    
+    stopAutoRefresh() {
+      if (this.autoRefreshInterval) {
+        clearInterval(this.autoRefreshInterval);
+        this.autoRefreshInterval = null;
+        console.log('Auto-refresh stopped');
+      }
+    },
+    
+    async performAutoRefresh() {
+      console.log('Performing auto-refresh...');
+      
+      // Refresh data based on active tab
+      switch (this.activeTab) {
+        case 'Users':
+          await this.fetchUsers(true); // silent refresh
+          break;
+        case 'Files':
+          await this.fetchFiles(true); // silent refresh
+          break;
+        case 'Reports':
+          await this.fetchReports(true); // silent refresh
+          break;
+        default:
+          // Refresh all data for system tab
+          await Promise.all([
+            this.fetchUsers(true),
+            this.fetchFiles(true),
+            this.fetchReports(true)
+          ]);
+          break;
+      }
+      
+      // Update last update timestamps
+      this.lastUpdate[this.activeTab.toLowerCase()] = new Date();
+    },
+    
+    toggleAutoRefresh() {
+      this.isAutoRefreshEnabled = !this.isAutoRefreshEnabled;
+      if (this.isAutoRefreshEnabled) {
+        this.startAutoRefresh();
+      } else {
+        this.stopAutoRefresh();
+      }
+      console.log('Auto-refresh', this.isAutoRefreshEnabled ? 'enabled' : 'disabled');
+    },
+    
+    getLastUpdateTime(tabName) {
+      const lastUpdate = this.lastUpdate[tabName.toLowerCase()];
+      if (!lastUpdate) return 'Never';
+      
+      const now = new Date();
+      const diffMs = now - lastUpdate;
+      const diffSeconds = Math.floor(diffMs / 1000);
+      const diffMinutes = Math.floor(diffSeconds / 60);
+      
+      if (diffSeconds < 60) return `${diffSeconds}s ago`;
+      if (diffMinutes < 60) return `${diffMinutes}m ago`;
+      return lastUpdate.toLocaleTimeString();
     }
   },
   mounted() {
+    // Initial data load
     this.fetchUsers();
     this.fetchFiles();
-    this.fetchReports();    
+    this.fetchReports();
+    
+    // Start auto-refresh
+    this.startAutoRefresh();
+    
+    // Set initial timestamps
+    this.lastUpdate.users = new Date();
+    this.lastUpdate.files = new Date();
+    this.lastUpdate.reports = new Date();
+  },
+  
+  beforeUnmount() {
+    // Clean up auto-refresh interval
+    this.stopAutoRefresh();
   }
 };
 </script>
 
 <style scoped>
+:root {
+  --primary: #4285f4;
+  --primary-dark: #1976d2;
+  --primary-light: #e3f2fd;
+  --tab-radius: 16px;
+  --tab-bg: #fff;
+  --tab-hover-bg: #f8f9fa;
+  --tab-active-bg: #e3f2fd;
+  --tab-shadow: 0 2px 8px rgba(66, 133, 244, 0.08);
+}
 .admin-dashboard {
   width: 100%;
   min-height: 100vh;
@@ -592,11 +1313,64 @@ export default {
   gap: 24px;
 }
 
-.admin-stats-quick {
-  display: flex;
-  gap: 24px;
-  align-items: center;
-}
+  .admin-stats-quick {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+  }
+  
+  .debug-btn {
+    background: #6c757d;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+  }
+  
+  .debug-btn:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+  }
+  
+  .auto-refresh-toggle {
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .auto-refresh-toggle:hover {
+    background: #218838;
+    transform: translateY(-1px);
+  }
+  
+  .auto-refresh-toggle.active {
+    background: #dc3545;
+  }
+  
+  .auto-refresh-toggle.active:hover {
+    background: #c82333;
+  }
+  
+  .toggle-icon {
+    font-size: 16px;
+  }
+  
+  .toggle-text {
+    font-weight: 600;
+  }
 
 .stat-item {
   display: flex;
@@ -623,36 +1397,47 @@ export default {
 /* Modern Tab Navigation */
 .admin-tabs {
   display: flex;
-  background: white;
-  border-bottom: 1px solid #e9ecef;
+  position: relative;
+  background: var(--tab-bg);
+  border-bottom: none;
   padding: 0 40px;
+  box-shadow: var(--tab-shadow);
+  border-radius: var(--tab-radius) var(--tab-radius) 0 0;
+  overflow-x: auto;
 }
 
 .admin-tab {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 16px 24px;
+  padding: 16px 32px;
   font-size: 16px;
   font-weight: 600;
   color: #6c757d;
   background: none;
   border: none;
-  border-bottom: 3px solid transparent;
+  border-radius: var(--tab-radius) var(--tab-radius) 0 0;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: background 0.2s, color 0.2s, box-shadow 0.2s;
   text-decoration: none;
+  position: relative;
+  outline: none;
+}
+
+.admin-tab:focus {
+  box-shadow: 0 0 0 3px var(--primary-light);
+  z-index: 2;
 }
 
 .admin-tab:hover {
-  color: #0d6efd;
-  background: rgba(13, 110, 253, 0.04);
+  color: var(--primary);
+  background: var(--tab-hover-bg);
 }
 
 .admin-tab.active {
-  color: #0d6efd;
-  border-bottom-color: #0d6efd;
-  background: rgba(13, 110, 253, 0.04);
+  color: var(--primary-dark);
+  background: var(--tab-active-bg);
+  z-index: 1;
 }
 
 .tab-icon {
@@ -661,6 +1446,16 @@ export default {
 
 .tab-text {
   font-weight: 600;
+}
+
+.tab-underline {
+  position: absolute;
+  bottom: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary) 60%, var(--primary-dark) 100%);
+  border-radius: 2px 2px 0 0;
+  transition: all 0.3s cubic-bezier(.55,0,.1,1);
+  will-change: left, width;
 }
 
 /* Content Area */
@@ -877,12 +1672,49 @@ export default {
   color: #6c757d;
 }
 
-.search-results-count {
-  font-size: 14px;
-  color: #6c757d;
-  font-weight: 500;
-  white-space: nowrap;
-}
+  .search-results-count {
+    font-size: 14px;
+    color: #6c757d;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  .auto-refresh-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+  }
+  
+  .auto-refresh-status .status-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #6c757d;
+    transition: all 0.3s ease;
+  }
+  
+  .auto-refresh-status .status-indicator.active {
+    background: #28a745;
+    box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+  }
+  
+  .auto-refresh-status .status-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  
+  .auto-refresh-status .last-update {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+  }
 
 .loading-state {
   display: flex;
@@ -1132,6 +1964,927 @@ export default {
   
   .btn-edit, .btn-delete {
     justify-content: center;
+  }
+  .admin-tabs {
+    padding: 0 8px;
+    border-radius: 0;
+  }
+  .admin-tab {
+    padding: 12px 16px;
+    font-size: 15px;
+  }
+  
+  .system-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .action-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  
+  .reports-tabs {
+    flex-direction: column;
+  }
+  
+  .report-tab {
+    padding: 12px 16px;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .endpoint-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .path {
+    min-width: auto;
+    font-size: 12px;
+  }
+  
+  .reports-overview {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .overview-card {
+    padding: 12px 16px;
+  }
+  
+  .overview-number {
+    font-size: 20px;
+  }
+  
+  .reports-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .report-card {
+    padding: 16px;
+  }
+  
+  .report-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+/* Files Section Styles */
+.files-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.upload-zone {
+  border: 2px dashed #dee2e6;
+  border-radius: 12px;
+  padding: 40px 20px;
+  text-align: center;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.upload-zone.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.upload-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-icon {
+  font-size: 48px;
+  opacity: 0.7;
+}
+
+.upload-content h3 {
+  margin: 0;
+  color: #495057;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.upload-content p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 16px;
+}
+
+.upload-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.upload-link:hover {
+  color: var(--primary-dark);
+}
+
+.files-table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.file-row {
+  transition: background-color 0.2s ease;
+}
+
+.file-row:hover {
+  background: #f8f9fa;
+}
+
+.file-name-cell {
+  font-weight: 600;
+}
+
+.file-name-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.file-icon-small {
+  font-size: 20px;
+}
+
+.file-name {
+  color: #212529;
+  font-weight: 600;
+}
+
+.file-type-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.file-size-cell, .file-date-cell {
+  color: #495057;
+  font-weight: 500;
+}
+
+.btn-preview {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-preview:hover {
+  background: #c8e6c9;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(46, 125, 50, 0.2);
+}
+
+/* Reports Section Styles */
+.reports-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.reports-overview {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.overview-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.overview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.overview-card.total {
+  border-left: 4px solid var(--primary);
+}
+
+.overview-card.auto {
+  border-left: 4px solid #1565c0;
+}
+
+.overview-card.manual {
+  border-left: 4px solid #7b1fa2;
+}
+
+.overview-icon {
+  font-size: 24px;
+  opacity: 0.8;
+}
+
+.overview-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.overview-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #212529;
+  line-height: 1;
+}
+
+.overview-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+}
+
+.stat-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-badge.auto {
+  background: #e3f2fd;
+  color: #1565c0;
+  border: 1px solid #bbdefb;
+}
+
+.stat-badge.manual {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #e1bee7;
+}
+
+.message-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  font-weight: 500;
+  font-size: 15px;
+}
+
+.message-banner.success {
+  background: #e8f5e8;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.message-banner.error {
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+.message-icon {
+  font-size: 18px;
+}
+
+.reports-navigation {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.reports-tabs {
+  display: flex;
+  gap: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e9ecef;
+}
+
+.report-tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 20px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #6c757d;
+  background: white;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+}
+
+.report-tab:hover {
+  background: #f8f9fa;
+  color: #495057;
+}
+
+.report-tab.active {
+  background: var(--primary);
+  color: white;
+}
+
+.report-tab.active .tab-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+.report-tab.active .tab-icon,
+.report-tab.active .tab-text {
+  color: white;
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-text {
+  font-weight: 600;
+}
+
+.tab-count {
+  background: #e9ecef;
+  color: #495057;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
+}
+
+.reports-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.report-category {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.category-header {
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.category-header h3 {
+  margin: 0 0 8px 0;
+  color: #212529;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.category-description {
+  margin: 0;
+  color: #6c757d;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.reports-container {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 20px;
+  margin-top: 20px;
+}
+
+.report-card {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+}
+
+.report-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.report-card.auto {
+  border-left: 4px solid #1565c0;
+}
+
+.report-card.manual {
+  border-left: 4px solid #7b1fa2;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.report-type {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-priority {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.report-priority.high {
+  background: #ffebee;
+  color: #c62828;
+}
+
+.report-priority.medium {
+  background: #fff3e0;
+  color: #ef6c00;
+}
+
+.report-priority.low {
+  background: #e8f5e8;
+  color: #2e7d32;
+}
+
+.report-content h4 {
+  margin: 0 0 8px 0;
+  color: #212529;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.report-description {
+  margin: 0 0 16px 0;
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.report-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.meta-icon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.empty-reports {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 2px dashed #dee2e6;
+}
+
+.empty-reports .empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-reports h3 {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.empty-reports p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* System Section Styles */
+.system-section {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.status-indicator.online {
+  background: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.2);
+}
+
+.status-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: #28a745;
+}
+
+.system-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.system-card {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.system-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.card-header h3 {
+  margin: 0 0 8px 0;
+  color: #212529;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.card-header p {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.card-content {
+  padding: 24px;
+}
+
+.action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.system-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  background: #f8f9fa;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.system-action-btn:hover:not(:disabled) {
+  background: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.15);
+}
+
+.system-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.action-icon {
+  font-size: 24px;
+}
+
+.action-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #212529;
+}
+
+.action-count {
+  background: var(--primary);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 24px;
+  text-align: center;
+}
+
+  .action-status {
+    background: #6c757d;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .action-status.active {
+    background: #28a745;
+  }
+  
+  .auto-refresh-control,
+  .refresh-frequency,
+  .last-updates {
+    cursor: default;
+    background: #f8f9fa;
+    border-color: #dee2e6;
+  }
+  
+  .auto-refresh-control:hover,
+  .refresh-frequency:hover,
+  .last-updates:hover {
+    transform: none;
+    box-shadow: none;
+  }
+  
+  .mini-toggle {
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+  }
+  
+  .mini-toggle:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
+  }
+  
+  .update-times {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  
+  .update-time {
+    font-size: 11px;
+    color: #6c757d;
+    font-weight: 500;
+  }
+
+.api-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.endpoint-group h4 {
+  margin: 0 0 16px 0;
+  color: #212529;
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.endpoint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.endpoint-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.method {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  min-width: 50px;
+  text-align: center;
+}
+
+.method.get {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.method.post {
+  background: #d4edda;
+  color: #155724;
+}
+
+.method.delete {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.path {
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  color: #495057;
+  font-weight: 500;
+  min-width: 120px;
+}
+
+.description {
+  color: #6c757d;
+  font-size: 14px;
+  flex: 1;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.info-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6c757d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.info-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #212529;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+/* Responsive Design for Auto-refresh Elements */
+@media (max-width: 768px) {
+  .auto-refresh-status {
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+  }
+  
+  .auto-refresh-toggle {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .toggle-text {
+    display: none;
+  }
+  
+  .overview-card {
+    padding: 12px 16px;
+  }
+  
+  .overview-number {
+    font-size: 20px;
+  }
+  
+  .reports-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .report-card {
+    padding: 16px;
+  }
+  
+  .report-meta {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .system-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .action-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  
+  .reports-tabs {
+    flex-direction: column;
+  }
+  
+  .report-tab {
+    padding: 12px 16px;
+  }
+  
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .endpoint-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .path {
+    min-width: auto;
+    font-size: 12px;
   }
 }
 </style>
