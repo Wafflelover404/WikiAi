@@ -23,7 +23,7 @@ export default {
       const canvas = this.$refs.canvas;
       const ctx = canvas.getContext('2d');
       this.resizeCanvas();
-      const NODES = 120;
+      const NODES = 100;
       const nodes = Array.from({ length: NODES }, () => ({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,

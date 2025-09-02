@@ -16,6 +16,6 @@ export default defineConfig({
     },
   },
   server: { 
-    allowedHosts: ['refresh-quite-structural-sensitive.trycloudflare.com']
+    allowedHosts: ['ten-palestinian-generating-decade.trycloudflare.com']
   }
 })
