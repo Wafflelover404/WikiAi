@@ -45,9 +45,9 @@
             <button class="search-btn primary" @click="runSearch" :disabled="!searchText.trim()">
               KBSage Search
             </button>
-            <button class="search-btn secondary" @click="feelingLucky" :disabled="!searchText.trim()">
+            <!-- <button class="search-btn secondary" @click="feelingLucky" :disabled="!searchText.trim()">
               I'm Feeling Lucky
-            </button>
+            </button> -->
           </div>
         </div>
       </div>
@@ -93,7 +93,7 @@
             v-for="(result, idx) in searchResults" 
             :key="idx" 
             class="search-result-item"
-            @click="openFile(result.filename, result.text)"
+            @click.stop="openFile(result.filename, result.text)"
           >
             <div class="result-header">
               <div class="result-url">
@@ -146,23 +146,25 @@
     </div>
 
     <!-- File Modal -->
-    <div v-if="fileModalVisible" class="file-modal-overlay" @click="closeFileModal">
-      <div class="file-modal" @click.stop>
-        <div class="file-modal-header">
-          <h3>{{ fileModalName }}</h3>
-          <button class="close-modal-btn" @click="closeFileModal">✖</button>
-        </div>
-        <div class="file-modal-content" v-html="fileModalContent"></div>
-      </div>
-    </div>
+    <FileModalOpener 
+      v-if="fileModalVisible" 
+      :filename="fileModalName" 
+      :content="fileModalContent" 
+      :loading="fileModalContent === ''" 
+      @close="closeFileModal"
+    />
   </div>
 </template>
 
 <script>
 import { marked } from 'marked';
+import FileModalOpener from './FileModalOpener.vue';
 
 export default {
   name: 'SearchPage',
+  components: {
+    FileModalOpener
+  },
   props: {
     token: {
       type: String,
@@ -405,45 +407,51 @@ export default {
     },
     
     async openFile(filename, segmentText) {
-      if (!filename || !this.token || !this.serverUrl) return;
+      if (!filename || !this.token || !this.serverUrl) {
+        console.error('Missing required parameters:', { filename, hasToken: !!this.token, hasServerUrl: !!this.serverUrl });
+        return;
+      }
+      
+      // Show modal with loading state
+      this.fileModalVisible = true;
+      this.fileModalName = filename.startsWith('file:') ? filename.substring(5) : filename;
+      this.fileModalContent = '';
       
       try {
-        // Remove the prefix if it exists
-        const cleanFilename = filename.startsWith('file:') ? filename.substring(5) : filename;
+        // Get clean filename (remove prefix if exists)
+        let cleanFilename = this.fileModalName;
+        if (cleanFilename.startsWith('temp_')) {
+          cleanFilename = cleanFilename.substring(5);
+        }
+        
         const encodedFilename = encodeURIComponent(cleanFilename);
         const url = `${this.serverUrl}/files/content/${encodedFilename}`;
         
+        console.log('Fetching file:', { url, cleanFilename });
+        
         const res = await fetch(url, {
           method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.token}`
-          }
+          headers: { 'Authorization': `Bearer ${this.token}` }
         });
         
         if (res.ok) {
           let content = await res.text();
-          
-          // Highlight search terms in content
-          if (segmentText && this.searchText) {
-            const searchTerms = this.searchText.split(' ').filter(term => term.length > 2);
-            searchTerms.forEach(term => {
-              const regex = new RegExp(`(${term})`, 'gi');
-              content = content.replace(regex, '<mark style="background: #ff6b35; color: white; padding: 2px 4px; border-radius: 2px;">$1</mark>');
-            });
+          if (segmentText) {
+            const escaped = segmentText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(escaped, 'g');
+            content = content.replace(regex, '<mark style="background: #0078d4; color: #fff;">$&</mark>');
           }
-          
-          this.fileModalContent = `<pre style="white-space: pre-wrap; word-break: break-word; line-height: 1.6;">${content}</pre>`;
-          this.fileModalName = cleanFilename;
-          this.fileModalVisible = true;
+          this.fileModalContent = content;
+        } else if (res.status === 404) {
+          this.fileModalContent = 'File not found.';
+        } else if (res.status === 403) {
+          this.fileModalContent = 'Access denied.';
         } else {
-          this.fileModalContent = '<p>Unable to load file content.</p>';
-          this.fileModalName = cleanFilename;
-          this.fileModalVisible = true;
+          this.fileModalContent = `Unable to load file content. Status: ${res.status}`;
         }
       } catch (error) {
-        this.fileModalContent = '<p>Error loading file.</p>';
-        this.fileModalName = filename;
-        this.fileModalVisible = true;
+        console.error('Error loading file:', error);
+        this.fileModalContent = `Error loading file: ${error.message || 'Unknown error occurred'}`;
       }
     },
     
