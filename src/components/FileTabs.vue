@@ -1,26 +1,67 @@
 <template>
   <div class="file-tabs">
-    <div class="tabs">
-      <transition-group name="tab-move" tag="div" class="tab-row">
-        <div
-          v-for="file in openedFiles"
-          :key="file"
-          class="tab"
-          :class="{ active: file === activeTab }"
-          @click="$emit('switch-tab', file)"
-        >
-          <span>{{ file }}</span>
-          <button class="close-tab-btn" @click.stop="$emit('close-file', file)" title="Close" style="margin-left: 8px;">✖</button>
+    <!-- File List View -->
+    <div v-if="!activeTab" class="file-list-view">
+      <div class="file-list-header">
+        <h3>📁 Files</h3>
+        <div class="file-count">{{ fileList.length }} files</div>
+      </div>
+      <div class="file-list-cards">
+        <div v-for="file in fileList" :key="file.name" class="file-card" @click="openFile(file.name)">
+          <div class="file-icon">{{ getFileIcon(file.name) }}</div>
+          <div class="file-info">
+            <div class="file-name" :title="file.name">{{ file.name }}</div>
+            <div class="file-meta">
+              <span class="file-size">{{ formatSize(file.size) }}</span>
+              <span class="file-date">{{ formatDate(file.modified) }}</span>
+              <span class="file-type">{{ getFileType(file.name) }}</span>
+            </div>
+          </div>
+          <div class="file-actions">
+            <button class="action-btn" @click.stop="downloadFile(file.name)" title="Download">
+              ⬇️
+            </button>
+          </div>
         </div>
-      </transition-group>
+        <div v-if="fileList.length === 0" class="empty-state">
+          <div class="empty-icon">📭</div>
+          <div class="empty-text">No files available</div>
+          <div class="empty-subtext">Files you have access to will appear here</div>
+        </div>
+      </div>
     </div>
-    <div class="file-content">
-      <p v-if="openedFiles.length === 0">No file opened</p>
-      <div v-else>
-        <h4>{{ activeTab || openedFiles[0] }}</h4>
-        <div class="content-scroll">
-          <div class="content-placeholder">
-            <pre class="scroll-pre"><span v-html="markedContents"></span></pre>
+    
+    <!-- File Content View -->
+    <div v-else class="file-content-view">
+      <div class="content-header">
+        <button class="back-to-list-btn" @click="closeFile" aria-label="Back to file list">
+          ← Back to files
+        </button>
+        <div class="content-title-section">
+          <h4 class="file-content-title">{{ activeTab }}</h4>
+          <div class="content-actions">
+            <button class="action-btn" @click="copyContent" title="Copy content">
+              📋
+            </button>
+            <button class="action-btn" @click="printContent" title="Print">
+              🖨️
+            </button>
+            <button class="action-btn" @click="downloadFile(activeTab)" title="Download">
+              ⬇️
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="content-scroll">
+        <div class="content-container">
+          <div v-if="loading" class="loading-state">
+            <div class="loading-spinner"></div>
+            <div>Loading content...</div>
+          </div>
+          <div v-else-if="currentContent" class="content-body" v-html="markedContent"></div>
+          <div v-else class="error-state">
+            <div class="error-icon">⚠️</div>
+            <div>Failed to load file content</div>
           </div>
         </div>
       </div>
@@ -45,118 +86,564 @@ export default {
     activeTab: {
       type: String,
       default: null
+    },
+    files: {
+      type: Array,
+      default: () => []
     }
   },
+  data() {
+    return {
+      loading: false
+    };
+  },
   computed: {
-    markedContents() {
-      if (!this.fileContents[this.activeTab]) return '';
-      marked.setOptions({
-        gfm: true,
-        smartLists: true,
-        smartypants: true
+    fileList() {
+      // Convert simple file names to file objects with metadata
+      return this.files.map(fileName => {
+        // Mock file metadata - in a real app, this would come from the API
+        const extension = fileName.split('.').pop();
+        return {
+          name: fileName,
+          size: Math.floor(Math.random() * 50000) + 1000, // Mock size
+          modified: new Date(Date.now() - Math.floor(Math.random() * 30) * 24 * 60 * 60 * 1000), // Mock date
+          type: extension
+        };
       });
-      return marked(this.fileContents[this.activeTab]);
+    },
+    currentContent() {
+      return this.activeTab ? this.fileContents[this.activeTab] : null;
+    },
+    markedContent() {
+      if (!this.currentContent) return '';
+      
+      // Configure marked for better rendering
+      marked.setOptions({ 
+        gfm: true, 
+        smartLists: true, 
+        smartypants: true,
+        breaks: true,
+        headerIds: true,
+        mangle: false
+      });
+      
+      // Simple check if content is markdown-like
+      if (this.currentContent.includes('#') || this.currentContent.includes('*') || this.currentContent.includes('[')) {
+        return marked(this.currentContent);
+      }
+      
+      // For plain text, preserve formatting but escape HTML
+      const escaped = this.currentContent
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+      
+      return `<pre class="plain-text">${escaped}</pre>`;
+    }
+  },
+  methods: {
+    openFile(fileName) {
+      this.$emit('switch-tab', fileName);
+    },
+    closeFile() {
+      this.$emit('close-file', this.activeTab);
+    },
+    getFileIcon(fileName) {
+      const extension = fileName.split('.').pop().toLowerCase();
+      const iconMap = {
+        'md': '📝',
+        'txt': '📄',
+        'pdf': '📕',
+        'doc': '📘',
+        'docx': '📘',
+        'json': '📋',
+        'js': '📜',
+        'ts': '📜',
+        'html': '🌐',
+        'css': '🎨',
+        'py': '🐍',
+        'java': '☕',
+        'cpp': '⚙️',
+        'c': '⚙️',
+        'go': '🔷',
+        'rust': '🦀',
+        'php': '🐘',
+        'rb': '💎',
+        'swift': '🕊️',
+        'kt': '🟣',
+        'xml': '📰',
+        'yml': '⚙️',
+        'yaml': '⚙️'
+      };
+      return iconMap[extension] || '📄';
+    },
+    getFileType(fileName) {
+      const extension = fileName.split('.').pop().toLowerCase();
+      return extension.toUpperCase();
+    },
+    formatSize(size) {
+      if (!size || isNaN(size)) return '-';
+      if (size < 1024) return size + ' B';
+      if (size < 1024 * 1024) return (size / 1024).toFixed(1) + ' KB';
+      return (size / (1024 * 1024)).toFixed(2) + ' MB';
+    },
+    formatDate(date) {
+      if (!date) return '-';
+      const d = new Date(date);
+      const now = new Date();
+      const diffTime = Math.abs(now - d);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 1) return 'Yesterday';
+      if (diffDays <= 7) return `${diffDays} days ago`;
+      if (diffDays <= 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+      
+      return d.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    },
+    async copyContent() {
+      if (!this.currentContent) return;
+      
+      try {
+        await navigator.clipboard.writeText(this.currentContent);
+        // You might want to show a toast notification here
+        console.log('Content copied to clipboard');
+      } catch (err) {
+        console.error('Failed to copy content:', err);
+      }
+    },
+    printContent() {
+      if (!this.currentContent) return;
+      
+      const printWindow = window.open('', '_blank');
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>${this.activeTab}</title>
+            <style>
+              body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+              pre { white-space: pre-wrap; word-break: break-word; }
+              h1, h2, h3, h4, h5, h6 { color: #333; }
+              code { background: #f4f4f4; padding: 2px 4px; border-radius: 3px; }
+            </style>
+          </head>
+          <body>
+            <h1>${this.activeTab}</h1>
+            <hr>
+            ${this.markedContent}
+          </body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    },
+    downloadFile(fileName) {
+      // Emit event to parent to handle file download
+      this.$emit('download-file', fileName);
     }
   }
 }
 </script>
 
 <style scoped>
-.tab-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-.file-tabs {
-  flex: 1;
+/* File list view */
+.file-list-view {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(33, 150, 243, 0.08);
+  overflow: hidden;
 }
-.tabs {
+
+.file-list-header {
   display: flex;
-  background: #fafafa;
-  border-bottom: 1px solid #ddd;
-  padding: 0 8px;
-  height: 40px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.file-list-header h3 {
+  font-size: 22px;
+  font-weight: 600;
+  color: #007BFF;
+  margin: 0;
+}
+
+.file-count {
+  font-size: 14px;
+  color: #6C757D;
+  background: #e3f2fd;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+.file-list-cards {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-card {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.file-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #007BFF;
+  transform: scaleY(0);
+  transition: transform 0.3s ease;
+}
+
+.file-card:hover::before {
+  transform: scaleY(1);
+}
+
+.file-card:hover {
+  background: #f8f9fa;
+  border-color: #007BFF;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(33, 150, 243, 0.15);
+}
+
+.file-icon {
+  font-size: 28px;
+  margin-right: 16px;
+  flex-shrink: 0;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-meta {
+  display: flex;
+  gap: 16px;
+  font-size: 13px;
+  color: #6C757D;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.file-card:hover .file-actions {
+  opacity: 1;
+}
+
+.action-btn {
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-btn:hover {
+  background: #e9ecef;
+  border-color: #6c757d;
+  transform: scale(1.1);
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: #6C757D;
+}
+
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+  opacity: 0.7;
+}
+
+.empty-text {
+  font-size: 18px;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #495057;
+}
+
+.empty-subtext {
+  font-size: 14px;
+  color: #6C757D;
+}
+
+/* File content view */
+.file-content-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 12px rgba(33, 150, 243, 0.08);
+  overflow: hidden;
+}
+
+.content-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid #e9ecef;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.back-to-list-btn {
+  background: #fff;
+  color: #007BFF;
+  border: 1.5px solid #007BFF;
+  border-radius: 25px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 20px;
+  margin-bottom: 16px;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-to-list-btn:hover {
+  background: #007BFF;
+  color: #fff;
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.content-title-section {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
 }
-.tab {
-  margin-right: 12px;
-  padding: 6px 16px;
-  background: #eaeaea;
-  border-radius: 4px 4px 0 0;
-  cursor: pointer;
-  transition: background 0.2s, box-shadow 0.2s;
+
+.file-content-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
-.tab.active {
-  background: #fff;
-  font-weight: bold;
-  box-shadow: 0 2px 8px rgba(0,120,212,0.08);
+
+.content-actions {
+  display: flex;
+  gap: 8px;
 }
-.tab-move-enter-active, .tab-move-leave-active {
-  transition: all 0.3s cubic-bezier(.55,0,.1,1);
+
+.content-scroll {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
-.tab-move-enter-from, .tab-move-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-.tab-move-enter-to, .tab-move-leave-from {
-  opacity: 1;
-  transform: translateY(0);
-}
-.file-content {
+
+.content-container {
   flex: 1;
   padding: 24px;
-  background: #fff;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  height: 100%;
+  overflow-y: auto;
+  background: #fafbfc;
 }
-.content-placeholder {
-  color: #888;
+
+.content-body {
+  line-height: 1.6;
+  color: #333;
+  font-size: 16px;
+}
+
+/* Markdown content styling */
+.content-body :deep(h1), 
+.content-body :deep(h2), 
+.content-body :deep(h3), 
+.content-body :deep(h4), 
+.content-body :deep(h5), 
+.content-body :deep(h6) {
+  color: #2c3e50;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  font-weight: 600;
+}
+
+.content-body :deep(h1) { font-size: 28px; }
+.content-body :deep(h2) { font-size: 24px; }
+.content-body :deep(h3) { font-size: 20px; }
+
+.content-body :deep(p) {
+  margin-bottom: 16px;
+}
+
+.content-body :deep(code) {
+  background: #f8f9fa;
+  color: #e83e8c;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 0.9em;
+}
+
+.content-body :deep(pre) {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 16px 0;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.content-body :deep(pre code) {
+  background: none;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+}
+
+.content-body :deep(blockquote) {
+  border-left: 4px solid #007BFF;
+  background: #f8f9fa;
+  margin: 16px 0;
+  padding: 12px 20px;
+  color: #495057;
   font-style: italic;
 }
-.content-scroll {
-  width: 100%;
-  height: 45em;
-  /* You can adjust 400px to fit your design */
-  display: flex;
-  flex-direction: column;
+
+.content-body :deep(ul), .content-body :deep(ol) {
+  margin: 16px 0;
+  padding-left: 24px;
 }
-.content-placeholder {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+
+.content-body :deep(li) {
+  margin-bottom: 4px;
 }
-.scroll-pre {
-  width: 100%;
-  height: 100%;
-  overflow-y: auto;
-  background: transparent;
-  border: none;
-  margin: 0;
-  padding: 0;
-  font-family: inherit;
-  font-size: inherit;
+
+.plain-text {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
   white-space: pre-wrap;
   word-break: break-word;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #495057;
+  margin: 0;
 }
-.close-tab-btn {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 16px;
-  cursor: pointer;
-  padding: 0 4px;
-  border-radius: 2px;
-  transition: background 0.2s;
+
+/* Loading and error states */
+.loading-state, .error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #6C757D;
+  text-align: center;
 }
-.close-tab-btn:hover {
-  background: #f2dede;
-  color: #c00;
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007BFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.error-icon {
+  font-size: 32px;
+  margin-bottom: 16px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .file-list-header {
+    padding: 16px 20px;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  
+  .file-card {
+    padding: 12px 16px;
+  }
+  
+  .file-meta {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .content-header {
+    padding: 16px 20px;
+  }
+  
+  .content-title-section {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .content-container {
+    padding: 16px;
+  }
 }
 </style>

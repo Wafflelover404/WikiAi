@@ -43,20 +43,18 @@
             </div>
             <!-- Loading/Feedback -->
             <div v-if="loading" class="loading-indicator" role="status" aria-live="polite">Loading...</div>
-            <!-- File List Sidebar -->
-            <SidebarFiles :files="filteredFiles" :token="token" :serverUrl="serverUrl" @file-click="handleFileClick">
-              <template #actions>
-                <button class="reload-btn" @click="updateFiles" aria-label="Reload files">🔄 Update</button>
-              </template>
-            </SidebarFiles>
-            <!-- Main Content Tabs -->
-            <FileTabs
-              :openedFiles="openedFiles"
-              :fileContents="fileContents"
-              :activeTab="activeTab"
-              @close-file="closeFile"
-              @switch-tab="switchTab"
-            />
+            <!-- Main Content Area -->
+            <div class="main-content-area">
+              <FileTabs
+                :files="filteredFiles"
+                :openedFiles="openedFiles"
+                :fileContents="fileContents"
+                :activeTab="activeTab"
+                @close-file="closeFile"
+                @switch-tab="switchTab"
+                @download-file="downloadFile"
+              />
+            </div>
             <!-- Search Sidebar -->
             <transition name="sidebar-slide">
               <div v-if="searchVisible" class="search-sidebar-animated">
@@ -82,7 +80,6 @@
 </template>
 
 <script>
-import SidebarFiles from './components/SidebarFiles.vue';
 import FileTabs from './components/FileTabs.vue';
 import SearchSidebar from './components/SearchSidebar.vue';
 import SettingsModal from './components/SettingsModal.vue';
@@ -92,7 +89,6 @@ import AdminDashboard from './components/AdminDashboard.vue';
 export default {
   name: 'App',
   components: {
-    SidebarFiles,
     FileTabs,
     SearchSidebar,
     SettingsModal,
@@ -262,8 +258,44 @@ export default {
         this.activeTab = this.openedFiles[0] || null;
       }
     },
-    switchTab(filename) {
-      this.activeTab = filename;
+    async switchTab(filename) {
+      // Load file content if not already loaded
+      if (!this.fileContents[filename]) {
+        await this.handleFileClick(filename);
+      } else {
+        this.activeTab = filename;
+        if (!this.openedFiles.includes(filename)) {
+          this.openedFiles.unshift(filename);
+        }
+      }
+    },
+    async downloadFile(filename) {
+      if (!this.token || !this.serverUrl) return;
+      
+      try {
+        const encodedFilename = encodeURIComponent(filename);
+        const url = `${this.serverUrl}/files/content/${encodedFilename}`;
+        const res = await fetch(url, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${this.token}` }
+        });
+        
+        if (res.ok) {
+          const blob = await res.blob();
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(downloadUrl);
+          document.body.removeChild(a);
+        } else {
+          console.error('Failed to download file:', res.statusText);
+        }
+      } catch (e) {
+        console.error('Error downloading file:', e);
+      }
     }
   }
 }
@@ -272,6 +304,19 @@ export default {
 
 
 <style>
+/* Full-page login UI */
+.login-fullpage {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f5f5f5;
+  z-index: 100;
+}
 body {
   font-family: 'Inter', 'Open Sans', Arial, sans-serif;
   background: #f5f5f5;
@@ -491,6 +536,15 @@ body {
   margin-left: 6px;
   color: #007BFF;
 }
+/* Main content area */
+.main-content-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  margin-top: 8px;
+}
+
 /* Accessibility: focus ring for keyboard navigation */
 .sidebar-tabs li:focus {
   outline: 2px solid #007BFF;
