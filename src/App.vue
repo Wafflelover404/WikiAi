@@ -36,6 +36,7 @@
             :files="files"
             :token="token"
             :serverUrl="serverUrl"
+            :userRole="user?.role || 'user'"
             @navigate-to="navigateTo"
             @perform-search="performSearch"
             @open-file="openFileFromHome"
@@ -143,15 +144,30 @@ export default {
       globalSearch: '',
       loading: false,
       currentView: 'home',
-      pendingSearch: ''
+      pendingSearch: '',
+      fileListCache: [],
+      fileListInterval: null
     };
   },
   watch: {
-    currentView(newView) {
-      if (newView === 'files' && this.files.length === 0 && this.token && this.serverUrl) {
-        this.updateFiles();
+      currentView(newView) {
+        if (newView === 'files' && this.token && this.serverUrl) {
+          // Start auto-update interval when entering Files tab
+          if (!this.fileListInterval) {
+            this.fileListInterval = setInterval(this.autoUpdateFiles, 5000);
+          }
+          // Initial load if needed
+          if (this.files.length === 0) {
+            this.updateFiles();
+          }
+        } else {
+          // Stop auto-update interval when leaving Files tab
+          if (this.fileListInterval) {
+            clearInterval(this.fileListInterval);
+            this.fileListInterval = null;
+          }
+        }
       }
-    }
   },
   computed: {
       isAdmin() {
@@ -172,9 +188,46 @@ export default {
         });
       }
     },
-  methods: {
-    toggleToken() {
-      this.showToken = !this.showToken;
+    methods: {
+        autoUpdateFiles() {
+          if (this.currentView !== 'files' || !this.token || !this.serverUrl) return;
+          this.fetchFilesForAutoUpdate();
+        },
+
+        async fetchFilesForAutoUpdate() {
+          try {
+            const { apiRequest } = await import('./api.js');
+            const res = await apiRequest({ url: `${this.serverUrl}/files/list`, method: 'GET', token: this.token });
+            if (res && res.response && Array.isArray(res.response.documents)) {
+              const newFiles = res.response.documents.map(doc => ({
+                filename: doc.filename || doc.original_filename,
+                original_filename: doc.original_filename,
+                file_id: doc.file_id,
+                size: doc.size || 0,
+                upload_date: doc.upload_date || doc.created_at,
+                file_type: doc.file_type || this.getFileTypeFromName(doc.filename || doc.original_filename),
+                description: doc.description || ''
+              }));
+              // Compare with cached list
+              if (JSON.stringify(newFiles) !== JSON.stringify(this.fileListCache)) {
+                this.files = newFiles;
+                this.fileListCache = newFiles;
+                console.log('Files auto-updated:', newFiles);
+              }
+            }
+          } catch (e) {
+            // Silent fail for auto-update
+          }
+        },
+      toggleToken() {
+        this.showToken = !this.showToken;
+      },
+    beforeDestroy() {
+      // Clean up interval on destroy
+      if (this.fileListInterval) {
+        clearInterval(this.fileListInterval);
+        this.fileListInterval = null;
+      }
     },
     copyToken() {
       navigator.clipboard.writeText(this.token).then(() => alert('Token copied!'));

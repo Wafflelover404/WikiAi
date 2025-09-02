@@ -106,16 +106,22 @@
               <div class="action-description">Explore your document library</div>
             </div>
             
-            <div class="action-card" @click="uploadFiles">
-              <div class="action-icon">⬆️</div>
-              <div class="action-title">Upload Documents</div>
-              <div class="action-description">Add new files to your knowledge base</div>
+            <div v-if="userRole === 'admin'" class="action-card" @click="$emit('navigate-to', 'admin')">
+              <div class="action-icon">⚙️</div>
+              <div class="action-title">Admin Panel</div>
+              <div class="action-description">Manage users and system settings</div>
             </div>
             
-            <div class="action-card" @click="viewAnalytics">
+            <div v-if="userRole === 'admin'" class="action-card" @click="viewAnalytics">
               <div class="action-icon">📊</div>
               <div class="action-title">Analytics</div>
               <div class="action-description">View usage statistics and insights</div>
+            </div>
+
+            <div v-if="userRole === 'user'" class="action-card" @click="viewStats">
+              <div class="action-icon">📊</div>
+              <div class="action-title">Statistics</div>
+              <div class="action-description">View your activity overview</div>
             </div>
           </div>
         </div>
@@ -205,6 +211,10 @@ export default {
     serverUrl: {
       type: String,
       default: ''
+    },
+    userRole: {
+      type: String,
+      default: 'user'
     }
   },
   data() {
