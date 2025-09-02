@@ -10,9 +10,9 @@
           <span class="sidebar-title">KBSage</span>
         </div>
         <ul class="sidebar-tabs">
-          <li :class="{active: !showAdminDashboard}" @click="showAdminDashboard = false" tabindex="0" aria-label="Home">🏠 Home</li>
-          <li :class="{active: false}" tabindex="0" aria-label="Files">📁 Files</li>
-          <li :class="{active: false}" tabindex="0" aria-label="Search" @click="toggleSearch">🔍 Search</li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" @click="navigateTo('home')" tabindex="0" aria-label="Home">🏠 Home</li>
+          <li :class="{active: currentView === 'files' && !showAdminDashboard}" @click="navigateTo('files')" tabindex="0" aria-label="Files">📁 Files</li>
+          <li :class="{active: currentView === 'search' && !showAdminDashboard}" @click="navigateTo('search')" tabindex="0" aria-label="Search">🔍 Search</li>
           <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="showAdminDashboard = true" tabindex="0" aria-label="Admin">🛠 Admin</li>
         </ul>
         <div class="sidebar-bottom">
@@ -30,20 +30,37 @@
           <AdminDashboard :token="token" :API_BASE_URL="serverUrl" :activeTabAdmin="activeTabAdmin" @close="showAdminDashboard = false" />
         </template>
         <template v-else>
-          <div class="main-content">
-            <!-- Breadcrumbs -->
-            <nav class="breadcrumbs" aria-label="Breadcrumb">
-              <span>Home</span>
-              <span v-if="activeTab"> / {{ activeTab }}</span>
-            </nav>
-            <!-- Global Search Bar -->
-            <div class="global-search-bar">
-              <input type="text" v-model="globalSearch" placeholder="Search files..." aria-label="Global Search" @input="onGlobalSearchInput" />
-              <button v-if="globalSearch" @click="clearGlobalSearch" aria-label="Clear search" class="clear-search-btn">✖</button>
+          <!-- Home View -->
+          <HomePage 
+            v-if="currentView === 'home'"
+            :files="files"
+            :token="token"
+            :serverUrl="serverUrl"
+            @navigate-to="navigateTo"
+            @perform-search="performSearch"
+            @open-file="openFileFromHome"
+            @upload-files="handleFileUpload"
+          />
+          
+          <!-- Files View -->
+          <div v-else-if="currentView === 'files'" class="files-view">
+            <div class="view-header">
+              <h1>📁 Files</h1>
+              <p class="view-subtitle">Browse and manage your document library</p>
+              <div class="view-actions">
+                <div class="search-bar">
+                  <input 
+                    type="text" 
+                    v-model="globalSearch" 
+                    placeholder="Search files..." 
+                    class="files-search-input"
+                  />
+                  <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
+                </div>
+                <button class="reload-btn" @click="updateFiles" aria-label="Reload files">🔄 Update</button>
+              </div>
             </div>
-            <!-- Loading/Feedback -->
             <div v-if="loading" class="loading-indicator" role="status" aria-live="polite">Loading...</div>
-            <!-- Main Content Area -->
             <div class="main-content-area">
               <FileTabs
                 :files="filteredFiles"
@@ -55,24 +72,28 @@
                 @download-file="downloadFile"
               />
             </div>
-            <!-- Search Sidebar -->
-            <transition name="sidebar-slide">
-              <div v-if="searchVisible" class="search-sidebar-animated">
-                <SearchSidebar :visible="searchVisible" :token="token" :serverUrl="serverUrl" />
-              </div>
-            </transition>
-            <!-- Settings Modal -->
-            <SettingsModal
-              :visible="settingsVisible"
-              :initialUsername="username"
-              :initialPassword="password"
-              :initialServerUrl="serverUrl"
-              :accessToken="token"
-              @close="settingsVisible = false"
-              @save="saveSettings"
-              @logout="handleLogout"
-            />
           </div>
+          
+          <!-- Search View -->
+          <SearchPage 
+            v-else-if="currentView === 'search'"
+            :token="token"
+            :serverUrl="serverUrl"
+            :initial-search="pendingSearch"
+            @search-performed="pendingSearch = ''"
+          />
+          
+          <!-- Settings Modal -->
+          <SettingsModal
+            :visible="settingsVisible"
+            :initialUsername="username"
+            :initialPassword="password"
+            :initialServerUrl="serverUrl"
+            :accessToken="token"
+            @close="settingsVisible = false"
+            @save="saveSettings"
+            @logout="handleLogout"
+          />
         </template>
       </div>
     </template>
@@ -85,6 +106,8 @@ import SearchSidebar from './components/SearchSidebar.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import LoginPage from './components/LoginPage.vue';
 import AdminDashboard from './components/AdminDashboard.vue';
+import HomePage from './components/HomePage.vue';
+import SearchPage from './components/SearchPage.vue';
 
 export default {
   name: 'App',
@@ -93,7 +116,9 @@ export default {
     SearchSidebar,
     SettingsModal,
     LoginPage,
-    AdminDashboard
+    AdminDashboard,
+    HomePage,
+    SearchPage
   },
   data() {
     return {
@@ -113,7 +138,9 @@ export default {
       showToken: false,
       darkMode: false,
       globalSearch: '',
-      loading: false
+      loading: false,
+      currentView: 'home',
+      pendingSearch: ''
     };
   },
   computed: {
@@ -296,6 +323,35 @@ export default {
       } catch (e) {
         console.error('Error downloading file:', e);
       }
+    },
+    
+    // Navigation methods
+    navigateTo(view) {
+      this.currentView = view;
+      this.showAdminDashboard = false;
+      
+      // Reset active tab when switching views
+      if (view !== 'files') {
+        this.activeTab = null;
+      }
+    },
+    
+    // Home page event handlers
+    performSearch(query) {
+      this.pendingSearch = query;
+      this.currentView = 'search';
+    },
+    
+    async openFileFromHome(filename) {
+      this.currentView = 'files';
+      await this.handleFileClick(filename);
+    },
+    
+    handleFileUpload(files) {
+      // Handle file upload - you can implement this based on your API
+      console.log('Files to upload:', files);
+      // For now, just show an alert
+      alert(`Selected ${files.length} file(s) for upload. Upload functionality needs to be implemented.`);
     }
   }
 }
@@ -545,8 +601,99 @@ body {
   margin-top: 8px;
 }
 
+/* Files View Styles */
+.files-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.view-header {
+  background: white;
+  padding: 32px 40px;
+  border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.view-header h1 {
+  font-size: 36px;
+  font-weight: 700;
+  color: #202124;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.view-subtitle {
+  font-size: 18px;
+  color: #5f6368;
+  margin: 0 0 24px 0;
+  font-weight: 300;
+}
+
+.view-actions {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.files-search-input {
+  width: 320px;
+  padding: 12px 16px;
+  border: 1px solid #dadce0;
+  border-radius: 24px;
+  font-size: 16px;
+  outline: none;
+  transition: all 0.3s ease;
+  background: #f8f9fa;
+}
+
+.files-search-input:focus {
+  background: white;
+  border-color: #4285f4;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.2);
+}
+
+.files-search-input::placeholder {
+  color: #9aa0a6;
+}
+
 /* Accessibility: focus ring for keyboard navigation */
 .sidebar-tabs li:focus {
   outline: 2px solid #007BFF;
+}
+
+/* Responsive design for files view */
+@media (max-width: 768px) {
+  .view-header {
+    padding: 24px 20px;
+  }
+  
+  .view-header h1 {
+    font-size: 28px;
+  }
+  
+  .view-subtitle {
+    font-size: 16px;
+  }
+  
+  .view-actions {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .files-search-input {
+    width: 100%;
+  }
 }
 </style>
