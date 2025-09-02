@@ -97,6 +97,8 @@
 
 <script>
 import { marked } from 'marked';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css';
 
 export default {
   name: 'FileTabs',
@@ -140,25 +142,28 @@ export default {
     },
     markedContent() {
       if (!this.currentContent) return '';
-      
-      // Configure marked for better rendering
-      marked.setOptions({ 
-        gfm: true, 
-        smartLists: true, 
+      // Configure marked for better rendering and code highlighting
+      marked.setOptions({
+        gfm: true,
+        smartLists: true,
         smartypants: true,
         breaks: true,
         headerIds: true,
-        mangle: false
+        mangle: false,
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          return hljs.highlightAuto(code).value;
+        }
       });
-      
       return marked(this.currentContent);
     },
-    
     isMarkdown() {
       if (!this.currentContent || !this.activeTab) return false;
       const filename = this.activeTab.toLowerCase();
-      return filename.endsWith('.md') || filename.endsWith('.markdown') || 
-             (this.currentContent.includes('#') && this.currentContent.includes('\n'));
+      // Only treat .md/.markdown files as markdown
+      return filename.endsWith('.md') || filename.endsWith('.markdown');
     },
     
     isCode() {
@@ -169,6 +174,24 @@ export default {
     }
   },
   methods: {
+    getMarkedContent(text) {
+      if (!text) return '';
+      marked.setOptions({
+        gfm: true,
+        smartLists: true,
+        smartypants: true,
+        breaks: true,
+        headerIds: true,
+        mangle: false,
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            return hljs.highlight(code, { language: lang }).value;
+          }
+          return hljs.highlightAuto(code).value;
+        }
+      });
+      return marked(text);
+    },
     openFile(fileName) {
       this.$emit('switch-tab', fileName);
     },
@@ -629,10 +652,13 @@ export default {
 }
 
 .content-body :deep(pre code) {
-  background: none;
-  color: inherit;
+  background: #f8f9fa;
+  color: #24292f;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  border-radius: 8px;
   padding: 0;
-  border-radius: 0;
+  overflow-x: auto;
 }
 
 .content-body :deep(blockquote) {
