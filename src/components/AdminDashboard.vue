@@ -603,6 +603,13 @@
       @save="onFileEditSaved"
       @close="closeEditFile"
     />
+    <FileModalOpener
+      v-if="previewModalOpen && previewModalFile"
+      :filename="previewModalFile.filename"
+      :content="previewModalContent"
+      :loading="previewModalLoading"
+      @close="closePreviewModal"
+    />
   </div>
 </template>
 
@@ -610,10 +617,11 @@
 import UserEditModal from './UserEditModal.vue';
 import ReportTable from './ReportTable.vue';
 import FileEditModal from './FileEditModal.vue';
+import FileModalOpener from './FileModalOpener.vue';
 
 export default {
   name: 'AdminDashboard',
-  components: { UserEditModal, ReportTable, FileEditModal },
+  components: { UserEditModal, ReportTable, FileEditModal, FileModalOpener },
   props: {
     token: { type: String, required: true },
     API_BASE_URL: { type: String, required: true }
@@ -664,6 +672,11 @@ export default {
       },
       updateFrequency: 30000, // 30 seconds
       isAutoRefreshEnabled: true,
+      // Preview modal data
+      previewModalOpen: false,
+      previewModalFile: null,
+      previewModalContent: '',
+      previewModalLoading: false,
     };
   },
   computed: {
@@ -829,13 +842,17 @@ export default {
       }
     },
     async createUser() {
-      // Set allowed_files based on radio selection
-      if (this.allowedFilesMode === 'all') {
-        this.newUser.allowed_files = ['all'];
-      } else if (this.allowedFilesMode === 'select' && this.newUser.allowed_files.length === 0) {
-        this.userCreateMsg = 'Please select at least one file.';
-        return;
-      }
+        // Set allowed_files based on radio selection
+        if (this.allowedFilesMode === 'all') {
+          this.newUser.allowed_files = ['all'];
+        } else if (this.allowedFilesMode === 'select') {
+          // Remove 'all' if present
+          this.newUser.allowed_files = this.newUser.allowed_files.filter(f => f !== 'all');
+          if (this.newUser.allowed_files.length === 0) {
+            this.userCreateMsg = 'Please select at least one file.';
+            return;
+          }
+        }
       try {
         const res = await fetch(`${this.API_BASE_URL}/register`, {
           method: 'POST',
@@ -1093,9 +1110,43 @@ export default {
       const date = new Date(dateString);
       return date.toLocaleDateString();
     },
-    previewFile(file) {
-      // For now, just show a message. You can implement actual file preview later
-      alert(`Previewing file: ${file.original_filename || file.filename}`);
+  async previewFile(file) {
+      this.previewModalOpen = true;
+      this.previewModalFile = file;
+      this.previewModalLoading = true;
+      // Fetch file content from backend
+      try {
+        const filename = file.filename.startsWith('temp_') ? file.filename.slice(5) : file.filename;
+        const cleanFilename = filename.startsWith('file:') ? filename.slice(5) : filename;
+        const res = await fetch(`${this.API_BASE_URL}/files/content/${encodeURIComponent(cleanFilename)}`, {
+          headers: { Authorization: `Bearer ${this.token}` }
+        });
+        const data = await res.json();
+        this.previewModalContent = data.content || '';
+        if (data.segments) {
+          this.previewModalContent = this.highlightSegments(data.content, data.segments);
+        }
+      } catch (e) {
+        this.previewModalContent = 'Failed to load file content.';
+      } finally {
+        this.previewModalLoading = false;
+      }
+    },
+    closePreviewModal() {
+      this.previewModalOpen = false;
+      this.previewModalFile = null;
+      this.previewModalContent = '';
+      this.previewModalLoading = false;
+    },
+    
+    highlightSegments(content, segments) {
+      if (!segments || segments.length === 0) return content;
+      let highlighted = content;
+      for (const segment of segments) {
+        const span = `<span class="highlight">${segment}</span>`;
+        highlighted = highlighted.replace(segment, span);
+      }
+      return highlighted;
     },
     
     async testAPIConnection() {
@@ -2888,4 +2939,3 @@ export default {
   }
 }
 </style>
-
