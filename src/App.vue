@@ -360,6 +360,10 @@ export default {
 
 
 <style>
+.kb-app {
+  max-width: 100%;
+}
+
 /* Full-page login UI */
 .login-fullpage {
   position: fixed;
@@ -383,21 +387,26 @@ body {
   display: flex;
   min-height: 100vh;
   background: #f5f5f5;
+  position: relative;
 }
 .dark-mode {
   background: #181a1b !important;
   color: #e0e0e0;
 }
 .sidebar-nav {
+  position: fixed;
+  left: 0;
+  top: 0;
   width: 220px;
+  height: 100vh;
   background: #fff;
   border-right: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  min-height: 100vh;
   box-shadow: 2px 0 8px rgba(33, 150, 243, 0.04);
-  z-index: 20;
+  z-index: 1000;
+  overflow-y: auto;
 }
 .sidebar-header {
   display: flex;
@@ -466,10 +475,11 @@ body {
   background: #e3f2fd;
 }
 .app-layout {
+  margin-left: 220px;
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 100vh;
   position: relative;
   background: inherit;
 }
@@ -672,8 +682,41 @@ body {
   outline: 2px solid #007BFF;
 }
 
-/* Responsive design for files view */
+/* Responsive design for files view and overall app */
+@media (max-width: 1024px) {
+  .sidebar-nav {
+    width: 180px;
+  }
+  
+  .app-layout {
+    margin-left: 180px;
+  }
+  
+  .admin-header-content {
+    padding: 20px 24px;
+  }
+  
+  .admin-tab-content {
+    padding: 24px 24px;
+  }
+}
+
 @media (max-width: 768px) {
+  .sidebar-nav {
+    position: fixed;
+    left: -220px;
+    transition: left 0.3s ease;
+    z-index: 2000;
+  }
+  
+  .sidebar-nav.mobile-open {
+    left: 0;
+  }
+  
+  .app-layout {
+    margin-left: 0;
+  }
+  
   .view-header {
     padding: 24px 20px;
   }
@@ -694,6 +737,51 @@ body {
   
   .files-search-input {
     width: 100%;
+  }
+  
+  .admin-header-content {
+    padding: 16px 20px;
+  }
+  
+  .admin-title {
+    font-size: 24px;
+  }
+  
+  .admin-subtitle {
+    font-size: 14px;
+  }
+  
+  .admin-stats-quick {
+    gap: 16px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .sidebar-title {
+    font-size: 18px;
+  }
+  
+  .sidebar-tabs li {
+    font-size: 16px;
+    padding: 12px 20px;
+  }
+  
+  .admin-tabs {
+    padding: 0 20px;
+    overflow-x: auto;
+  }
+  
+  .admin-tab {
+    min-width: 120px;
+    justify-content: center;
+  }
+  
+  .admin-tab-content {
+    padding: 20px 16px;
   }
 }
 </style>
