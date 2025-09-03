@@ -5,7 +5,7 @@
       <div class="login-box" v-motion-slide-visible-once-bottom>
         <h2>Login</h2>
         <form @submit.prevent="handleLogin">
-          <div class="form-group" v-if="!defaultServerUrl">
+          <div class="form-group" v-if="defaultServerUrl">
             <label for="serverUrl">API URL</label>
             <input 
               id="serverUrl" 
