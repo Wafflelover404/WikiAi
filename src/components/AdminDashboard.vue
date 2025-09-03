@@ -228,7 +228,8 @@
           </div>
 
           <div v-else-if="filteredFiles.length" class="files-table-container">
-            <table class="modern-users-table">
+            <!-- Desktop Table View -->
+            <table class="modern-users-table desktop-table">
               <thead>
                 <tr>
                   <th>File</th>
@@ -271,6 +272,49 @@
                 </tr>
               </tbody>
             </table>
+
+            <!-- Mobile Card View -->
+            <div class="mobile-files-list">
+              <div v-for="file in filteredFiles" 
+                   :key="file.file_id || file.filename" 
+                   class="mobile-file-card"
+                   :class="{ 'expanded': expandedFile === file.filename }">
+                <div class="mobile-file-header" @click="toggleFileDetails(file)">
+                  <div class="mobile-file-main">
+                    <span class="file-icon-small">{{ getFileIcon(file) }}</span>
+                    <span class="file-name">{{ file.original_filename || file.filename }}</span>
+                  </div>
+                  <button class="mobile-expand-btn">
+                    {{ expandedFile === file.filename ? '▼' : '▶' }}
+                  </button>
+                </div>
+                <div v-if="expandedFile === file.filename" class="mobile-file-details">
+                  <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span class="file-type-badge">{{ getFileType(file) }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Size:</span>
+                    <span>{{ formatFileSize(file.size) }}</span>
+                  </div>
+                  <div class="detail-row">
+                    <span class="detail-label">Uploaded:</span>
+                    <span>{{ formatFileDate(file.created_at || file.uploaded_at) }}</span>
+                  </div>
+                  <div class="mobile-file-actions">
+                    <button class="btn-preview" @click="previewFile(file)">
+                      👁️ Preview
+                    </button>
+                    <button class="btn-edit" @click="openEditFile(file)">
+                      ✏️ Edit
+                    </button>
+                    <button class="btn-delete" @click="deleteFile(file)">
+                      🗑️ Delete
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div v-else class="empty-state">
@@ -632,6 +676,7 @@ export default {
       activeTab: 'Users',
       users: [],
       files: [],
+      expandedFile: null, // Track which file is expanded in mobile view
       newUser: {
         username: '',
         password: '',
@@ -720,6 +765,14 @@ export default {
     }
   },
   methods: {
+    toggleFileDetails(file) {
+      if (this.expandedFile === file.filename) {
+        this.expandedFile = null;
+      } else {
+        this.expandedFile = file.filename;
+      }
+    },
+
     getTabIcon(tab) {
       const icons = {
         Users: '👥',
@@ -1583,7 +1636,7 @@ export default {
   padding: 32px 40px;
   max-width: 1200px;
   margin: 0 auto;
-  width: 100%;
+  max-width: 90%;
 }
 .admin-section-header {
   display: flex;
@@ -2060,23 +2113,129 @@ export default {
   .search-input {
     width: 100%;
   }
+
+  /* Hide desktop table on mobile */
+  .desktop-table {
+    display: none;
+  }
+
+  /* Mobile files list styles */
+  .mobile-files-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .mobile-file-card {
+    background: white;
+    border-radius: 12px;
+    border: 1px solid #e9ecef;
+    overflow: hidden;
+  }
+
+  .mobile-file-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px;
+    cursor: pointer;
+    background: #fff;
+    transition: background-color 0.2s ease;
+  }
+
+  .mobile-file-header:active {
+    background: #f8f9fa;
+  }
+
+  .mobile-file-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mobile-file-main .file-name {
+    font-weight: 600;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-expand-btn {
+    background: none;
+    border: none;
+    color: #6c757d;
+    padding: 8px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+
+  .mobile-file-details {
+    padding: 16px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    transition: all 0.3s ease;
+    max-height: 500px;
+    overflow: hidden;
+    opacity: 1;
+  }
   
-  .modern-users-table {
+  .mobile-file-card:not(.expanded) .mobile-file-details {
+    max-height: 0;
+    padding: 0 16px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .detail-label {
+    color: #6c757d;
     font-size: 14px;
   }
-  
-  .modern-users-table th,
-  .modern-users-table td {
-    padding: 12px 8px;
+
+  .mobile-file-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e9ecef;
   }
-  
-  .action-buttons {
-    flex-direction: column;
-  }
-  
-  .btn-edit, .btn-delete {
+
+  .mobile-file-actions button {
+    width: 100%;
     justify-content: center;
+    padding: 12px;
   }
+
+  /* Adjust button styles for mobile */
+  .btn-preview, .btn-edit, .btn-delete {
+    font-size: 14px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+}
+
+/* Show mobile view only on mobile devices */
+@media (min-width: 769px) {
+  .mobile-files-list {
+    display: none;
+  }
+}
   .admin-tabs {
     padding: 0 8px;
     border-radius: 0;
@@ -2146,13 +2305,19 @@ export default {
     flex-direction: column;
     gap: 8px;
   }
-}
 
 /* Files Section Styles */
 .files-section {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
+}
+
+/* Show mobile view only on mobile devices */
+@media (min-width: 769px) {
+  .mobile-files-list {
+    display: none;
+  }
 }
 
 .upload-zone {
@@ -2225,7 +2390,7 @@ export default {
 }
 
 .file-name-cell {
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .file-name-info {
