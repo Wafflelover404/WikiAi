@@ -856,7 +856,10 @@ export default {
 
 <style>
 .kb-app {
-  max-width: 100%;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
 }
 
 /* Full-page login UI */
@@ -977,6 +980,9 @@ body {
   min-height: 100vh;
   position: relative;
   background: inherit;
+  width: calc(100% - 220px);
+  max-width: calc(100vw - 220px);
+  overflow-x: hidden;
 }
 .main-content {
   flex: 1;
@@ -1792,8 +1798,9 @@ body {
   
   .app-layout {
     margin-left: 0;
-    padding-top: 60px;
+    width: 100%;
     max-width: 100vw;
+    padding-top: 60px;
     overflow-x: hidden;
   }
   
