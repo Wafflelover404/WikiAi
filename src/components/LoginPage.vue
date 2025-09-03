@@ -5,7 +5,7 @@
       <div class="login-box" v-motion-slide-visible-once-bottom>
         <h2>Login</h2>
         <form @submit.prevent="handleLogin">
-          <div class="form-group" v-if="!serverUrl">
+          <div class="form-group" v-if="!defaultServerUrl">
             <label for="serverUrl">API URL</label>
             <input 
               id="serverUrl" 
@@ -97,19 +97,11 @@ export default {
 
         this.$root.serverUrl = cleanUrl;
 
-        const { apiRequest } = await import('../api.js');
-        const res = await apiRequest({
-          url: `${cleanUrl}/login`,
-          method: 'POST',
-          data: {
-            username: this.username.trim(),
-            password: this.password.trim()
-          },
-          headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'Origin': window.location.origin
-          }
+        const { login } = await import('../api.js');
+        const res = await login({
+          serverUrl: cleanUrl,
+          username: this.username.trim(),
+          password: this.password.trim()
         });
 
         if (res.token || (res.status && res.session_id)) {

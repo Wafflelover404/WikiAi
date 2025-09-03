@@ -1,3 +1,11 @@
+// Login (POST /login)
+export async function login({ serverUrl, username, password }) {
+  return await apiRequest({
+    url: `${serverUrl}/login`,
+    method: 'POST',
+    data: { username, password }
+  });
+}
 
 // Query knowledge base (POST /query)
 export async function queryKnowledgeBase({ serverUrl, token, question, session_id = null, model = null }) {
@@ -11,17 +19,194 @@ export async function queryKnowledgeBase({ serverUrl, token, question, session_i
 
 // Get files list (GET /files/list)
 export async function getFilesList({ serverUrl, token }) {
-  return await apiRequest({
+  const res = await apiRequest({
     url: `${serverUrl}/files/list`,
     method: 'GET',
     token
+  });
+  
+  // Handle both possible API response formats
+  if (typeof res === 'object') {
+    if (res.status === 'success' && res.response && Array.isArray(res.response.documents)) {
+      return res;
+    } else if (Array.isArray(res)) {
+      // If API returns array directly, wrap it in expected format
+      return {
+        status: 'success',
+        response: {
+          documents: res
+        }
+      };
+    }
+  }
+  
+  // Return empty array if response is invalid
+  return {
+    status: 'success',
+    response: {
+      documents: []
+    }
+  };
+}
+
+// Get auto reports (GET /reports/get/auto)
+export async function getAutoReports({ serverUrl, token }) {
+  let fullUrl = `${serverUrl}/reports/get/auto`;
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/json'
+  };
+  
+  const res = await fetch(fullUrl, {
+    method: 'GET',
+    headers
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch auto reports: ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return {
+    status: 'success',
+    response: data.reports || data || []
+  };
+}
+
+// Get manual reports (GET /reports/get/manual)
+export async function getManualReports({ serverUrl, token }) {
+  let fullUrl = `${serverUrl}/reports/get/manual`;
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Authorization': `Bearer ${token}`,
+    'Accept': 'application/json'
+  };
+  
+  const res = await fetch(fullUrl, {
+    method: 'GET',
+    headers
+  });
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch manual reports: ${res.status} ${res.statusText}`);
+  }
+
+  const data = await res.json();
+  return {
+    status: 'success',
+    response: data.reports || data || []
+  };
+}
+
+// Get accounts list (GET /accounts)
+export async function getAccounts({ serverUrl, token }) {
+  return await apiRequest({
+    url: `${serverUrl}/accounts`,
+    method: 'GET',
+    token
+  });
+}
+
+// Create user (POST /register)
+export async function createUser({ serverUrl, token, userData }) {
+  return await apiRequest({
+    url: `${serverUrl}/register`,
+    method: 'POST',
+    token,
+    data: userData
+  });
+}
+
+// Delete user (DELETE /user/delete)
+export async function deleteUser({ serverUrl, token, username }) {
+  return await apiRequest({
+    url: `${serverUrl}/user/delete`,
+    method: 'DELETE',
+    token,
+    params: { username }
+  });
+}
+
+// Edit user (POST /user/edit)
+export async function editUser({ serverUrl, token, userData }) {
+  return await apiRequest({
+    url: `${serverUrl}/user/edit`,
+    method: 'POST',
+    token,
+    data: userData
+  });
+}
+
+// Upload file (POST /upload)
+export async function uploadFile({ serverUrl, token, file }) {
+  const formData = new FormData();
+  formData.append('file', file);
+  return await apiRequest({
+    url: `${serverUrl}/upload`,
+    method: 'POST',
+    token,
+    data: formData
+  });
+}
+
+// Delete file by ID (DELETE /files/delete_by_fileid)
+export async function deleteFileById({ serverUrl, token, fileId }) {
+  return await apiRequest({
+    url: `${serverUrl}/files/delete_by_fileid`,
+    method: 'DELETE',
+    token,
+    data: { file_id: fileId }
+  });
+}
+
+// Delete file by filename (DELETE /files/delete_by_filename)
+export async function deleteFileByName({ serverUrl, token, filename }) {
+  return await apiRequest({
+    url: `${serverUrl}/files/delete_by_filename`,
+    method: 'DELETE',
+    token,
+    params: { filename }
+  });
+}
+
+// Get file content (GET /files/content/:filename)
+export async function getFileContent({ serverUrl, token, filename }) {
+  let fullUrl = `${serverUrl}/files/content/${encodeURIComponent(filename)}`;
+  const headers = {
+    'ngrok-skip-browser-warning': 'true',
+    'Authorization': `Bearer ${token}`
+  };
+  
+  const res = await fetch(fullUrl, {
+    method: 'GET',
+    headers
+  });
+
+  if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+  
+  // Return the raw response rather than parsing it
+  return res;
+}
+
+// Edit file content (POST /files/edit)
+export async function editFileContent({ serverUrl, token, filename, newContent }) {
+  return await apiRequest({
+    url: `${serverUrl}/files/edit`,
+    method: 'POST',
+    token,
+    data: { filename, new_content: newContent }
   });
 }
 
 // API utility for kb-sage endpoints
 export async function apiRequest({ url, method = 'GET', token = '', data = null, params = {} }) {
   let fullUrl = url;
-  const headers = {};
+  const headers = {
+    'ngrok-skip-browser-warning': 'true'
+  };
   if (token) headers['Authorization'] = `Bearer ${token}`;
   if (method === 'POST' && !(data instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -39,9 +224,30 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
     options.body = data instanceof FormData ? data : JSON.stringify(data);
   }
   const res = await fetch(fullUrl, options);
+  
+  if (!res.ok) {
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      const errorData = await res.json();
+      throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+    }
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+
   const contentType = res.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
+  // Only parse as JSON if endpoint is known to return JSON
+  if (fullUrl.endsWith('/login') || 
+      fullUrl.endsWith('/query') || 
+      fullUrl.includes('/files/list') ||
+      fullUrl.includes('/reports/') ||
+      fullUrl.includes('/accounts') ||
+      fullUrl.includes('/register') ||
+      fullUrl.includes('/user/') ||
+      fullUrl.includes('/upload') ||
+      fullUrl.includes('/files/delete_')) {
     return await res.json();
   }
-  return await res.text();
+  
+  // For file content and other endpoints, return raw response
+  return res;
 }

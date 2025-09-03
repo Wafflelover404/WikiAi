@@ -75,24 +75,43 @@ export default {
   },
   methods: {
     cleanResult(result) {
-      // For new format, just return the text field
-      return result && result.text ? result.text : '';
+      if (!result) return '';
+      // If result is already a string, return it
+      if (typeof result === 'string') return result;
+      // For new format with text field
+      if (result.text) return result.text;
+      // For other formats, try to get meaningful content
+      return result.content || result.toString();
     },
     extractUploadId(result) {
-      // For new format, return filename
-      return result && result.filename ? result.filename : null;
+      if (!result) return null;
+      // If result has explicit filename field
+      if (result.filename) return result.filename;
+      // Try to extract filename from text format
+      if (typeof result === 'string') {
+        const match = result.match(/<filename>(.*?)<\/filename>/);
+        return match ? match[1] : null;
+      }
+      return null;
     },
     async openFile(filename, segmentText) {
       if (!filename || !this.token || !this.serverUrl) return;
       try {
-        filename = filename.substring(5);
-        const encodedFilename = encodeURIComponent(filename);
-        const url = `${this.serverUrl}/files/content/${encodedFilename}`;
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${this.token}`
-          }
+        // Clean up the filename, removing prefixes carefully
+        if (filename.startsWith('file:')) {
+          filename = filename.substring(5);
+        }
+        if (filename.startsWith('temp_')) {
+          filename = filename.substring(5);
+        }
+
+        console.log('Opening file:', filename); // Debug log
+        
+        const { getFileContent } = await import('../api.js');
+        const res = await getFileContent({
+          serverUrl: this.serverUrl,
+          token: this.token,
+          filename: filename
         });
         if (res.ok) {
           let content = await res.text();
@@ -130,13 +149,13 @@ export default {
       this.aiOverviewLoading = false;
       this.aiOverviewLoaded = false;
       try {
-        const { apiRequest } = await import('../api.js');
+        const { queryKnowledgeBase } = await import('../api.js');
         // Request pure RAG chunks (unhumanized)
-        const res = await apiRequest({
-          url: `${this.serverUrl}/query`,
-          method: 'POST',
+        const res = await queryKnowledgeBase({
+          serverUrl: this.serverUrl,
           token: this.token,
-          data: { question: this.searchText, humanize: false }
+          question: this.searchText,
+          humanize: false
         });
         if (res.status === 'success' && res.response && Array.isArray(res.response.chunks)) {
           // Parse each chunk to extract text and filename
@@ -151,11 +170,11 @@ export default {
         }
         this.aiOverviewLoading = true;
         // Now request humanized (AI overview)
-        const res2 = await apiRequest({
-          url: `${this.serverUrl}/query`,
-          method: 'POST',
+        const res2 = await queryKnowledgeBase({
+          serverUrl: this.serverUrl,
           token: this.token,
-          data: { question: this.searchText, humanize: true }
+          question: this.searchText,
+          humanize: true
         });
         if (res2.status === 'success' && res2.response && res2.response.answer) {
           this.aiOverview = res2.response.answer;

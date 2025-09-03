@@ -736,21 +736,49 @@ export default {
       }
       
       try {
-        // Fetch auto reports
-        let res = await fetch(`${this.API_BASE_URL}/reports/get/auto`, {
-          headers: { Authorization: `Bearer ${this.token}` }
-        });
-        let data = await res.json();
-        this.autoReports = Array.isArray(data.reports) ? data.reports : [];
+        const { getAutoReports, getManualReports } = await import('../api.js');
         
-        // Fetch manual reports
-        res = await fetch(`${this.API_BASE_URL}/reports/get/manual`, {
-          headers: { Authorization: `Bearer ${this.token}` }
+        // Fetch both types of reports in parallel
+        const [autoData, manualData] = await Promise.all([
+          getAutoReports({ 
+            serverUrl: this.API_BASE_URL, 
+            token: this.token 
+          }),
+          getManualReports({ 
+            serverUrl: this.API_BASE_URL, 
+            token: this.token 
+          })
+        ]);
+
+        // Process auto reports
+        if (autoData && autoData.status === 'success' && autoData.response) {
+          this.autoReports = Array.isArray(autoData.response.reports) 
+            ? autoData.response.reports 
+            : Array.isArray(autoData.response) 
+              ? autoData.response 
+              : [];
+        } else {
+          this.autoReports = [];
+        }
+
+        // Process manual reports
+        if (manualData && manualData.status === 'success' && manualData.response) {
+          this.manualReports = Array.isArray(manualData.response.reports) 
+            ? manualData.response.reports 
+            : Array.isArray(manualData.response) 
+              ? manualData.response 
+              : [];
+        } else {
+          this.manualReports = [];
+        }
+
+        console.log('Reports fetched:', { 
+          auto: this.autoReports, 
+          manual: this.manualReports,
+          autoData,
+          manualData
         });
-        data = await res.json();
-        this.manualReports = Array.isArray(data.reports) ? data.reports : [];
         
-        console.log('Reports fetched:', { auto: this.autoReports, manual: this.manualReports });
         this.lastUpdate.reports = new Date();
       } catch (e) {
         console.error('Error fetching reports:', e);
@@ -771,22 +799,12 @@ export default {
       }
       
       try {
+        const { getAccounts } = await import('../api.js');
         console.log('Fetching users from:', `${this.API_BASE_URL}/accounts`);
-        const res = await fetch(`${this.API_BASE_URL}/accounts`, {
-          headers: { Authorization: `Bearer ${this.token}` }
+        const data = await getAccounts({
+          serverUrl: this.API_BASE_URL,
+          token: this.token
         });
-        console.log('Users response status:', res.status);
-        
-        if (!res.ok) {
-          console.warn('Users response not ok:', res.status, res.statusText);
-          this.users = [];
-          if (!silent) {
-            this.userCreateMsg = 'Failed to fetch users.';
-          }
-          return;
-        }
-        
-        const data = await res.json();
         console.log('Users response data:', data);
         
         if (Array.isArray(data)) {
@@ -815,15 +833,15 @@ export default {
       }
       
       try {
+        const { getFilesList } = await import('../api.js');
         console.log('Fetching files from:', `${this.API_BASE_URL}/files/list`);
-        const res = await fetch(`${this.API_BASE_URL}/files/list`, {
-          headers: { Authorization: `Bearer ${this.token}` }
+        const data = await getFilesList({
+          serverUrl: this.API_BASE_URL,
+          token: this.token
         });
-        console.log('Files response status:', res.status);
-        const data = await res.json();
         console.log('Files response data:', data);
         
-        if (res.ok && data.status === 'success' && data.response && Array.isArray(data.response.documents)) {
+        if (data.status === 'success' && data.response && Array.isArray(data.response.documents)) {
           // Ensure each file object has file_id, filename, etc.
           this.files = data.response.documents.map(doc => ({ ...doc }));
           console.log('DEBUG: files after fetch', this.files);
@@ -848,19 +866,17 @@ export default {
         } else if (this.allowedFilesMode === 'select') {
           // Remove 'all' if present
           this.newUser.allowed_files = this.newUser.allowed_files.filter(f => f !== 'all');
-          if (this.newUser.allowed_files.length === 0) {
-            this.userCreateMsg = 'Please select at least one file.';
-            return;
-          }
+          // if (this.newUser.allowed_files.length === 0) {
+          //   this.userCreateMsg = 'Please select at least one file.';
+          //   return;
+          // }
         }
       try {
-        const res = await fetch(`${this.API_BASE_URL}/register`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.token}`
-          },
-          body: JSON.stringify(this.newUser)
+        const { createUser } = await import('../api.js');
+        const res = await createUser({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          userData: this.newUser
         });
         const data = await res.json();
         this.userCreateMsg = data.message || 'User created.';
@@ -876,9 +892,11 @@ export default {
     async deleteUser(username) {
       if (!confirm(`Delete user ${username}?`)) return;
       try {
-        const res = await fetch(`${this.API_BASE_URL}/user/delete?username=${encodeURIComponent(username)}`, {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${this.token}` }
+        const { deleteUser } = await import('../api.js');
+        const res = await deleteUser({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          username
         });
         const data = await res.json();
         this.userCreateMsg = data.message || 'User deleted.';
@@ -893,12 +911,11 @@ export default {
       try {
         const file = this.$refs.fileInput.files[0];
         if (!file) return;
-        const formData = new FormData();
-        formData.append('file', file);
-        const res = await fetch(`${this.API_BASE_URL}/upload`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${this.token}` },
-          body: formData
+        const { uploadFile } = await import('../api.js');
+        const res = await uploadFile({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          file
         });
         const data = await res.json();
         this.fileUploadMsg = data.message || 'File uploaded.';
@@ -923,22 +940,21 @@ export default {
     const confirmMsg = `Delete file:\n- Name: ${file.original_filename || filename}\n- file_id: ${file.file_id || 'N/A'}\nContinue?`;
     if (!confirm(confirmMsg)) return;
         try {
-          let res, data;
+          const { deleteFileById, deleteFileByName } = await import('../api.js');
+          let res;
           if (file_id) {
             // Prefer file_id deletion
-            res = await fetch(`${this.API_BASE_URL}/files/delete_by_fileid`, {
-              method: 'DELETE',
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${this.token}`
-              },
-              body: JSON.stringify({ file_id })
+            res = await deleteFileById({
+              serverUrl: this.API_BASE_URL,
+              token: this.token,
+              fileId: file_id
             });
           } else {
             // Fallback to filename (try original_filename first)
-            res = await fetch(`${this.API_BASE_URL}/files/delete_by_filename?filename=${encodeURIComponent(filename)}`, {
-              method: 'DELETE',
-              headers: { Authorization: `Bearer ${this.token}` }
+            res = await deleteFileByName({
+              serverUrl: this.API_BASE_URL,
+              token: this.token,
+              filename
             });
           }
           data = await res.json();
@@ -968,13 +984,11 @@ export default {
     },
     async saveEditUser() {
       try {
-        const res = await fetch(`${this.API_BASE_URL}/user/edit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.token}`
-          },
-          body: JSON.stringify(this.editUserData)
+        const { editUser } = await import('../api.js');
+        const res = await editUser({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          userData: this.editUserData
         });
         const data = await res.json();
         this.editUserMsg = data.message || 'User updated.';
@@ -1116,7 +1130,6 @@ export default {
       this.previewModalLoading = true;
       
       try {
-        // Clean up the filename
         let filename = file.filename;
         if (filename.startsWith('temp_')) {
           filename = filename.slice(5);
@@ -1125,28 +1138,19 @@ export default {
           filename = filename.slice(5);
         }
         
-        const url = `${this.API_BASE_URL}/files/content/${encodeURIComponent(filename)}`;
-        console.log('Fetching file content from:', url);
-        
-        const res = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${this.token}`,
-            'Accept': 'application/json'
-          }
+        const { getFileContent } = await import('../api.js');
+        const res = await getFileContent({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          filename: filename
         });
-        
-        if (!res.ok) {
-          throw new Error(`HTTP error! status: ${res.status}`);
-        }
 
         // Check content type of response
         const contentType = res.headers.get('content-type');
         console.log('Response content type:', contentType);
 
-        let data;
         if (contentType && contentType.includes('application/json')) {
-          data = await res.json();
-          
+          const data = await res.json();
           if (data.status === 'error') {
             throw new Error(data.message || 'Failed to load file content');
           }
@@ -1162,12 +1166,9 @@ export default {
           const textContent = await res.text();
           this.previewModalContent = textContent;
         }
-        
       } catch (error) {
         console.error('Error loading file content:', error);
-        // Log the full error for debugging
-        console.error('Full error:', error);
-        this.previewModalContent = `Failed to load file content. Please try again.`;
+        this.previewModalContent = `Failed to load file content: ${error.message}`;
       } finally {
         this.previewModalLoading = false;
       }

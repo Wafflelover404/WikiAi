@@ -424,14 +424,13 @@ export default {
           cleanFilename = cleanFilename.substring(5);
         }
         
-        const encodedFilename = encodeURIComponent(cleanFilename);
-        const url = `${this.serverUrl}/files/content/${encodedFilename}`;
+        const { getFileContent } = await import('../api.js');
+        console.log('Fetching file:', { cleanFilename });
         
-        console.log('Fetching file:', { url, cleanFilename });
-        
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${this.token}` }
+        const res = await getFileContent({
+          serverUrl: this.serverUrl,
+          token: this.token,
+          filename: cleanFilename
         });
         
         if (res.ok) {

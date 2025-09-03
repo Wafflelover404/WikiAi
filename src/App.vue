@@ -530,32 +530,56 @@ export default {
       
       try {
         this.loading = true;
-        const encodedFilename = encodeURIComponent(filename);
-        const url = `${this.serverUrl}/files/content/${encodedFilename}`;
-        const res = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': `Bearer ${this.token}` }
+        
+        // Use the centralized API function
+        const { getFileContent } = await import('./api.js');
+        const res = await getFileContent({
+          serverUrl: this.serverUrl,
+          token: this.token,
+          filename: filename
         });
         
-        if (res.ok) {
-          const content = await res.text();
-          this.fileContents[filename] = content;
-          this.mobileActiveContent = content;
-          console.log(`File content loaded for: ${filename}`);
-        } else if (res.status === 404) {
-          this.fileContents[filename] = 'File not found.';
-          this.mobileActiveContent = 'File not found.';
-          console.warn(`File not found: ${filename}`);
-        } else if (res.status === 403) {
-          this.fileContents[filename] = 'Access denied.';
-          this.mobileActiveContent = 'Access denied.';
-          console.warn(`Access denied for file: ${filename}`);
-        } else {
-          const errorMsg = `Unable to load file content. Status: ${res.status}`;
-          this.fileContents[filename] = errorMsg;
-          this.mobileActiveContent = errorMsg;
-          console.error(`Failed to load file: ${filename}, status: ${res.status}`);
+        if (!res.ok) {
+          if (res.status === 404) {
+            this.fileContents[filename] = 'File not found.';
+            this.mobileActiveContent = 'File not found.';
+            console.warn(`File not found: ${filename}`);
+          } else if (res.status === 403) {
+            this.fileContents[filename] = 'Access denied.';
+            this.mobileActiveContent = 'Access denied.';
+            console.warn(`Access denied for file: ${filename}`);
+          } else {
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          return;
         }
+        
+        // Try to parse response based on content type
+        const contentType = res.headers.get('content-type');
+        let content;
+        
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          // Handle different JSON response formats
+          if (data.status === 'success' && data.response) {
+            content = data.response.content || data.response;
+          } else if (data.content) {
+            content = data.content;
+          } else if (typeof data === 'string') {
+            content = data;
+          } else {
+            content = JSON.stringify(data, null, 2);
+          }
+        } else {
+          // For non-JSON responses, get the raw text
+          content = await res.text();
+        }
+        
+        // Store and display the content
+        this.fileContents[filename] = content;
+        this.mobileActiveContent = content;
+        console.log(`File content loaded for: ${filename}`);
+        
       } catch (e) {
         console.error(`Error loading file ${filename}:`, e);
         const errorMsg = 'Error loading file: ' + e.message;

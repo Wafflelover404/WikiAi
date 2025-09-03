@@ -32,24 +32,29 @@ export default {
   methods: {
     async loadFileContent() {
       try {
-        const res = await fetch(`${this.API_BASE_URL}/files/content/${encodeURIComponent(this.filename)}`, {
-          headers: { Authorization: `Bearer ${this.token}` }
+        const { getFileContent } = await import('../api.js');
+        const res = await getFileContent({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          filename: this.filename
         });
-        if (!res.ok) throw new Error('Failed to load file content');
-        this.content = await res.text();
+        if (typeof res === 'string') {
+          this.content = res;
+        } else {
+          throw new Error('Invalid response format');
+        }
       } catch (e) {
         this.editFileMsg = 'Error loading file content.';
       }
     },
     async saveEditFile() {
       try {
-        const res = await fetch(`${this.API_BASE_URL}/files/edit`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.token}`
-          },
-          body: JSON.stringify({ filename: this.filename, new_content: this.content })
+        const { editFileContent } = await import('../api.js');
+        const res = await editFileContent({
+          serverUrl: this.API_BASE_URL,
+          token: this.token,
+          filename: this.filename,
+          newContent: this.content
         });
         const data = await res.json();
         if (data.status === 'success') {
