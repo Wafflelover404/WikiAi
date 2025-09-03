@@ -4,9 +4,28 @@
     <LoginPage v-if="!token" @login-success="onLoginSuccess" />
     <!-- Main App -->
     <template v-else>
-      <div class="sidebar-nav" role="navigation" aria-label="Main Navigation">
+      <!-- Mobile Navigation Bar -->
+      <div class="mobile-navbar">
+        <button class="hamburger-btn" @click="toggleMobileMenu" :class="{ 'is-active': isMobileMenuOpen }" aria-label="Toggle menu">
+          <span class="hamburger-icon"></span>
+        </button>
+        <div class="mobile-title">
+          <img src="/favicon.ico" alt="KBSage Logo" class="mobile-logo" />
+          <span>KBSage</span>
+        </div>
+      </div>
+      <!-- Sidebar Navigation -->
+      <!-- Mobile Menu Overlay -->
+      <div 
+        class="mobile-menu-overlay" 
+        :style="{ display: isMobileMenuOpen ? 'block' : 'none' }"
+        @click="toggleMobileMenu"
+      ></div>
+      <!-- Swipe Area for Opening Sidebar -->
+      <div class="swipe-area" @touchstart="handleSwipeStart" @touchmove="handleSwipeMove" @touchend="handleSwipeEnd"></div>
+      <div class="sidebar-nav" :class="{ 'mobile-open': isMobileMenuOpen }" role="navigation" aria-label="Main Navigation">
         <div class="sidebar-header">
-          <img src="/favicon.ico" alt="KBSage Logo" class="sidebar-logo" />
+          <img src="/favicon.ico" alt="KBSage Logo" class="sidebar-logo" /> 
           <span class="sidebar-title">KBSage</span>
         </div>
         <ul class="sidebar-tabs">
@@ -42,31 +61,83 @@
             @open-file="openFileFromHome"
             @upload-files="handleFileUpload"
           />
-          
           <!-- Files View -->
           <div v-else-if="currentView === 'files'" class="files-view">
-            <div class="view-header">
-              <h1>📁 Files</h1>
-              <p class="view-subtitle">Browse and manage your document library</p>
-              <div class="view-actions">
-                <div class="search-bar">
-                  <input 
-                    type="text" 
-                    v-model="globalSearch" 
-                    placeholder="Search files..." 
-                    class="files-search-input"
-                  />
-                  <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
+              <div class="view-header">
+                <!-- Mobile Header -->
+                <div class="mobile-view-header">
+                  <h1>📁 Files</h1>
+                  <p class="view-subtitle">Browse and manage your document library</p>
                 </div>
-                <div class="file-status">
-                  <span class="status-text">{{ loading ? 'Loading...' : `${filteredFiles.length} files` }}</span>
-                  <span v-if="!loading" class="last-update">Last updated: {{ getLastUpdateTime() }}</span>
+                <!-- Desktop Header -->
+                <div class="desktop-view-header">
+                  <div class="header-content">
+                    <h1>📁 Files</h1>
+                    <p class="view-subtitle">Browse and manage your document library</p>
+                  </div>
+                </div>
+                <!-- Desktop Search and Filters (Always visible) -->
+                <div class="desktop-filters-panel">
+                  <div class="search-bar">
+                    <input 
+                      type="text" 
+                      v-model="globalSearch" 
+                      placeholder="Search files..." 
+                      class="files-search-input"
+                    />
+                    <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
+                  </div>
+                  <div class="filter-options">
+                    <select v-model="fileTypeFilter" class="filter-select">
+                      <option value="">All Types</option>
+                      <option value="document">Documents</option>
+                      <option value="image">Images</option>
+                      <option value="pdf">PDFs</option>
+                    </select>
+                    <select v-model="dateSortOrder" class="filter-select">
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                    </select>
+                  </div>
+                  <div class="file-status">
+                    <span class="status-text">{{ loading ? 'Loading...' : `${filteredFiles.length} files` }}</span>
+                    <span v-if="!loading" class="last-update">Last updated: {{ getLastUpdateTime() }}</span>
+                  </div>
+                </div>
+                <!-- Mobile Search and Filters Panel -->
+                <div class="mobile-filters-panel" :class="{ 'show': showMobileFilters }">
+                  <div class="search-bar">
+                    <input 
+                      type="text" 
+                      v-model="globalSearch" 
+                      placeholder="Search files..." 
+                      class="files-search-input"
+                    />
+                    <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
+                  </div>
+                  <div class="mobile-filter-options">
+                    <select v-model="fileTypeFilter" class="mobile-filter-select">
+                      <option value="">All Types</option>
+                      <option value="document">Documents</option>
+                      <option value="image">Images</option>
+                      <option value="pdf">PDFs</option>
+                    </select>
+                    <select v-model="dateSortOrder" class="mobile-filter-select">
+                      <option value="newest">Newest First</option>
+                      <option value="oldest">Oldest First</option>
+                    </select>
+                  </div>
+                  <div class="file-status">
+                    <span class="status-text">{{ loading ? 'Loading...' : `${filteredFiles.length} files` }}</span>
+                    <span v-if="!loading" class="last-update">Last updated: {{ getLastUpdateTime() }}</span>
+                  </div>
                 </div>
               </div>
-            </div>
             <div v-if="loading" class="loading-indicator" role="status" aria-live="polite">Loading...</div>
             <div class="main-content-area">
+              <!-- Desktop View - Always render FileTabs -->
               <FileTabs
+                v-show="!isMobileView"
                 :files="filteredFiles"
                 :openedFiles="openedFiles"
                 :fileContents="fileContents"
@@ -74,10 +145,97 @@
                 @close-file="closeFile"
                 @switch-tab="switchTab"
                 @download-file="downloadFile"
+                class="desktop-file-tabs"
               />
+              <!-- Mobile File List View -->
+              <div class="mobile-file-list" v-show="isMobileView && mobileActiveContent === null">
+                <div 
+                  v-for="file in filteredFiles" 
+                  :key="file.file_id"
+                  class="mobile-file-item"
+                >
+                  <div class="mobile-file-container" @click="handleMobileFileClick(file)">
+                    <div class="mobile-file-icon">{{ getFileEmoji(file.file_type) }}</div>
+                    <div class="mobile-file-info">
+                      <div class="mobile-file-name">{{ file.filename }}</div>
+                      <div class="mobile-file-meta">
+                        <span class="mobile-file-type">{{ getFileTypeLabel(file.file_type) }}</span>
+                        <span class="mobile-file-date">{{ formatDate(file.upload_date) }}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button 
+                    class="mobile-action-btn" 
+                    @click.stop="toggleMobileFileActions(file)"
+                    aria-label="More actions"
+                  >⋮</button>
+                </div>
+                <!-- Mobile File Actions Menu -->
+                <div 
+                  v-if="selectedFile"
+                  class="mobile-file-actions-menu" 
+                  :class="{ 'show': showMobileFileActions }"
+                >
+                  <div class="mobile-actions-header">
+                    <h3>{{ selectedFile.filename }}</h3>
+                    <button @click="closeMobileFileActions" class="close-actions-btn">✕</button>
+                  </div>
+                  <div class="mobile-actions-list">
+                    <button @click="downloadFile(selectedFile)" class="mobile-action-item">
+                      <span>💾</span> Download
+                    </button>
+                    <button @click="shareFile(selectedFile)" class="mobile-action-item">
+                      <span>↗️</span> Share
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Mobile Content Display -->
+              <div v-if="isMobileView && mobileActiveContent !== null" class="mobile-content-view">
+                <div class="mobile-content-header">
+                  <button @click="closeMobileContent" class="back-btn">← Back</button>
+                  <h3 class="mobile-content-title">{{ mobileActiveFilename }}</h3>
+                  <div class="mobile-content-actions">
+                    <button 
+                      @click="downloadFile(mobileActiveFilename)" 
+                      class="mobile-content-action-btn" 
+                      aria-label="Download"
+                      title="Download file"
+                    >💾</button>
+                  </div>
+                </div>
+                <div class="mobile-content-text">
+                  <div v-if="loading" class="mobile-content-loading">
+                    <div class="loading-spinner"></div>
+                    <span>Loading...</span>
+                  </div>
+                  <div v-else class="mobile-content-wrapper">
+                    <div v-if="isMarkdown" class="markdown-content" v-html="markedContent"></div>
+                    <div v-else-if="isCode" class="code-content">
+                      <div class="code-header">
+                        <span class="code-language">{{ getCodeLanguage() }}</span>
+                      </div>
+                      <pre class="code-block"><code>{{ mobileActiveContent }}</code></pre>
+                    </div>
+                    <div v-else class="plain-text-content">
+                      <pre class="text-block">{{ mobileActiveContent }}</pre>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Optional: Show message if no file is selected on mobile and content view is not active -->
+              <div v-if="isMobileView && mobileActiveContent === null" class="mobile-placeholder">
+                <div v-if="filteredFiles.length === 0 && !loading" class="empty-state">
+                  <span class="empty-icon">📂</span>
+                  <p>No files found</p>
+                </div>
+                <div v-if="loading" class="loading-state">
+                  <div class="loading-spinner"></div>
+                  <p>Loading files...</p>
+                </div>
+              </div>
             </div>
           </div>
-          
           <!-- Search View -->
           <SearchPage 
             v-else-if="currentView === 'search'"
@@ -86,7 +244,6 @@
             :initial-search="pendingSearch"
             @search-performed="pendingSearch = ''"
           />
-          
           <!-- Settings Modal -->
           <SettingsModal
             :visible="settingsVisible"
@@ -112,6 +269,9 @@ import LoginPage from './components/LoginPage.vue';
 import AdminDashboard from './components/AdminDashboard.vue';
 import HomePage from './components/HomePage.vue';
 import SearchPage from './components/SearchPage.vue';
+import { marked } from 'marked';
+import hljs from 'highlight.js';
+import 'highlight.js/styles/github.css';
 
 export default {
   name: 'App',
@@ -131,6 +291,13 @@ export default {
       fileContents: {},
       searchVisible: false,
       settingsVisible: false,
+      isMobileMenuOpen: false,
+      showMobileFilters: false,
+      showMobileFileActions: false,
+      selectedFile: null,
+      fileTypeFilter: '',
+      dateSortOrder: 'newest',
+      isMobileView: window.innerWidth <= 768,
       token: '',
       serverUrl: '',
       activeTab: null,
@@ -146,6 +313,8 @@ export default {
       currentView: 'home',
       pendingSearch: '',
       fileListCache: [],
+      mobileActiveContent: null, 
+      mobileActiveFilename: null, 
       fileListInterval: null
     };
   },
@@ -171,12 +340,39 @@ export default {
   },
   computed: {
       isAdmin() {
-        // You may want to fetch user info from API or decode token
-        // For now, assume user info is available in this.user
         return this.user && this.user.role === 'admin';
       },
       maskedToken() {
         return this.token ? '•'.repeat(this.token.length) : 'No token';
+      },
+      markedContent() {
+        if (!this.mobileActiveContent) return '';
+        marked.setOptions({
+          gfm: true,
+          smartLists: true,
+          smartypants: true,
+          breaks: true,
+          headerIds: true,
+          mangle: false,
+          highlight: function(code, lang) {
+            if (lang && hljs.getLanguage(lang)) {
+              return hljs.highlight(code, { language: lang }).value;
+            }
+            return hljs.highlightAuto(code).value;
+          }
+        });
+        return marked(this.mobileActiveContent);
+      },
+      isMarkdown() {
+        if (!this.mobileActiveFilename) return false;
+        const filename = this.mobileActiveFilename.toLowerCase();
+        return filename.endsWith('.md') || filename.endsWith('.markdown');
+      },
+      isCode() {
+        if (!this.mobileActiveFilename) return false;
+        const filename = this.mobileActiveFilename.toLowerCase();
+        const codeExtensions = ['.js', '.ts', '.py', '.java', '.cpp', '.c', '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.html', '.css', '.xml', '.json', '.yml', '.yaml'];
+        return codeExtensions.some(ext => filename.endsWith(ext));
       },
       filteredFiles() {
         if (!this.globalSearch) return this.files;
@@ -316,14 +512,19 @@ export default {
         }
       }
     },
-    async handleFileClick(fileOrFilename) {
+    // Inside your methods block
+    async handleMobileFileClick(fileOrFilename) {
       if (!this.token || !this.serverUrl) return;
       
       // Handle both file objects and filenames
       const filename = typeof fileOrFilename === 'string' ? fileOrFilename : fileOrFilename.filename;
       
-      if (this.openedFiles.includes(filename)) {
-        this.activeTab = filename;
+      // Set the mobile active filename immediately for UI feedback
+      this.mobileActiveFilename = filename;
+      
+      // If content is already loaded, show it
+      if (this.fileContents[filename]) {
+        this.mobileActiveContent = this.fileContents[filename];
         return;
       }
       
@@ -339,25 +540,27 @@ export default {
         if (res.ok) {
           const content = await res.text();
           this.fileContents[filename] = content;
+          this.mobileActiveContent = content;
           console.log(`File content loaded for: ${filename}`);
         } else if (res.status === 404) {
           this.fileContents[filename] = 'File not found.';
+          this.mobileActiveContent = 'File not found.';
           console.warn(`File not found: ${filename}`);
         } else if (res.status === 403) {
           this.fileContents[filename] = 'Access denied.';
+          this.mobileActiveContent = 'Access denied.';
           console.warn(`Access denied for file: ${filename}`);
         } else {
-          this.fileContents[filename] = `Unable to load file content. Status: ${res.status}`;
+          const errorMsg = `Unable to load file content. Status: ${res.status}`;
+          this.fileContents[filename] = errorMsg;
+          this.mobileActiveContent = errorMsg;
           console.error(`Failed to load file: ${filename}, status: ${res.status}`);
         }
-        
-        this.openedFiles.unshift(filename);
-        this.activeTab = filename;
       } catch (e) {
         console.error(`Error loading file ${filename}:`, e);
-        this.fileContents[filename] = 'Error loading file: ' + e.message;
-        this.openedFiles.unshift(filename);
-        this.activeTab = filename;
+        const errorMsg = 'Error loading file: ' + e.message;
+        this.fileContents[filename] = errorMsg;
+        this.mobileActiveContent = errorMsg;
       } finally {
         this.loading = false;
       }
@@ -374,12 +577,12 @@ export default {
       
       // Load file content if not already loaded
       if (!this.fileContents[filename]) {
-        await this.handleFileClick(filename);
-      } else {
-        this.activeTab = filename;
-        if (!this.openedFiles.includes(filename)) {
-          this.openedFiles.unshift(filename);
-        }
+        await this.handleMobileFileClick(fileOrFilename);
+      }
+      
+      this.activeTab = filename;
+      if (!this.openedFiles.includes(filename)) {
+        this.openedFiles.unshift(filename);
       }
     },
     async downloadFile(fileOrFilename) {
@@ -419,11 +622,61 @@ export default {
     navigateTo(view) {
       this.currentView = view;
       this.showAdminDashboard = false;
+      this.isMobileMenuOpen = false; // Close mobile menu after navigation
       
       // Reset active tab when switching views
       if (view !== 'files') {
         this.activeTab = null;
       }
+    },
+
+    toggleMobileMenu() {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen;
+      // Add overlay when menu is open
+      if (this.isMobileMenuOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    },
+
+    // Touch handling for mobile swipe gestures
+    handleSwipeStart(e) {
+      this.touchStartX = e.touches[0].clientX;
+      this.touchStartY = e.touches[0].clientY;
+    },
+
+    handleSwipeMove(e) {
+      if (!this.touchStartX || !this.touchStartY) return;
+
+      const touchX = e.touches[0].clientX;
+      const touchY = e.touches[0].clientY;
+      const deltaX = touchX - this.touchStartX;
+      const deltaY = touchY - this.touchStartY;
+
+      // Check if horizontal swipe
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+        e.preventDefault();
+      }
+    },
+
+    handleSwipeEnd(e) {
+      if (!this.touchStartX) return;
+
+      const touchEndX = e.changedTouches[0].clientX;
+      const deltaX = touchEndX - this.touchStartX;
+
+      // Open menu on right swipe when closed
+      if (deltaX > 70 && !this.isMobileMenuOpen) {
+        this.isMobileMenuOpen = true;
+      }
+      // Close menu on left swipe when open
+      else if (deltaX < -70 && this.isMobileMenuOpen) {
+        this.isMobileMenuOpen = false;
+      }
+
+      this.touchStartX = null;
+      this.touchStartY = null;
     },
     
     // Home page event handlers
@@ -434,7 +687,7 @@ export default {
     
     async openFileFromHome(fileOrFilename) {
       this.currentView = 'files';
-      await this.handleFileClick(fileOrFilename);
+      await this.handleMobileFileClick(fileOrFilename);
     },
     
     handleFileUpload(files) {
@@ -479,7 +732,98 @@ export default {
       if (!this.files.length) return 'Never';
       // For now, return a simple timestamp. In a real app, you'd track this
       return new Date().toLocaleTimeString();
+    },
+
+    // Mobile-specific methods
+    toggleMobileFilters() {
+      this.showMobileFilters = !this.showMobileFilters;
+      this.showMobileFileActions = false;
+    },
+
+    toggleMobileSort() {
+      this.dateSortOrder = this.dateSortOrder === 'newest' ? 'oldest' : 'newest';
+    },
+
+    closeMobileContent() {
+      this.mobileActiveContent = null;
+      this.mobileActiveFilename = null;
+      this.loading = false;
+    },
+
+    toggleMobileFileActions(file) {
+      this.selectedFile = file;
+      this.showMobileFileActions = true;
+    },
+
+    closeMobileFileActions() {
+      this.showMobileFileActions = false;
+      this.selectedFile = null;
+    },
+
+    getFileEmoji(fileType) {
+      const emojiMap = {
+        'document': '📄',
+        'image': '🖼️',
+        'pdf': '📑',
+        'markdown': '📝',
+        'code': '💻',
+        'unknown': '📁'
+      };
+      return emojiMap[fileType] || emojiMap.unknown;
+    },
+
+    getFileTypeLabel(fileType) {
+      return fileType.charAt(0).toUpperCase() + fileType.slice(1);
+    },
+
+    formatDate(date) {
+      if (!date) return '';
+      const d = new Date(date);
+      const now = new Date();
+      const diff = now - d;
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+      if (days === 0) {
+        return 'Today';
+      } else if (days === 1) {
+        return 'Yesterday';
+      } else if (days < 7) {
+        return `${days} days ago`;
+      } else {
+        return d.toLocaleDateString();
+      }
+    },
+
+    shareFile(file) {
+      // Implement sharing functionality
+      if (navigator.share) {
+        navigator.share({
+          title: file.filename,
+          text: `Check out this file: ${file.filename}`,
+          url: window.location.href
+        }).catch(console.error);
+      } else {
+        // Fallback - copy link to clipboard
+        const fileUrl = `${window.location.origin}/files/${file.file_id}`;
+        navigator.clipboard.writeText(fileUrl)
+          .then(() => alert('Link copied to clipboard!'))
+          .catch(console.error);
+      }
     }
+  },
+
+  mounted() {
+    // Add window resize listener for mobile view
+    window.addEventListener('resize', () => {
+      this.isMobileView = window.innerWidth <= 768;
+    });
+  },
+
+  beforeDestroy() {
+    // Clean up resize listener
+    window.removeEventListener('resize', () => {
+      this.isMobileView = window.innerWidth <= 768;
+    });
   }
 }
 </script>
@@ -828,6 +1172,552 @@ body {
   outline: 2px solid #007BFF;
 }
 
+/* Mobile File List Styles */
+.mobile-view-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.desktop-view-header {
+  margin-bottom: 16px;
+}
+
+@media (min-width: 769px) {
+  .desktop-view-header {
+    padding: 0 8px;
+  }
+
+  .header-content {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+  }
+
+  .header-content h1 {
+    margin: 0;
+    font-size: 28px;
+  }
+
+  .view-subtitle {
+    margin: 0;
+    color: #666;
+  }
+
+  .view-header {
+    background: #fff;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin: 16px 24px;
+  }
+}
+
+.mobile-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.mobile-filter-btn,
+.mobile-sort-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  min-width: 44px;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 123, 255, 0.1);
+}
+
+/* Desktop Filters Panel */
+.desktop-filters-panel {
+  display: block;
+  padding: 16px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 16px;
+}
+
+.desktop-filters-panel .search-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.desktop-filters-panel .files-search-input {
+  max-width: 320px;
+}
+
+.filter-options {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  background: #fff;
+  min-width: 130px;
+  height: 38px; /* Match search input height */
+}
+
+/* Desktop horizontal layout */
+@media (min-width: 769px) {
+  .desktop-filters-panel {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 16px 24px;
+  }
+
+  .desktop-filters-panel .search-bar {
+    flex: 0 0 auto;
+    width: auto;
+  }
+
+  .filter-options {
+    flex: 0 0 auto;
+    margin-top: 0;
+  }
+
+  .file-status {
+    margin-left: auto;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.mobile-filters-panel {
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  margin-top: 8px;
+  max-width: 100%;
+}
+
+@media (min-width: 769px) {
+  .mobile-filters-panel {
+    display: none;
+  }
+}
+
+.mobile-filter-options {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.mobile-filter-select {
+  flex: 1;
+  min-width: calc(50% - 4px);
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23666%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 8px;
+  padding-right: 24px;
+}
+
+.mobile-file-list {
+  padding: 8px;
+}
+
+.mobile-file-item {
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  touch-action: pan-y;
+}
+
+.mobile-file-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  flex: 1;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.mobile-file-container:active {
+  background-color: rgba(0, 123, 255, 0.05);
+}
+
+.mobile-action-btn {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  min-height: 44px;
+}
+
+.mobile-action-btn:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .mobile-action-btn {
+  color: #999;
+}
+
+.dark-mode .mobile-action-btn:active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-file-icon {
+  font-size: 24px;
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 8px;
+}
+
+.mobile-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-file-name {
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mobile-file-meta {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  color: #666;
+}
+
+.mobile-file-type {
+  background: rgba(0, 123, 255, 0.1);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+}
+
+.mobile-file-date {
+  color: #888;
+}
+
+.mobile-action-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.desktop-file-tabs {
+  display: block;
+}
+
+@media (max-width: 768px) {
+  .desktop-file-tabs {
+    display: none;
+  }
+}
+
+.mobile-file-list {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-file-list {
+    display: block;
+    padding: 4px 8px;
+  }
+}
+
+.mobile-file-actions-menu {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-radius: 16px 16px 0 0;
+  padding: 16px;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  max-width: 100vw;
+}
+
+.mobile-file-actions-menu.show {
+  transform: translateY(0);
+}
+
+.mobile-actions-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.mobile-actions-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 80%;
+}
+
+.close-actions-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  padding: 8px;
+  color: #666;
+  cursor: pointer;
+}
+
+.mobile-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mobile-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: #333;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.mobile-action-item:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.mobile-action-item span {
+  font-size: 18px;
+}
+
+.dark-mode .mobile-file-actions-menu {
+  background: #242526;
+}
+
+.dark-mode .mobile-actions-header h3 {
+  color: #e0e0e0;
+}
+
+.dark-mode .close-actions-btn {
+  color: #999;
+}
+
+.dark-mode .mobile-action-item {
+  color: #e0e0e0;
+}
+
+.dark-mode .mobile-action-item:active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-file-actions-menu.show {
+  transform: translateY(0);
+}
+
+.mobile-actions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.mobile-actions-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.close-actions-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.mobile-actions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.mobile-action-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.mobile-action-item:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.mobile-action-item span {
+  font-size: 20px;
+}
+
+/* Dark mode adjustments for mobile file list */
+.dark-mode .mobile-filters-panel,
+.dark-mode .mobile-file-item,
+.dark-mode .mobile-file-actions-menu {
+  background: #242526;
+}
+
+.dark-mode .mobile-file-name {
+  color: #e0e0e0;
+}
+
+.dark-mode .mobile-file-meta {
+  color: #888;
+}
+
+.dark-mode .mobile-file-type {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Mobile Navigation Bar Styles */
+.mobile-navbar {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #fff;
+  padding: 0 16px;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 1001;
+}
+
+.mobile-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-logo {
+  width: 24px;
+  height: 24px;
+}
+
+.hamburger-btn {
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 8px;
+  position: relative;
+  z-index: 2001;
+}
+
+.hamburger-icon {
+  position: relative;
+  width: 24px;
+  height: 2px;
+  background: #333;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon::before,
+.hamburger-icon::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: #333;
+  transition: all 0.3s ease;
+}
+
+.hamburger-icon::before {
+  transform: translateY(-8px);
+}
+
+.hamburger-icon::after {
+  transform: translateY(8px);
+}
+
+.hamburger-btn.is-active .hamburger-icon {
+  background: transparent;
+}
+
+.hamburger-btn.is-active .hamburger-icon::before {
+  transform: rotate(45deg);
+}
+
+.hamburger-btn.is-active .hamburger-icon::after {
+  transform: rotate(-45deg);
+}
+
+/* Mobile Menu Overlay */
+.mobile-menu-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+}
+
 /* Responsive design for files view and overall app */
 @media (max-width: 1024px) {
   .sidebar-nav {
@@ -848,86 +1738,395 @@ body {
 }
 
 @media (max-width: 768px) {
+  .mobile-navbar {
+    display: flex;
+  }
+
+  .mobile-view-header {
+    display: flex;
+  }
+
+  .desktop-view-header,
+  .desktop-filters-panel {
+    display: none;
+  }
+
   .sidebar-nav {
     position: fixed;
-    left: -220px;
-    transition: left 0.3s ease;
+    left: -280px;
+    top: 0;
+    width: 280px;
+    transition: transform 0.3s ease;
     z-index: 2000;
+    background: #fff;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
   }
   
   .sidebar-nav.mobile-open {
-    left: 0;
+    transform: translateX(280px);
   }
   
   .app-layout {
     margin-left: 0;
+    padding-top: 60px;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
   
   .view-header {
-    padding: 24px 20px;
+    padding: 12px;
   }
   
   .view-header h1 {
-    font-size: 28px;
+    font-size: 20px;
+    margin-bottom: 8px;
   }
   
   .view-subtitle {
-    font-size: 16px;
+    font-size: 13px;
+    margin-bottom: 12px;
   }
   
   .view-actions {
     flex-direction: column;
-    gap: 16px;
+    gap: 8px;
     align-items: stretch;
   }
   
   .files-search-input {
     width: 100%;
+    max-width: calc(100vw - 32px);
+    font-size: 16px;
+    padding: 8px 12px;
+    margin: 0 auto;
   }
-  
-  .admin-header-content {
-    padding: 16px 20px;
+
+  .mobile-file-list {
+    padding: 8px;
+    max-width: 100vw;
   }
-  
-  .admin-title {
-    font-size: 24px;
+
+  .mobile-file-item {
+    padding: 12px;
+    margin: 0 0 8px 0;
+    border-radius: 8px;
   }
-  
-  .admin-subtitle {
-    font-size: 14px;
-  }
-  
-  .admin-stats-quick {
-    gap: 16px;
-  }
-  
-  .stat-number {
+
+  .mobile-file-icon {
     font-size: 20px;
+    min-width: 32px;
+    height: 32px;
+  }
+
+.mobile-file-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.mobile-file-name {
+  font-size: 14px;
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: #333;
+}
+
+.mobile-file-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.mobile-file-type {
+  padding: 2px 8px;
+  font-size: 11px;
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 12px;
+  color: #0066cc;
+}
+
+.mobile-file-date {
+  color: #666;
+}
+
+.mobile-actions {
+  gap: 8px;
+}
+
+.mobile-filter-btn,
+.mobile-sort-btn {
+  font-size: 18px;
+  padding: 6px;
+  min-width: 36px;
+  min-height: 36px;
+}
+
+/* Active state for mobile file items */
+.mobile-file-item:active {
+  background: rgba(0, 123, 255, 0.05);
+}
+
+.dark-mode .mobile-file-name {
+  color: #e0e0e0;
+}
+
+.dark-mode .mobile-file-type {
+  background: rgba(255, 255, 255, 0.1);
+  color: #66b3ff;
+}
+
+.dark-mode .mobile-file-date {
+  color: #999;
+}
+
+.dark-mode .mobile-file-item:active {
+  background: rgba(255, 255, 255, 0.05);
+}  /* File content adaptations */
+  .file-tabs-card {
+    margin: 12px;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  /* Touch-friendly adjustments */
+  .sidebar-tabs li {
+    padding: 16px 24px;
+    font-size: 16px;
+    min-height: 48px; /* Minimum touch target size */
+  }
+
+  .darkmode-toggle,
+  .settings-icon-btn {
+    padding: 12px;
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* File tabs improvements */
+  .file-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px;
+  }
+
+  .file-tab {
+    padding: 12px 16px;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+
+  /* Add swipe area for sidebar */
+  .swipe-area {
+    position: fixed;
+    top: 60px;
+    left: 0;
+    width: 20px;
+    height: calc(100vh - 60px);
+    z-index: 999;
   }
 }
 
+/* Add these styles inside your <style> block */
+.mobile-content-view {
+  position: fixed;
+  top: 60px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  z-index: 1000;
+}
+
+.dark-mode .mobile-content-view {
+  background: #242526;
+  color: #e0e0e0;
+}
+
+.mobile-content-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f8f9fa;
+  min-height: 56px;
+}
+
+.dark-mode .mobile-content-header {
+  background: #181a1b;
+  border-bottom-color: #333;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  padding: 8px 12px;
+  cursor: pointer;
+  color: #007BFF;
+  border-radius: 4px;
+  margin-right: 8px; /* Space after back button */
+}
+
+.back-btn:hover,
+.back-btn:active {
+  background-color: rgba(0, 123, 255, 0.1);
+}
+
+.dark-mode .back-btn {
+  color: #66b3ff;
+}
+
+.dark-mode .back-btn:hover,
+.dark-mode .back-btn:active {
+  background-color: rgba(102, 179, 255, 0.1);
+}
+
+.mobile-content-title {
+  flex: 1;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 8px; /* Add padding for text */
+}
+
+.mobile-content-actions {
+  display: flex;
+  gap: 8px; /* Space between action buttons */
+}
+
+.mobile-content-action-btn {
+  background: none;
+  border: none;
+  font-size: 18px; /* Slightly larger icons */
+  padding: 8px;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 40px; /* Minimum touch target */
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mobile-content-action-btn:hover,
+.mobile-content-action-btn:active {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .mobile-content-action-btn:hover,
+.dark-mode .mobile-content-action-btn:active {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.mobile-content-text {
+  flex: 1;
+  position: relative;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #fff;
+}
+
+.mobile-content-wrapper {
+  padding: 16px;
+}
+
+.mobile-content-wrapper pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.mobile-content-text pre {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  margin: 0;
+  font-family: 'Roboto Mono', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.dark-mode .mobile-content-text pre {
+  color: #e0e0e0;
+}
+
+.mobile-content-loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #666;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007BFF;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Optional placeholder text */
+.mobile-placeholder {
+  padding: 20px;
+  text-align: center;
+  color: #666;
+  font-style: italic;
+}
+
+.dark-mode .mobile-placeholder {
+  color: #999;
+}
+
 @media (max-width: 480px) {
-  .sidebar-title {
-    font-size: 18px;
+  .view-header h1 {
+    font-size: 20px;
+  }
+  
+  .view-subtitle {
+    font-size: 13px;
   }
   
   .sidebar-tabs li {
-    font-size: 16px;
-    padding: 12px 20px;
+    font-size: 15px;
+    padding: 14px 20px;
   }
-  
-  .admin-tabs {
-    padding: 0 20px;
-    overflow-x: auto;
+
+  .file-tabs-card {
+    margin: 8px;
+    padding: 12px;
   }
-  
-  .admin-tab {
-    min-width: 120px;
-    justify-content: center;
+
+  .file-content {
+    font-size: 14px;
   }
-  
-  .admin-tab-content {
-    padding: 20px 16px;
-  }
+}
+
+/* Dark mode adjustments for mobile */
+.dark-mode .mobile-navbar {
+  background: #242526;
+}
+
+.dark-mode .hamburger-icon,
+.dark-mode .hamburger-icon::before,
+.dark-mode .hamburger-icon::after {
+  background: #e0e0e0;
 }
 </style>
