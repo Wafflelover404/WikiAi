@@ -58,7 +58,14 @@
       <div class="admin-tab-content">
         <div v-if="activeTab === 'Users'" class="users-section">
           <div class="admin-section-header">
-            <h2>👥 User Management</h2>
+            <div class="admin-section-user-top">
+              <h2>👥 User Management</h2>
+              <div class="auto-refresh-status">
+                  <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
+                  <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                  <span class="last-update">Updated {{ getLastUpdateTime('users') }}</span>
+              </div>
+            </div>
             <div class="header-actions">
               <div class="search-users">
                 <input 
@@ -68,11 +75,6 @@
                   :disabled="loadingUsers"
                 />
                 <span v-if="userSearch" class="search-results-count">{{ filteredUsers.length }} results</span>
-              </div>
-              <div class="auto-refresh-status">
-                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
-                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
-                <span class="last-update">Updated {{ getLastUpdateTime('users') }}</span>
               </div>
             </div>
           </div>
@@ -187,21 +189,24 @@
         </div>
         <div v-else-if="activeTab === 'Files'" class="files-section">
           <div class="admin-section-header">
-            <h2>📁 File Management</h2>
+            <div class="files-section-top-header">
+              <h2>📁 File Management</h2>
+              <div class="auto-refresh-status">
+                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
+                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                <span class="last-update">Updated {{ getLastUpdateTime('files') }}</span>
+              </div>
+            </div>
             <div class="header-actions">
               <div class="search-files">
                 <input 
                   v-model="fileSearch" 
                   placeholder="Search files..." 
                   class="search-input"
+                  id="search-input-files"
                   :disabled="loadingFiles"
                 />
                 <span v-if="fileSearch" class="search-results-count">{{ filteredFiles.length }} results</span>
-              </div>
-              <div class="auto-refresh-status">
-                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
-                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
-                <span class="last-update">Updated {{ getLastUpdateTime('files') }}</span>
               </div>
             </div>
           </div>
@@ -329,35 +334,37 @@
         
         <div v-else-if="activeTab === 'Reports'" class="reports-section">
           <div class="admin-section-header">
-            <h2>📊 Reports & Analytics</h2>
-            <div class="header-actions">
-              <div class="reports-overview">
-                <div class="overview-card total">
-                  <div class="overview-icon">📊</div>
-                  <div class="overview-content">
-                    <div class="overview-number">{{ totalReports }}</div>
-                    <div class="overview-label">Total Reports</div>
-                  </div>
-                </div>
-                <div class="overview-card auto">
-                  <div class="overview-icon">🤖</div>
-                  <div class="overview-content">
-                    <div class="overview-number">{{ autoReports.length }}</div>
-                    <div class="overview-label">Auto Reports</div>
-                  </div>
-                </div>
-                <div class="overview-card manual">
-                  <div class="overview-icon">✍️</div>
-                  <div class="overview-content">
-                    <div class="overview-number">{{ manualReports.length }}</div>
-                    <div class="overview-label">Manual Reports</div>
-                  </div>
+            <div class="header-top">
+              <div class="title-row">
+                <h2>📊 Reports & Analytics</h2>
+                <div class="auto-refresh-status">
+                  <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
+                  <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                  <span class="last-update">Updated {{ getLastUpdateTime('reports') }}</span>
                 </div>
               </div>
-              <div class="auto-refresh-status">
-                <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
-                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
-                <span class="last-update">Updated {{ getLastUpdateTime('reports') }}</span>
+            </div>
+            <div class="reports-overview">
+              <div class="overview-card total">
+                <div class="overview-icon">📊</div>
+                <div class="overview-content">
+                  <div class="overview-number">{{ totalReports }}</div>
+                  <div class="overview-label">Total Reports</div>
+                </div>
+              </div>
+              <div class="overview-card auto">
+                <div class="overview-icon">🤖</div>
+                <div class="overview-content">
+                  <div class="overview-number">{{ autoReports.length }}</div>
+                  <div class="overview-label">Auto Reports</div>
+                </div>
+              </div>
+              <div class="overview-card manual">
+                <div class="overview-icon">✍️</div>
+                <div class="overview-content">
+                  <div class="overview-number">{{ manualReports.length }}</div>
+                  <div class="overview-label">Manual Reports</div>
+                </div>
               </div>
             </div>
           </div>
@@ -1629,6 +1636,8 @@ export default {
   display: flex;
   flex-direction: column;
   background: #f8f9fa;
+  width: 100%;
+  overflow: auto;
 }
 
 .admin-tab-content {
@@ -1637,13 +1646,217 @@ export default {
   max-width: 1200px;
   margin: 0 auto;
   max-width: 90%;
+  width: 90%;
 }
 .admin-section-header {
   display: flex;
+  flex-direction: column !important;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(1rem, 2vw, 2rem);
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  margin: 0 0 1.5rem 0;
+  position: sticky;
+  top: 1rem;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.98);
+  transition: all 0.3s ease;
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  position: relative;
+  
+  @media (min-width: 769px) {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  
+  @media (min-width: 1200px) {
+    padding: 2rem;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+}
+
+.files-section-top-header {
+  display: flex;
+  flex-direction: row !important;
+  margin-bottom: 75px;
+}
+
+.admin-section-header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--primary, #4285f4);
+  border-radius: 12px 0 0 12px;
+  opacity: 0.8;
+}
+
+.admin-section-user-top {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 1rem;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 2rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1.5rem;
+  }
 }
+
+.admin-section-header h2 {
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: clamp(1rem, 4vw, 10em);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-section-header .search-input {
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: clamp(0.875rem, 2vw, 1rem);
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.admin-section-header .search-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+  outline: none;
+}
+
+.admin-section-header .auto-refresh-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: clamp(0.75rem, 1.5vw, 0.875rem);
+  white-space: nowrap;
+}
+
+.admin-section-header .header-actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  margin-top: 1rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.search-users {
+  width: 100%;
+  max-width: 300px;
+  position: relative;
+}
+
+.search-users input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.search-users input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.search-results-count {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 12px;
+  color: #6c757d;
+  background: #f8f9fa;
+  padding: 2px 8px;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+@media (max-width: 768px) {
+  .admin-section-header {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+  }
+  
+  .admin-section-header .header-actions {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .admin-section-header .search-input,
+  .admin-section-header .auto-refresh-status {
+    width: 100%;
+  }
+  
+  .admin-section-header h2 {
+    font-size: clamp(1.25rem, 4vw, 1.5rem);
+    margin-right: 0;
+  }
+  
+  .search-users {
+    width: 100%;
+    max-width: none;
+  }
+  
+  .auto-refresh-status {
+    width: 100%;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+  }
+}
+
+@media (min-width: 769px) {
+  .admin-section-header .header-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    margin-top: 0;
+    width: auto;
+    min-width: 280px;
+  }
+  
+  .admin-section-header .search-input {
+    min-width: 200px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .admin-section-header .header-actions {
+    min-width: 320px;
+  }
+  
+  .admin-section-header .search-input {
+    min-width: 240px;
+  }
+}
+
 .admin-section-sub {
   margin-top: 32px;
   background: #f9f9f9;
@@ -1776,10 +1989,11 @@ export default {
   cursor: pointer;
   transition: background 0.2s, color 0.2s, border-bottom 0.2s;
 }
+
 .report-tab.active {
   border-bottom: 3px solid #1976d2;
-  background: #e3f2fd;
-  color: #1565c0;
+  /* background: #e3f2fd;
+  color: #1565c0; */
 }
 .scrollable-reports {
   max-height: 480px;
@@ -1807,6 +2021,7 @@ export default {
 
 .header-actions {
   display: flex;
+  flex-direction: column-reverse;
   align-items: center;
   gap: 16px;
 }
@@ -1822,7 +2037,7 @@ export default {
   border: 1px solid #dee2e6;
   border-radius: 8px;
   font-size: 16px;
-  width: 300px;
+  width: 45em;
   transition: all 0.3s ease;
   outline: none;
 }
@@ -1848,10 +2063,11 @@ export default {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 8px 16px;
+    padding: 6px 12px;
     background: #f8f9fa;
-    border-radius: 8px;
+    border-radius: 6px;
     border: 1px solid #e9ecef;
+    margin-left: auto;
   }
   
   .auto-refresh-status .status-indicator {
@@ -1880,6 +2096,82 @@ export default {
     color: #6c757d;
     font-weight: 500;
   }
+
+.header-top {
+  width: 100%;
+  margin-bottom: 1.5rem;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  width: 100%;
+}
+
+.reports-overview {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.overview-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.25rem;
+  min-width: 200px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.overview-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.overview-icon {
+  font-size: 24px;
+  margin-bottom: 0.5rem;
+}
+
+.overview-content {
+  text-align: center;
+}
+
+.overview-number {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  margin-bottom: 0.25rem;
+}
+
+.overview-label {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .header-top {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+
+  .reports-overview {
+    flex-direction: row;
+    gap: 1rem;
+  }
+
+  .overview-card {
+    flex: 1;
+    min-width: unset;
+  }
+}
 
 .loading-state {
   display: flex;
@@ -2280,12 +2572,12 @@ export default {
   }
   
   .reports-overview {
-    flex-direction: column;
+    flex-direction: row;
     gap: 12px;
   }
   
   .overview-card {
-    padding: 12px 16px;
+    padding: 10px 14px;
   }
   
   .overview-number {
@@ -2807,6 +3099,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 24px;
+  width: 100% !important;
 }
 
 .system-status {

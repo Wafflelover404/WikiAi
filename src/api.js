@@ -201,7 +201,7 @@ export async function editFileContent({ serverUrl, token, filename, newContent }
   });
 }
 
-// API utility for kb-sage endpoints
+// API utility for WikiAi endpoints
 export async function apiRequest({ url, method = 'GET', token = '', data = null, params = {} }) {
   let fullUrl = url;
   const headers = {

@@ -4,8 +4,8 @@
     <div class="search-header">
       <div class="search-container">
         <div class="search-logo">
-          <img src="/favicon.ico" alt="KBSage" class="logo-icon" />
-          <span class="logo-text">KBSage</span>
+          <img src="/favicon.ico" alt="WikiAi" class="logo-icon" />
+          <span class="logo-text">WikiAi</span>
         </div>
         
         <!-- Main Search Bar -->
@@ -43,7 +43,7 @@
           
           <div class="search-buttons">
             <button class="search-btn primary" @click="runSearch" :disabled="!searchText.trim()">
-              KBSage Search
+              WikiAi Search
             </button>
             <!-- <button class="search-btn secondary" @click="feelingLucky" :disabled="!searchText.trim()">
               I'm Feeling Lucky

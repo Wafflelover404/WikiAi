@@ -4,7 +4,7 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="welcome-message">
-          <h1>Welcome to <span class="brand">KBSage</span></h1>
+          <h1>Welcome to <span class="brand">WikiAi</span></h1>
           <p class="subtitle">Your intelligent knowledge base companion</p>
         </div>
         
@@ -373,7 +373,7 @@ export default {
 }
 
 .brand {
-  background: linear-gradient(45deg, #4285f4, #34a853);
+  background: linear-gradient(300deg, #74a9ff, #ffffff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

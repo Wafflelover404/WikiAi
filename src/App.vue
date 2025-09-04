@@ -10,8 +10,8 @@
           <span class="hamburger-icon"></span>
         </button>
         <div class="mobile-title">
-          <img src="/favicon.ico" alt="KBSage Logo" class="mobile-logo" />
-          <span>KBSage</span>
+          <img src="/favicon.ico" alt="WikiAi Logo" class="mobile-logo" />
+          <span>WikiAi</span>
         </div>
       </div>
       <!-- Sidebar Navigation -->
@@ -25,8 +25,8 @@
       <div class="swipe-area" @touchstart="handleSwipeStart" @touchmove="handleSwipeMove" @touchend="handleSwipeEnd"></div>
       <div class="sidebar-nav" :class="{ 'mobile-open': isMobileMenuOpen }" role="navigation" aria-label="Main Navigation">
         <div class="sidebar-header">
-          <img src="/favicon.ico" alt="KBSage Logo" class="sidebar-logo" /> 
-          <span class="sidebar-title">KBSage</span>
+          <img src="/favicon.ico" alt="WikiAi Logo" class="sidebar-logo" /> 
+          <span class="sidebar-title">WikiAi</span>
         </div>
         <ul class="sidebar-tabs">
           <li :class="{active: currentView === 'home' && !showAdminDashboard}" @click="navigateTo('home')" tabindex="0" aria-label="Home">🏠 Home</li>
