@@ -38,16 +38,27 @@ export default {
           token: this.token,
           filename: this.filename
         });
-        if (typeof res === 'string') {
-          this.content = res;
+        // Check if the response is JSON
+        const contentType = res.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const data = await res.json();
+          this.content = data.content || data.response || '';
         } else {
-          throw new Error('Invalid response format');
+          // For text files, get the raw text
+          this.content = await res.text();
         }
       } catch (e) {
-        this.editFileMsg = 'Error loading file content.';
+        console.error('Error loading file:', e);
+        this.editFileMsg = 'Error loading file content: ' + e.message;
       }
     },
     async saveEditFile() {
+      if (!this.content) {
+        this.editFileMsg = 'Cannot save empty content';
+        return;
+      }
+      
+      this.editFileMsg = 'Saving...';
       try {
         const { editFileContent } = await import('../api.js');
         const res = await editFileContent({
@@ -56,15 +67,19 @@ export default {
           filename: this.filename,
           newContent: this.content
         });
-        const data = await res.json();
-        if (data.status === 'success') {
-          this.editFileMsg = 'File updated!';
-          this.$emit('save');
+        
+        if (res.status === 'success') {
+          this.editFileMsg = 'File updated successfully!';
+          setTimeout(() => {
+            this.$emit('save');
+            this.$emit('close');
+          }, 1000);
         } else {
-          this.editFileMsg = data.message || 'Failed to update file.';
+          this.editFileMsg = res.message || 'Failed to update file.';
         }
       } catch (e) {
-        this.editFileMsg = 'Failed to update file.';
+        console.error('Error saving file:', e);
+        this.editFileMsg = 'Failed to update file: ' + e.message;
       }
     },
     closeModal() {

@@ -1017,7 +1017,7 @@ export default {
               filename
             });
           }
-          data = await res.json();
+          let data = await res.json();
           this.fileUploadMsg = data.message || 'File deleted.';
           if (data.status === 'success') {
             this.fetchFiles();
