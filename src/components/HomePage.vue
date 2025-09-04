@@ -31,7 +31,6 @@
     <!-- Dashboard Content -->
     <div class="dashboard-content">
       <div class="dashboard-grid">
-        
         <!-- Statistics Cards -->
         <div class="stats-section">
           <h2 class="section-title">📊 Overview</h2>
@@ -39,53 +38,37 @@
             <div class="stat-card">
               <div class="stat-icon">📄</div>
               <div class="stat-info">
-                <div class="stat-number">{{ totalFiles }}</div>
+                <div class="stat-number">{{ files.length }}</div>
                 <div class="stat-label">Total Documents</div>
               </div>
+              <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
             
             <div class="stat-card">
               <div class="stat-icon">🔍</div>
               <div class="stat-info">
-                <div class="stat-number">{{ totalSearches }}</div>
+                <div class="stat-number">{{ dashboardMetrics.total_queries_24h }}</div>
                 <div class="stat-label">Searches Today</div>
               </div>
+              <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
             
             <div class="stat-card">
               <div class="stat-icon">⚡</div>
               <div class="stat-info">
-                <div class="stat-number">{{ avgResponseTime }}ms</div>
+                <div class="stat-number">{{ Math.round(dashboardMetrics.avg_response_time_ms) }}ms</div>
                 <div class="stat-label">Avg Response Time</div>
               </div>
+              <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
             
             <div class="stat-card">
-              <div class="stat-icon">📈</div>
+              <div class="stat-icon">👤</div>
               <div class="stat-info">
-                <div class="stat-number">{{ knowledgeScore }}%</div>
-                <div class="stat-label">Knowledge Coverage</div>
+                <div class="stat-number">{{ userRole === 'admin' ? dashboardMetrics.active_users_24h : dashboardMetrics.active_sessions }}</div>
+                <div class="stat-label">{{ userRole === 'admin' ? 'Active Users Today' : 'Active Sessions' }}</div>
               </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="activity-section">
-          <h2 class="section-title">🕒 Recent Activity</h2>
-          <div class="activity-list">
-            <div 
-              v-for="(activity, idx) in recentActivity" 
-              :key="idx" 
-              class="activity-item"
-              @click="handleActivityClick(activity)"
-            >
-              <div class="activity-icon">{{ activity.icon }}</div>
-              <div class="activity-content">
-                <div class="activity-title">{{ activity.title }}</div>
-                <div class="activity-description">{{ activity.description }}</div>
-                <div class="activity-time">{{ formatTime(activity.timestamp) }}</div>
-              </div>
+              <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
           </div>
         </div>
@@ -126,30 +109,57 @@
           </div>
         </div>
 
-        <!-- Popular Searches -->
-        <div class="popular-section">
-          <h2 class="section-title">🔥 Trending Searches</h2>
+        <!-- Recent Activity
+        <div class="activity-section">
+          <h2 class="section-title"> Recent Activity</h2>
+          <div class="activity-list">
+            <div v-for="(activity, index) in recentActivity" :key="index" class="activity-item">
+              <div class="activity-icon" :class="getActivityIconClass(activity.type)">
+                {{ getActivityIcon(activity.type) }}
+              </div>
+              <div class="activity-content">
+                <div class="activity-title">
+                  {{ formatActivityTitle(activity) }}
+                </div>
+                <div class="activity-details">
+                  {{ formatActivityDetails(activity) }}
+                </div>
+              </div>
+              <div class="activity-time">{{ formatTime(activity.timestamp) }}</div>
+            </div>
+          </div>
+        </div> -->
+
+        <!-- Popular Searches (admin only) -->
+        <div v-if="userRole === 'admin'" class="popular-section">
+          <h2 class="section-title">🔥 Most Referenced Files</h2>
           <div class="popular-searches">
             <div 
-              v-for="(search, idx) in popularSearches" 
+              v-for="(file, idx) in popularFiles" 
               :key="idx" 
               class="popular-search-item"
-              @click="performSearch(search.query)"
+              @click="$emit('open-file', file.query)"
             >
               <div class="search-rank">#{{ idx + 1 }}</div>
               <div class="search-info">
-                <div class="search-query">{{ search.query }}</div>
-                <div class="search-count">{{ search.count }} searches</div>
+                <div class="search-query">{{ file.query }}</div>
+                <div class="search-count">{{ file.count }} references</div>
               </div>
-              <div class="search-trend" :class="search.trend">
-                {{ search.trend === 'up' ? '📈' : search.trend === 'down' ? '📉' : '➡️' }}
+              <div class="search-trend" :class="file.trend">
+                {{ file.trend === 'up' ? '📈' : file.trend === 'down' ? '📉' : '➡️' }}
               </div>
+            </div>
+            <div v-if="loading.metrics && !popularFiles.length" class="loading-state">
+              Loading popular files...
+            </div>
+            <div v-if="!loading.metrics && !popularFiles.length" class="empty-state">
+              No file references yet
             </div>
           </div>
         </div>
 
         <!-- System Status -->
-        <div class="status-section">
+        <div v-if="userRole === 'admin'" class="status-section">
           <h2 class="section-title">🟢 System Status</h2>
           <div class="status-grid">
             <div class="status-item">
@@ -199,6 +209,57 @@
 <script>
 export default {
   name: 'HomePage',
+  methods: {
+    getActivityIcon(type) {
+      const icons = {
+        search: '🔍',
+        upload: '📤',
+        download: '📥',
+        edit: '✏️',
+        delete: '🗑️',
+        default: '📋'
+      };
+      return icons[type] || icons.default;
+    },
+    
+    getActivityIconClass(type) {
+      return `activity-icon--${type}`;
+    },
+    
+    formatActivityTitle(activity) {
+      const actions = {
+        search: 'Searched for documents',
+        upload: 'Uploaded document',
+        download: 'Downloaded document',
+        edit: 'Edited document',
+        delete: 'Deleted document'
+      };
+      return actions[activity.type] || 'Performed action';
+    },
+    
+    formatActivityDetails(activity) {
+      if (activity.documentName) {
+        return `"${activity.documentName}"`;
+      } else if (activity.query) {
+        return `Query: "${activity.query}"`;
+      }
+      return activity.details || '';
+    },
+    
+    formatTime(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diff = Math.floor((now - date) / 1000);
+      
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+      if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+      if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+      
+      return date.toLocaleDateString();
+    }
+  },
   props: {
     files: {
       type: Array,
@@ -220,65 +281,277 @@ export default {
   data() {
     return {
       quickSearchText: '',
-      recentActivity: [
-        {
-          icon: '🔍',
-          title: 'Search: "API documentation"',
-          description: 'Found 12 relevant documents',
-          timestamp: new Date(Date.now() - 1000 * 60 * 5), // 5 minutes ago
-          type: 'search',
-          query: 'API documentation'
-        },
-        {
-          icon: '📄',
-          title: 'Opened: setup-guide.md',
-          description: 'Viewed installation instructions',
-          timestamp: new Date(Date.now() - 1000 * 60 * 15), // 15 minutes ago
-          type: 'file',
-          filename: 'setup-guide.md'
-        },
-        {
-          icon: '⬆️',
-          title: 'Uploaded: troubleshooting.pdf',
-          description: 'Added new troubleshooting guide',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60), // 1 hour ago
-          type: 'upload',
-          filename: 'troubleshooting.pdf'
-        },
-        {
-          icon: '🔍',
-          title: 'Search: "configuration settings"',
-          description: 'Found 8 relevant documents',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-          type: 'search',
-          query: 'configuration settings'
-        }
-      ],
-      popularSearches: [
-        { query: 'API documentation', count: 156, trend: 'up' },
-        { query: 'installation guide', count: 134, trend: 'stable' },
-        { query: 'troubleshooting', count: 98, trend: 'up' },
-        { query: 'configuration', count: 87, trend: 'down' },
-        { query: 'deployment process', count: 76, trend: 'up' }
-      ],
-      totalSearches: 42,
-      avgResponseTime: 340,
-      knowledgeScore: 94,
-      aiProcessingStatus: 'Optimal',
-      storageUsage: 67
+      recentActivity: [],
+      popularFiles: [],
+      dashboardMetrics: {
+        total_queries_24h: 0,
+        active_users_24h: 0,
+        avg_response_time_ms: 0,
+        top_performing_file: 'N/A',
+      },
+      activityTrends: [],
+      aiProcessingStatus: 'Loading...',
+      storageUsage: 0,
+      loading: {
+        metrics: true,
+        activity: true,
+        trends: true
+      }
     };
   },
   computed: {
-    totalFiles() {
-      return this.files.length || 28; // Fallback for demo
-    },
     storageStatusClass() {
-      if (this.storageUsage < 70) return 'healthy';
-      if (this.storageUsage < 90) return 'warning';
+      const usage = this.storageUsage || 0;
+      if (usage < 70) return 'healthy';
+      if (usage < 90) return 'warning';
       return 'critical';
     }
   },
+  mounted() {
+    this.fetchDashboardMetrics();
+    this.fetchRecentActivity();
+    this.fetchTrends();
+    this.fetchPopularFiles();
+    // Set up auto-refresh every 5 minutes
+    this.refreshInterval = setInterval(() => {
+      this.fetchDashboardMetrics();
+      this.fetchRecentActivity();
+    }, 5 * 60 * 1000);
+  },
+
+  beforeDestroy() {
+    if (this.refreshInterval) {
+      clearInterval(this.refreshInterval);
+    }
+  },
+
   methods: {
+    async fetchDashboardMetrics() {
+      this.loading.metrics = true;
+      try {
+        const endpoint = this.userRole === 'admin' ? '/metrics/summary' : '/metrics/user/summary';
+        
+        // First get metrics summary
+        const response = await fetch(`${this.serverUrl}${endpoint}`, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch metrics');
+        const data = await response.json();
+        
+        if (this.userRole === 'user') {
+          // Get active sessions for user
+          const sessionResponse = await fetch(`${this.serverUrl}/metrics/user/sessions`, {
+            headers: {
+              'Authorization': `Bearer ${this.token}`
+            }
+          });
+          const sessionData = await sessionResponse.json();
+          
+          this.dashboardMetrics = {
+            total_queries_24h: data.total_queries,
+            active_sessions: sessionData.active_sessions || 1,
+            avg_response_time_ms: data.avg_response_time_ms,
+            top_performing_file: data.top_files[0]?.filename || 'N/A'
+          };
+        } else {
+          this.dashboardMetrics = data;
+        }
+        
+        this.aiProcessingStatus = this.dashboardMetrics.avg_response_time_ms < 1000 ? 'Optimal' : 
+                                 this.dashboardMetrics.avg_response_time_ms < 2000 ? 'Good' : 'Degraded';
+      } catch (error) {
+        console.error('Error fetching metrics:', error);
+      } finally {
+        this.loading.metrics = false;
+      }
+    },
+
+    async fetchRecentActivity() {
+      this.loading.activity = true;
+      try {
+        const endpoint = this.userRole === 'admin' ? '/metrics/queries' : '/metrics/user/activity';
+        const response = await fetch(`${this.serverUrl}${endpoint}?limit=15`, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch activity');
+        const data = await response.json();
+        
+        // Extract activities from response
+        const activities = this.userRole === 'admin' ? 
+          (data.queries || []) : 
+          (data.activities || []);
+        
+        this.recentActivity = activities.map(activity => {
+          const base = {
+            id: activity.id || `${Date.now()}-${Math.random()}`,
+            timestamp: activity.timestamp ? new Date(activity.timestamp) : new Date(),
+            type: activity.type || 'unknown'
+          };
+
+          if (activity.type === 'search' || activity.query_type === 'search' || activity.activity_type === 'query') {
+            return {
+              ...base,
+              type: 'search',
+              query: activity.content || activity.query || '',
+              documentName: activity.filename || '',
+              details: activity.content || activity.query || '',
+              success: activity.success || true
+            };
+          }
+          
+          if (activity.type === 'file' || activity.activity_type === 'file_access' || activity.filename) {
+            return {
+              ...base,
+              type: 'file',
+              documentName: activity.filename || '',
+              details: `${activity.action_type || 'Accessed'} ${activity.filename || 'file'}`,
+              action: activity.action_type || 'access'
+            };
+          }
+
+          // Upload activity
+          if (activity.type === 'upload' || activity.activity_type === 'upload') {
+            return {
+              ...base,
+              type: 'upload',
+              documentName: activity.filename || '',
+              details: `Uploaded ${activity.filename || 'file'}`
+            };
+          }
+
+          // Default case for unknown activity types
+          return {
+            ...base,
+            type: 'unknown',
+            details: activity.details || 'Activity details not available'
+          };
+        });
+      } catch (error) {
+        console.error('Error fetching activity:', error);
+        this.recentActivity = [];
+      } finally {
+        this.loading.activity = false;
+      }
+    },
+    
+    getActivityIcon(activity) {
+      if (activity.activity_type === 'query') {
+        return activity.success ? '🔍' : '❌';
+      } else {
+        return activity.action === 'view' ? '📄' : '🔄';
+      }
+    },
+    
+    getActivityIconClass(activity) {
+      if (activity.activity_type === 'query') {
+        return activity.success ? 'activity-icon--success' : 'activity-icon--error';
+      }
+      return 'activity-icon--file';
+    },
+    async fetchTrends() {
+      // Only fetch trends for admin users
+      if (this.userRole !== 'admin') {
+        this.loading.trends = false;
+        return;
+      }
+      
+      this.loading.trends = true;
+      try {
+        const response = await fetch(`${this.serverUrl}/metrics/aggregations/timeseries?interval=hour&metric=queries&since=24h`, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch trends');
+        const data = await response.json();
+        this.activityTrends = data.data;
+      } catch (error) {
+        console.error('Error fetching trends:', error);
+      } finally {
+        this.loading.trends = false;
+      }
+    },
+
+    async fetchPopularFiles() {
+      try {
+        const endpoint = this.userRole === 'admin' ? '/metrics/aggregations/files' : '/metrics/user/files';
+        const response = await fetch(`${this.serverUrl}${endpoint}`, {
+          headers: {
+            'Authorization': `Bearer ${this.token}`
+          }
+        });
+        if (!response.ok) throw new Error('Failed to fetch popular files');
+        const data = await response.json();
+        
+        if (this.userRole === 'user') {
+          // For users, process their personal file statistics
+          const ragFiles = (data.rag_files || []).map(f => ({
+            filename: f.filename || '',
+            ragCount: f.retrieval_count || 0,
+            viewCount: 0,
+            lastAccessed: f.last_accessed || new Date()
+          }));
+
+          const viewedFiles = (data.viewed_files || []).map(f => ({
+            filename: f.filename || '',
+            ragCount: 0,
+            viewCount: f.view_count || 0,
+            lastAccessed: f.last_accessed || new Date()
+          }));
+
+          // Combine files and aggregate usage
+          const fileMap = new Map();
+          [...ragFiles, ...viewedFiles].forEach(file => {
+            const existing = fileMap.get(file.filename) || {
+              filename: file.filename,
+              ragCount: 0,
+              viewCount: 0,
+              lastAccessed: file.lastAccessed
+            };
+            
+            existing.ragCount += file.ragCount;
+            existing.viewCount += file.viewCount;
+            existing.lastAccessed = new Date(Math.max(
+              new Date(existing.lastAccessed),
+              new Date(file.lastAccessed)
+            ));
+            
+            fileMap.set(file.filename, existing);
+          });
+
+          this.popularFiles = Array.from(fileMap.values())
+            .sort((a, b) => (b.ragCount + b.viewCount) - (a.ragCount + a.viewCount))
+            .slice(0, 10)
+            .map(file => ({
+              query: file.filename,
+              count: file.ragCount + file.viewCount,
+              description: `${file.ragCount} searches, ${file.viewCount} views`,
+              trend: this.getFileTrend(file)
+            }));
+        } else {
+          // For admin, process overall file statistics
+          const files = Array.isArray(data.top_files_in_rag) ? data.top_files_in_rag :
+                       Array.isArray(data.top_files) ? data.top_files :
+                       [];
+          
+          this.popularFiles = files
+            .filter(file => file && file.filename)
+            .map(file => ({
+              query: file.filename,
+              count: file.retrieval_count || file.count || 0,
+              description: this.formatFileStats(file),
+              trend: this.getFileTrend(file)
+            }));
+        }
+      } catch (error) {
+        console.error('Error fetching popular files:', error);
+      }
+    },
+
     performQuickSearch() {
       if (!this.quickSearchText.trim()) return;
       this.$emit('perform-search', this.quickSearchText);
@@ -307,7 +580,6 @@ export default {
     },
     
     uploadFiles() {
-      // Create a temporary file input
       const input = document.createElement('input');
       input.type = 'file';
       input.multiple = true;
@@ -320,9 +592,49 @@ export default {
       };
       input.click();
     },
+
+    getFileTrend(file) {
+      // If we have previous_count/period data, use it
+      if (file.previous_count !== undefined && file.current_count !== undefined) {
+        return file.current_count > file.previous_count ? 'up' :
+               file.current_count < file.previous_count ? 'down' : 'stable';
+      }
+      
+      // For user files, compare search vs view ratio
+      if (file.ragCount !== undefined && file.viewCount !== undefined) {
+        const searchRatio = file.ragCount / (file.ragCount + file.viewCount);
+        return searchRatio > 0.6 ? 'up' :
+               searchRatio < 0.4 ? 'down' : 'stable';
+      }
+      
+      // Default to stable if we can't determine trend
+      return 'stable';
+    },
+    
+    formatFileStats(file) {
+      const counts = [];
+      
+      if (file.retrieval_count || file.count) {
+        counts.push(`${file.retrieval_count || file.count} uses`);
+      }
+      
+      if (file.search_count) {
+        counts.push(`${file.search_count} searches`);
+      }
+      
+      if (file.view_count) {
+        counts.push(`${file.view_count} views`);
+      }
+      
+      return counts.length > 0 ? counts.join(', ') : 'No usage data';
+    },
     
     viewAnalytics() {
       this.$emit('navigate-to', 'admin');
+    },
+
+    viewStats() {
+      this.$emit('navigate-to', 'stats');
     },
     
     formatTime(timestamp) {
@@ -478,8 +790,9 @@ export default {
   margin: 0 auto;
   padding: 0 20px;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 30px;
+  grid-auto-rows: auto;
 }
 
 .section-title {
@@ -495,11 +808,12 @@ export default {
 /* Statistics Cards */
 .stats-section {
   grid-column: 1 / -1;
+  min-height: 200px;
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
@@ -544,6 +858,8 @@ export default {
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  max-height: 200px;
+  overflow-y: auto;
 }
 
 .activity-list {
@@ -604,8 +920,10 @@ export default {
 
 .actions-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(2, 1fr);
   gap: 16px;
+  height: calc(100% - 60px); /* Account for title */
+  align-content: start;
 }
 
 .action-card {
@@ -782,6 +1100,58 @@ export default {
   font-size: 24px;
 }
 
+/* Latest Activity Styles */
+.activity-meta {
+  display: flex;
+  gap: 12px;
+  color: #666;
+  font-size: 0.85em;
+  margin-top: 4px;
+}
+
+.activity-icon {
+  padding: 8px;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.activity-icon--success {
+  background-color: rgba(52, 168, 83, 0.1);
+  color: #34a853;
+}
+
+.activity-icon--error {
+  background-color: rgba(234, 67, 53, 0.1);
+  color: #ea4335;
+}
+
+.activity-icon--file {
+  background-color: rgba(66, 133, 244, 0.1);
+  color: #4285f4;
+}
+
+.activity-warning {
+  color: #ea4335;
+  font-size: 0.9em;
+  margin-top: 4px;
+  padding: 4px 8px;
+  background: rgba(234, 67, 53, 0.1);
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.activity-item--clickable {
+  cursor: pointer;
+}
+
+.activity-item--clickable:hover {
+  background: rgba(66, 133, 244, 0.05);
+}
+
 .tip-title {
   font-size: 16px;
   font-weight: 600;
@@ -794,6 +1164,79 @@ export default {
   color: #1a73e8;
   opacity: 0.8;
   line-height: 1.4;
+}
+
+/* Loading and Empty States */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: inherit;
+}
+
+.loading-state,
+.empty-state {
+  padding: 20px;
+  text-align: center;
+  color: #5f6368;
+  font-size: 14px;
+}
+
+.loading-state {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+.stat-card {
+  position: relative;
+}
+
+/* Section Base Styles */
+.activity-section,
+.actions-section,
+.popular-section,
+.status-section,
+.tips-section {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  min-height: 400px;
+  max-height: 400px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.activity-section {
+  grid-row: span 2;
+}
+
+.actions-section {
+  grid-row: span 1;
+}
+
+.popular-section {
+  grid-row: span 1;
+}
+
+.tips-section {
+  grid-row: span 1;
+}
+
+.status-section {
+  grid-row: span 1;
 }
 
 /* Responsive Design */
@@ -822,12 +1265,21 @@ export default {
   }
   
   .stats-grid {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
     gap: 16px;
   }
   
   .actions-grid {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .activity-section,
+  .actions-section,
+  .popular-section,
+  .status-section,
+  .tips-section {
+    min-height: unset;
+    max-height: unset;
   }
 }
 </style>
