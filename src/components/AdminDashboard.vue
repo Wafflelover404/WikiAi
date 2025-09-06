@@ -212,20 +212,31 @@
           </div>
 
           <!-- Drag and Drop Upload Area -->
-          <div 
-            class="upload-zone"
-            :class="{ 'drag-over': isDragOver }"
-            @dragover.prevent="isDragOver = true"
-            @dragleave.prevent="isDragOver = false"
-            @drop.prevent="handleFileDrop"
-          >
-            <div class="upload-content">
-              <div class="upload-icon">📤</div>
-              <h3>Drag & Drop Files Here</h3>
-              <p>or <button class="upload-link" @click="$refs.fileInput.click()">browse files</button></p>
-              <input type="file" ref="fileInput" @change="handleFileSelect" multiple style="display: none;" />
+            <div class="file-upload-tabs">
+              <button :class="{ active: fileUploadTab === 'upload' }" @click="fileUploadTab = 'upload'">Upload File</button>
+              <button :class="{ active: fileUploadTab === 'enter' }" @click="fileUploadTab = 'enter'">Enter File</button>
             </div>
-          </div>
+            <div v-if="fileUploadTab === 'upload'">
+              <div 
+                class="upload-zone"
+                :class="{ 'drag-over': isDragOver }"
+                @dragover.prevent="isDragOver = true"
+                @dragleave.prevent="isDragOver = false"
+                @drop.prevent="handleFileDrop"
+              >
+                <div class="upload-content">
+                  <div class="upload-icon">📤</div>
+                  <h3>Drag & Drop Files Here</h3>
+                  <p>or <button class="upload-link" @click="$refs.fileInput.click()">browse files</button></p>
+                  <input type="file" ref="fileInput" @change="handleFileSelect" multiple style="display: none;" />
+                </div>
+              </div>
+            </div>
+            <div v-else class="manual-file-entry">
+              <input v-model="manualFilename" placeholder="Filename" style="display:block; margin-bottom:0.5rem; width:100%; max-width:400px;" />
+              <textarea v-model="manualContent" placeholder="File content" rows="8" style="width:100%; max-width:600px;"></textarea>
+              <button class="upload-btn" @click="submitManualFile" style="margin-top:0.5rem;">Submit</button>
+            </div>
 
           <div v-if="loadingFiles" class="loading-state">
             <div class="loading-spinner">⟳</div>
@@ -678,58 +689,62 @@ export default {
     API_BASE_URL: { type: String, required: true }
   },
   data() {
-    return {
-      tabs: ['Users', 'Files', 'Reports', 'System'],
-      activeTab: 'Users',
-      users: [],
-      files: [],
-      expandedFile: null, // Track which file is expanded in mobile view
-      newUser: {
-        username: '',
-        password: '',
-        role: 'user',
-        allowed_files: []
-      },
-      allowedFilesMode: 'all',
-      userCreateMsg: '',
-      fileUploadMsg: '',
-      editUserModal: false,
-      editUserData: null,
-      editUserMsg: '',
-      showPassword: false,
-      autoReports: [],
-      manualReports: [],
-      reportsMsg: '',
-      reportTab: 'auto',
-      editFileModal: false,
-      editFileName: '',
-      userSearch: '',
-      loadingUsers: false,
-      loadingFiles: false,
-      loadingReports: false,
-      fileSearch: '',
-      filesView: 'grid',
-      isDragOver: false,
-      tabUnderline: {
-        width: '0px',
-        left: '0px',
-        transition: 'all 0.3s cubic-bezier(.55,0,.1,1)'
-      },
-      // Auto-refresh settings
-      autoRefreshInterval: null,
-      lastUpdate: {
-        users: null,
-        files: null,
-        reports: null
-      },
-      updateFrequency: 30000, // 30 seconds
-      isAutoRefreshEnabled: true,
-      // Preview modal data
-      previewModalOpen: false,
-      previewModalFile: null,
-      previewModalContent: '',
-      previewModalLoading: false,
-    };
+      return {
+        tabs: ['Users', 'Files', 'Reports', 'System'],
+        activeTab: 'Users',
+        users: [],
+        files: [],
+        expandedFile: null, // Track which file is expanded in mobile view
+        newUser: {
+          username: '',
+          password: '',
+          role: 'user',
+          allowed_files: []
+        },
+        allowedFilesMode: 'all',
+        userCreateMsg: '',
+        fileUploadMsg: '',
+        editUserModal: false,
+        editUserData: null,
+        editUserMsg: '',
+        showPassword: false,
+        autoReports: [],
+        manualReports: [],
+        reportsMsg: '',
+        reportTab: 'auto',
+        editFileModal: false,
+        editFileName: '',
+        userSearch: '',
+        loadingUsers: false,
+        loadingFiles: false,
+        loadingReports: false,
+        fileSearch: '',
+        filesView: 'grid',
+        isDragOver: false,
+        tabUnderline: {
+          width: '0px',
+          left: '0px',
+          transition: 'all 0.3s cubic-bezier(.55,0,.1,1)'
+        },
+        // Auto-refresh settings
+        autoRefreshInterval: null,
+        lastUpdate: {
+          users: null,
+          files: null,
+          reports: null
+        },
+        updateFrequency: 30000, // 30 seconds
+        isAutoRefreshEnabled: true,
+        // Preview modal data
+        previewModalOpen: false,
+        previewModalFile: null,
+        previewModalContent: '',
+        previewModalLoading: false,
+        // File uploader tabs
+        fileUploadTab: 'upload',
+        manualFilename: '',
+        manualContent: '',
+      };
   },
   computed: {
     totalReports() {
@@ -772,6 +787,18 @@ export default {
     }
   },
   methods: {
+      submitManualFile() {
+        if (!this.manualFilename || !this.manualContent) {
+          alert('Please enter both filename and content.');
+          return;
+        }
+        // Prepare a Blob and FormData to mimic file upload
+        const blob = new Blob([this.manualContent], { type: 'text/plain' });
+        const file = new File([blob], this.manualFilename, { type: 'text/plain' });
+        this.uploadFiles([file]);
+        this.manualFilename = '';
+        this.manualContent = '';
+      },
     toggleFileDetails(file) {
       if (this.expandedFile === file.filename) {
         this.expandedFile = null;
@@ -2613,57 +2640,97 @@ export default {
 }
 
 .upload-zone {
-  border: 2px dashed #dee2e6;
-  border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  background: #f8f9fa;
+  background: white;
+  padding: 3rem 2rem;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #e0e0e0;
   transition: all 0.3s ease;
-  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .upload-zone.drag-over {
-  border-color: var(--primary);
-  background: var(--primary-light);
+  border-color: #1976d2;
+  background: rgba(25, 118, 210, 0.04);
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
 }
 
 .upload-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 1rem;
 }
 
-.upload-icon {
-  font-size: 48px;
-  opacity: 0.7;
+.upload-content .upload-icon {
+  font-size: 3rem;
+  color: #1976d2;
+  opacity: 0.8;
 }
 
 .upload-content h3 {
   margin: 0;
-  color: #495057;
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 600;
+  color: #333;
 }
 
 .upload-content p {
   margin: 0;
-  color: #6c757d;
-  font-size: 16px;
+  color: #666;
 }
 
 .upload-link {
+  color: #1976d2;
+  text-decoration: underline;
   background: none;
   border: none;
-  color: var(--primary);
-  text-decoration: underline;
   cursor: pointer;
-  font-size: 16px;
   font-weight: 500;
+  padding: 0;
 }
 
 .upload-link:hover {
-  color: var(--primary-dark);
+  color: #1565c0;
+}
+
+@media (max-width: 768px) {
+  .file-upload-tabs {
+    flex-direction: row;
+    padding: 0.5rem;
+  }
+  
+  .file-upload-tabs button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    flex: 1;
+  }
+  
+  .manual-file-entry,
+  .upload-zone {
+    padding: 1.5rem 1rem;
+  }
+  
+  .manual-file-entry input,
+  .manual-file-entry textarea {
+    max-width: 100%;
+  }
+}
+
+/* Additional visual feedback */
+.manual-file-entry input::placeholder,
+.manual-file-entry textarea::placeholder {
+  color: #999;
+}
+
+.manual-file-entry input:hover,
+.manual-file-entry textarea:hover {
+  border-color: #bbdefb;
+}
+
+.manual-file-entry .upload-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .files-table-container {
@@ -3458,3 +3525,128 @@ export default {
   }
 }
 </style>
+/* Enhanced File Upload Styles */
+.file-upload-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 2rem;
+  background: white;
+  padding: 0.5rem 0.5rem 0;
+  border-radius: 8px 8px 0 0;
+  border: 1px solid #e0e0e0;
+  border-bottom: none;
+}
+
+.file-upload-tabs button {
+  padding: 1rem 2rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 0.95rem;
+  color: #666;
+  position: relative;
+  transition: all 0.3s ease;
+  border-radius: 6px 6px 0 0;
+}
+
+.file-upload-tabs button:hover {
+  color: #1976d2;
+  background: rgba(25, 118, 210, 0.04);
+}
+
+.file-upload-tabs button.active {
+  color: #1976d2;
+  font-weight: 600;
+}
+
+.file-upload-tabs button.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #1976d2;
+  border-radius: 2px 2px 0 0;
+}
+
+.manual-file-entry {
+  background: white;
+  padding: 2rem;
+  border-radius: 0 0 8px 8px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.manual-file-entry input {
+  width: 100%;
+  max-width: 400px;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+  background: #f8f9fa;
+}
+
+.manual-file-entry input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+  background: white;
+}
+
+.manual-file-entry textarea {
+  width: 100%;
+  max-width: 600px;
+  min-height: 200px;
+  padding: 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-family: monospace;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+  resize: vertical;
+  background: #f8f9fa;
+}
+
+.manual-file-entry textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+  background: white;
+}
+
+.manual-file-entry .upload-btn {
+  margin-top: 1rem;
+  padding: 0.75rem 1.5rem;
+  background: #1976d2;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.manual-file-entry .upload-btn::before {
+  content: '📤';
+}
+
+.manual-file-entry .upload-btn:hover {
+  background: #1565c0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(21, 101, 192, 0.2);
+}
+
+.manual-file-entry .upload-btn:active {
+  transform: translateY(0);
+  box-shadow: none;
+}

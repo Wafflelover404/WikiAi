@@ -619,8 +619,9 @@ export default {
         const encodedFilename = encodeURIComponent(filename);
         const url = `${this.serverUrl}/files/content/${encodedFilename}`;
         const res = await fetch(url, {
+
           method: 'GET',
-          headers: { 'Authorization': `Bearer ${this.token}` }
+          headers: { 'Authorization': `Bearer ${this.token}`, 'ngrok-skip-browser-warning': 'true' }
         });
         
         if (res.ok) {

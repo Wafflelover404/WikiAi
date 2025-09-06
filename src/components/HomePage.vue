@@ -334,7 +334,8 @@ export default {
         // First get metrics summary
         const response = await fetch(`${this.serverUrl}${endpoint}`, {
           headers: {
-            'Authorization': `Bearer ${this.token}`
+            'Authorization': `Bearer ${this.token}`,
+            'ngrok-skip-browser-warning': 'true'
           }
         });
         if (!response.ok) throw new Error('Failed to fetch metrics');
@@ -374,7 +375,8 @@ export default {
         const endpoint = this.userRole === 'admin' ? '/metrics/queries' : '/metrics/user/activity';
         const response = await fetch(`${this.serverUrl}${endpoint}?limit=15`, {
           headers: {
-            'Authorization': `Bearer ${this.token}`
+            'Authorization': `Bearer ${this.token}`,
+            'ngrok-skip-browser-warning': 'true'
           }
         });
         if (!response.ok) throw new Error('Failed to fetch activity');
@@ -463,7 +465,8 @@ export default {
       try {
         const response = await fetch(`${this.serverUrl}/metrics/aggregations/timeseries?interval=hour&metric=queries&since=24h`, {
           headers: {
-            'Authorization': `Bearer ${this.token}`
+            'Authorization': `Bearer ${this.token}`,
+            'ngrok-skip-browser-warning': 'true'
           }
         });
         if (!response.ok) throw new Error('Failed to fetch trends');
@@ -481,7 +484,8 @@ export default {
         const endpoint = this.userRole === 'admin' ? '/metrics/aggregations/files' : '/metrics/user/files';
         const response = await fetch(`${this.serverUrl}${endpoint}`, {
           headers: {
-            'Authorization': `Bearer ${this.token}`
+            'Authorization': `Bearer ${this.token}`,
+            'ngrok-skip-browser-warning': 'true'
           }
         });
         if (!response.ok) throw new Error('Failed to fetch popular files');
