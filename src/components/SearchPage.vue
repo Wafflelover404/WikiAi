@@ -63,7 +63,7 @@
         </div>
 
         <!-- AI Overview -->
-        <div v-if="aiOverview || aiOverviewLoading" class="ai-overview-card">
+        <div v-if="aiOverview || aiOverviewLoading || aiOverviewError" class="ai-overview-card">
           <div class="ai-overview-header">
             <div class="ai-badge">
               <span class="ai-icon">✨</span>
@@ -83,6 +83,7 @@
               </div>
               <span>AI is analyzing your knowledge base...</span>
             </div>
+            <div v-else-if="aiOverviewError" class="ai-overview-error">{{ aiOverviewError }}</div>
             <div v-else-if="aiOverview" class="ai-overview-text" v-html="markedOverview"></div>
           </div>
         </div>
@@ -93,21 +94,21 @@
             v-for="(result, idx) in searchResults" 
             :key="idx" 
             class="search-result-item"
-            @click.stop="openFile(result.filename, result.text)"
+            @click.stop="openFile(result, result.text)"
           >
             <div class="result-header">
               <div class="result-url">
                 <span class="file-icon">{{ getFileIcon(result.filename) }}</span>
-                <span class="filename">{{ result.filename }}</span>
+                <span class="filename">{{ displayFilename(result) }}</span>
               </div>
               <div class="result-actions">
-                <button class="action-btn" @click.stop="openFile(result.filename, result.text)">
+                <button class="action-btn" @click.stop="openFile(result, result.text)">
                   Open
                 </button>
               </div>
             </div>
-            <h3 class="result-title">{{ getResultTitle(result.text) }}</h3>
-            <p class="result-snippet" v-html="highlightSearchTerm(getResultSnippet(result.text))"></p>
+            <h3 class="result-title">{{ getResultTitle(result) }}</h3>
+            <p class="result-snippet" v-html="highlightSearchTerm(getResultSnippet(result))"></p>
           </div>
         </div>
 
@@ -190,6 +191,7 @@ export default {
       aiOverview: '',
       aiOverviewLoading: false,
       aiOverviewExpanded: false,
+      aiOverviewError: '',
       fileModalVisible: false,
       fileModalContent: '',
       fileModalName: '',
@@ -295,6 +297,7 @@ export default {
       this.hasSearched = true;
       this.searchResults = [];
       this.aiOverview = '';
+      this.aiOverviewError = '';
       this.aiOverviewLoading = true;
       this.aiOverviewExpanded = false;
       
@@ -316,12 +319,61 @@ export default {
         });
         
         if (res.status === 'success' && res.response && Array.isArray(res.response.chunks)) {
-          this.searchResults = res.response.chunks.map(chunk => {
-            const match = chunk.match(/<filename>(.*?)<\/filename>/);
-            const filename = match ? match[1] : null;
-            const text = chunk.replace(/<filename>.*?<\/filename>/g, '').trim();
-            return { text, filename };
+          this.searchResults = res.response.chunks.map(rawChunk => {
+            // Extract filename and possible_files tags
+            const fnameMatch = rawChunk.match(/<filename>(.*?)<\/filename>/);
+            const filename = fnameMatch ? fnameMatch[1] : null;
+            const possMatch = rawChunk.match(/<possible_files>([\s\S]*?)<\/possible_files>/);
+            let possibleFiles = [];
+            if (possMatch && possMatch[1]) {
+              try { possibleFiles = JSON.parse(possMatch[1]); } catch (_) { possibleFiles = []; }
+            }
+            // Remove tags to get the main text
+            const text = rawChunk
+              .replace(/<filename>[\s\S]*?<\/filename>/g, '')
+              .replace(/<possible_files>[\s\S]*?<\/possible_files>/g, '')
+              .trim();
+            // Try to parse dict-like content to extract title/content
+            let displayTitle = '';
+            let displaySnippet = '';
+            try {
+              // Convert single quotes to double quotes carefully for the first JSON-like object
+              let candidate = text;
+              if (candidate.includes("'title'")) {
+                candidate = candidate.replace(/'/g, '"');
+              }
+              const objStart = candidate.indexOf('{');
+              const objEnd = candidate.lastIndexOf('}');
+              if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+                const jsonStr = candidate.slice(objStart, objEnd + 1);
+                const parsed = JSON.parse(jsonStr);
+                if (parsed && typeof parsed === 'object') {
+                  if (typeof parsed.title === 'string') displayTitle = parsed.title;
+                  if (typeof parsed.content === 'string') displaySnippet = parsed.content;
+                }
+              }
+            } catch (_) { /* ignore parsing errors */ }
+            // Fallback: try regex to extract content field only (single or double quoted), avoid other fields
+            if (!displaySnippet) {
+              const single = text.match(/['"]content['"]\s*:\s*['"]([\s\S]*?)['"]/);
+              if (single && single[1]) {
+                displaySnippet = single[1];
+              }
+            }
+            // As a last resort, take first non-metadata line that doesn't include 'relevance'
+            if (!displaySnippet) {
+              const firstClean = (text.split('\n').map(l => l.trim()).filter(l => l && !/^<.*?>$/.test(l) && !/relevance\s*:/i.test(l)))[0] || '';
+              displaySnippet = firstClean;
+            }
+            // Ensure snippet is concise
+            if (displaySnippet && displaySnippet.length > 280) {
+              displaySnippet = displaySnippet.slice(0, 280) + '...';
+            }
+            return { text, filename, possibleFiles, displayTitle, displaySnippet };
           });
+        } else if (res.status === 'error') {
+          // Show backend error in AI card for visibility
+          this.aiOverviewError = res.message || 'Failed to fetch search results';
         }
         
         // Get AI overview (humanized)
@@ -334,6 +386,8 @@ export default {
         
         if (res2.status === 'success' && res2.response && res2.response.answer) {
           this.aiOverview = res2.response.answer;
+        } else if (res2.status === 'error') {
+          this.aiOverviewError = res2.message || 'Error generating AI overview';
         }
         
         this.searchTime = ((Date.now() - startTime) / 1000).toFixed(2);
@@ -342,6 +396,7 @@ export default {
         console.error('Search error:', error);
         this.searchResults = [];
         this.aiOverview = '';
+        this.aiOverviewError = error.message || 'Unknown error occurred';
       } finally {
         this.aiOverviewLoading = false;
       }
@@ -377,19 +432,23 @@ export default {
       return iconMap[extension] || '📄';
     },
     
-    getResultTitle(text) {
-      // Extract first line or first sentence as title
+    getResultTitle(result) {
+      // Prefer parsed title, fallback to first line of text
+      const candidate = (result.displayTitle || '').trim();
+      if (candidate) return candidate.length > 80 ? candidate.slice(0, 80) + '...' : candidate;
+      const text = result.text || '';
       const lines = text.split('\n');
-      const firstLine = lines[0].trim();
+      const firstLine = (lines[0] || '').trim();
       if (firstLine.length > 60) {
         return firstLine.substring(0, 60) + '...';
       }
       return firstLine || 'Document content';
     },
     
-    getResultSnippet(text) {
-      // Get a snippet around the search term
-      const snippet = text.substring(0, 200);
+    getResultSnippet(result) {
+      // Prefer parsed content snippet, fallback to raw text
+      const text = (result.displaySnippet && typeof result.displaySnippet === 'string') ? result.displaySnippet : (result.text || '');
+      const snippet = text.substring(0, 260);
       return snippet.length < text.length ? snippet + '...' : snippet;
     },
     
@@ -406,15 +465,29 @@ export default {
       return highlightedText;
     },
     
-    async openFile(filename, segmentText) {
-      if (!filename || !this.token || !this.serverUrl) {
-        console.error('Missing required parameters:', { filename, hasToken: !!this.token, hasServerUrl: !!this.serverUrl });
+    displayFilename(result) {
+      if (!result) return 'unknown';
+      // Prefer the first possible file, then the filename, then fallback to 'unknown'
+      const possibleFile = Array.isArray(result.possibleFiles) && result.possibleFiles.length > 0 
+        ? result.possibleFiles[0] 
+        : (result.filename === 'unknown' ? null : result.filename);
+      return possibleFile || 'unknown';
+    },
+    
+    async openFile(item, segmentText) {
+      // Backward compatibility: if first arg is string, wrap it
+      const result = (typeof item === 'string') ? { filename: item, possibleFiles: [], text: segmentText } : item;
+      const chosenFilename = (result && result.filename && result.filename !== 'unknown')
+        ? result.filename
+        : (Array.isArray(result?.possibleFiles) && result.possibleFiles.length > 0 ? result.possibleFiles[0] : result?.filename);
+      if (!chosenFilename || !this.token || !this.serverUrl) {
+        console.error('Missing required parameters:', { filename: chosenFilename, hasToken: !!this.token, hasServerUrl: !!this.serverUrl });
         return;
       }
       
       // Show modal with loading state
       this.fileModalVisible = true;
-      this.fileModalName = filename.startsWith('file:') ? filename.substring(5) : filename;
+      this.fileModalName = chosenFilename.startsWith('file:') ? chosenFilename.substring(5) : chosenFilename;
       this.fileModalContent = '';
       
       try {
@@ -710,6 +783,14 @@ export default {
 .ai-overview-content {
   line-height: 1.6;
   color: #202124;
+}
+
+.ai-overview-error {
+  color: #d93025;
+  background: #fdecea;
+  border-left: 4px solid #d93025;
+  padding: 12px 14px;
+  border-radius: 4px;
 }
 
 .ai-overview-content.collapsed {
