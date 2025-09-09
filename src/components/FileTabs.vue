@@ -46,6 +46,9 @@
         <div class="content-title-section">
           <h4 class="file-content-title">{{ activeTab }}</h4>
           <div class="content-actions">
+            <button class="action-btn" @click="$emit('open-quiz', activeTab)" title="Open Quiz" aria-label="Open Quiz">
+              🧠
+            </button>
             <button class="action-btn" @click="copyContent" title="Copy content">
               📋
             </button>

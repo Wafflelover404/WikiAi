@@ -72,8 +72,10 @@
                 <!-- Desktop Header -->
                 <div class="desktop-view-header">
                   <div class="header-content">
-                    <h1>📁 Files</h1>
-                    <p class="view-subtitle">Browse and manage your document library</p>
+                    <div class="header-left">
+                      <h1>📁 Files</h1>
+                      <p class="view-subtitle">Browse and manage your document library</p>
+                    </div>
                   </div>
                 </div>
                 <!-- Desktop Search and Filters (Always visible) -->
@@ -145,6 +147,7 @@
                 @close-file="closeFile"
                 @switch-tab="switchTab"
                 @download-file="downloadFile"
+                @open-quiz="openQuiz"
                 class="desktop-file-tabs"
               />
               <!-- Mobile File List View -->
@@ -184,6 +187,9 @@
                     <button @click="downloadFile(selectedFile)" class="mobile-action-item">
                       <span>💾</span> Download
                     </button>
+                    <button @click="openQuiz(selectedFile)" class="mobile-action-item">
+                      <span>🧠</span> Quiz !
+                    </button>
                     <button @click="shareFile(selectedFile)" class="mobile-action-item">
                       <span>↗️</span> Share
                     </button>
@@ -202,6 +208,12 @@
                       aria-label="Download"
                       title="Download file"
                     >💾</button>
+                    <button 
+                      @click="openQuiz(mobileActiveFilename)" 
+                      class="mobile-content-action-btn" 
+                      aria-label="Open Quiz"
+                      title="Open Quiz"
+                    >🧠</button>
                   </div>
                 </div>
                 <div class="mobile-content-text">
@@ -259,6 +271,14 @@
       </div>
     </template>
   </div>
+  <!-- Quiz Modal -->
+  <QuizModal
+    :visible="quizVisible"
+    :filename="quizFilename"
+    :token="token"
+    :serverUrl="serverUrl"
+    @close="quizVisible = false"
+  />
 </template>
 
 <script>
@@ -269,6 +289,7 @@ import LoginPage from './components/LoginPage.vue';
 import AdminDashboard from './components/AdminDashboard.vue';
 import HomePage from './components/HomePage.vue';
 import SearchPage from './components/SearchPage.vue';
+import QuizModal from './components/QuizModal.vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
@@ -282,7 +303,8 @@ export default {
     LoginPage,
     AdminDashboard,
     HomePage,
-    SearchPage
+    SearchPage,
+    QuizModal
   },
   data() {
     return {
@@ -315,7 +337,9 @@ export default {
       fileListCache: [],
       mobileActiveContent: null, 
       mobileActiveFilename: null, 
-      fileListInterval: null
+      fileListInterval: null,
+      quizVisible: false,
+      quizFilename: ''
     };
   },
   watch: {
@@ -342,6 +366,30 @@ export default {
       isAdmin() {
         return this.user && this.user.role === 'admin';
       },
+    copyContent() {
+      if (!this.activeTab) return;
+      const content = this.fileContents[this.activeTab] || '';
+      if (!content) return;
+      navigator.clipboard.writeText(content).then(() => {
+        console.log('Content copied');
+      }).catch(() => {});
+    },
+    printContent() {
+      if (!this.activeTab) return;
+      const content = this.fileContents[this.activeTab] || '';
+      const w = window.open('', '_blank');
+      if (!w) return;
+      const isMarkdown = this.activeTab.toLowerCase().endsWith('.md');
+      const escaped = content
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${this.activeTab}</title></head><body>${isMarkdown ? `<pre>${escaped}</pre>` : `<pre>${escaped}</pre>`}</body></html>`);
+      w.document.close();
+      w.focus();
+      w.print();
+      w.close();
+    },
       maskedToken() {
         return this.token ? '•'.repeat(this.token.length) : 'No token';
       },
@@ -641,6 +689,13 @@ export default {
       } catch (e) {
         console.error(`Error downloading file ${filename}:`, e);
       }
+    },
+    openQuiz(fileOrFilename) {
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : (fileOrFilename && fileOrFilename.filename) || this.activeTab;
+      if (!filename) return;
+      console.log('[Quiz] Opening quiz for', filename);
+      this.quizFilename = filename;
+      this.quizVisible = true;
     },
     
     // Navigation methods
@@ -2419,4 +2474,57 @@ body {
 .dark-mode .hamburger-icon::after {
   background: #e0e0e0;
 }
+
+/* Add Quiz UI styles */
+.quiz-btn {
+  background-color: #007BFF;
+  color: #fff;
+  border: none;
+  padding: 8px 16px;
+  font-size: 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.quiz-btn:hover {
+  background-color: #0056b3;
+}
+
+.dark-mode .quiz-btn {
+  background-color: #66b3ff;
+}
+
+.dark-mode .quiz-btn:hover {
+  background-color: #4488ff;
+}
+
+/* Ensure the desktop quick actions bar sits above content and stays visible */
+.desktop-quick-actions {
+  position: sticky;
+  top: 0;
+  z-index: 200;
+  background: #fff;
+  padding: 8px 0 12px 0;
+  border-bottom: 1px solid #eee;
+}
+.dark-mode .desktop-quick-actions { background: #0f1115; border-bottom-color: #222; }
+
+/* Make mobile header action buttons visible and clickable */
+.mobile-content-header { position: sticky; top: 0; z-index: 250; background: inherit; }
+.mobile-content-actions {
+  display: flex;
+  gap: 8px;
+  z-index: 300;
+}
+.mobile-content-action-btn {
+  position: relative;
+  z-index: 300;
+  pointer-events: auto;
+}
+
+/* Ensure main content does not sit above action bars */
+.main-content-area { position: relative; z-index: 1; }
+.desktop-file-tabs { position: relative; z-index: 1; }
+.desktop-quick-actions { z-index: 1002; }
+.quiz-btn { pointer-events: auto; }
 </style>
