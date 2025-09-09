@@ -229,7 +229,13 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
     const contentType = res.headers.get('content-type');
     if (contentType && contentType.includes('application/json')) {
       const errorData = await res.json();
-      throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+      // Create a more detailed error message including both status and message
+      const errorMessage = errorData.message || errorData.detail || `HTTP error! status: ${res.status}`;
+      const error = new Error(errorMessage);
+      // Attach the full error response to the error object
+      error.response = errorData;
+      error.status = res.status;
+      throw error;
     }
     throw new Error(`HTTP error! status: ${res.status}`);
   }

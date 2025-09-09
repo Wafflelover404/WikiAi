@@ -22,9 +22,25 @@
             <label for="username">Username</label>
             <input id="username" v-model="username" type="text" required />
           </div>
-          <div class="form-group">
+          <div class="form-group password-group">
             <label for="password">Password</label>
-            <input id="password" v-model="password" type="password" required />
+            <div class="password-input-wrapper">
+              <input 
+                id="password" 
+                v-model="password" 
+                :type="showPassword ? 'text' : 'password'" 
+                required 
+              />
+              <button 
+                type="button" 
+                class="toggle-password"
+                @click="togglePasswordVisibility"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'"
+              >
+                <span v-if="showPassword">👁️</span>
+                <span v-else>🙈</span>
+              </button>
+            </div>
           </div>
           <div class="form-group checkbox-group">
             <label class="checkbox-label">
@@ -37,7 +53,11 @@
             <span v-if="!loading">Login</span>
             <span v-else class="loading-spinner"></span>
           </button>
-          <div v-if="error" class="error-msg" v-motion-pop-visible-once>{{ error }}</div>
+          <div v-if="error || success" 
+               :class="['status-msg', { 'error-msg': error, 'success-msg': success }]" 
+               v-motion-pop-visible-once>
+            {{ error || success }}
+          </div>
         </form>
       </div>
     </div>
@@ -60,6 +80,8 @@ export default {
       rememberMe: false,
       loading: false,
       error: '',
+      success: '',
+      showPassword: false,
       showProxyWarning: !!import.meta.env.VITE_API_PROXY
     };
   },
@@ -76,12 +98,16 @@ export default {
     this.showProxyWarning = !!import.meta.env.VITE_API_PROXY;
   },
   methods: {
+    togglePasswordVisibility() {
+      this.showPassword = !this.showPassword;
+    },
     async autoLogin() {
       await this.handleLogin(true);
     },
     async handleLogin(isAuto = false) {
       this.loading = true;
       this.error = '';
+      this.success = '';
 
       try {
         let cleanUrl = this.serverUrl.trim();
@@ -98,14 +124,33 @@ export default {
         this.$root.serverUrl = cleanUrl;
 
         const { login } = await import('../api.js');
-        const res = await login({
+        const response = await login({
           serverUrl: cleanUrl,
           username: this.username.trim(),
           password: this.password.trim()
         });
 
-        if (res.token || (res.status && res.session_id)) {
-          if (this.rememberMe) {
+        // Check for error status in response
+        if (response.status === 'error') {
+          throw new Error(response.message || 'Login failed');
+        }
+
+        // If we get here, login was successful
+        const { token, role } = response;
+        this.$root.token = token;
+        this.$emit('login-success', {
+          username: this.username,
+          password: this.password,
+          role: role || 'user',
+          token: token,
+          serverUrl: cleanUrl
+        });
+
+        // Set success message
+        this.success = response.message || 'Login successful!';
+        
+        // Handle remember me
+        if (this.rememberMe) {
             localStorage.setItem(
               'loginData',
               JSON.stringify({
@@ -117,37 +162,26 @@ export default {
           } else {
             localStorage.removeItem('loginData');
           }
-
-          if (res.token) {
-            this.$root.token = res.token;
-            this.$emit('login-success', {
-              username: this.username,
-              password: this.password,
-              role: res.role || 'user',
-              token: res.token,
-              serverUrl: cleanUrl
-            });
-          } else {
-            this.$root.session_id = res.session_id;
-            this.$emit('login-success', {
-              username: this.username,
-              password: this.password,
-              role: res.role || 'user',
-              session_id: res.session_id,
-              status: res.status,
-              serverUrl: cleanUrl
-            });
-          }
-        } else {
-          if (!isAuto) this.error = res.detail || res.message || 'Login failed.';
-          else localStorage.removeItem('loginData');
-        }
       } catch (e) {
         console.error('Login error:', e);
-        if (!isAuto) {
-          this.error = e.message.includes('CORS')
-            ? 'CORS error - configure server or use dev proxy'
-            : 'Network or server error.';
+        
+        // Clear any previous success message
+        this.success = '';
+        
+        // Set error message from the error object
+        if (e.message.includes('CORS')) {
+          this.error = 'CORS error - configure server or use dev proxy';
+        } else if (e.response) {
+          // If we have a response object, use its message or detail
+          this.error = e.response.message || e.response.detail || 'Invalid username or password';
+        } else {
+          // Fallback to the error message or a generic one
+          this.error = e.message || 'Network or server error. Please try again.';
+        }
+        
+        // Only redirect on auto-login if there's no error
+        if (isAuto && !this.error) {
+          this.$router.push('/');
         }
       }
       this.loading = false;
@@ -333,15 +367,57 @@ button:disabled {
   to { transform: rotate(360deg); }
 }
 
+.password-group {
+  position: relative;
+}
+
+.password-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 10px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 1.2em;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.toggle-password:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.status-msg {
+  margin-top: 16px;
+  text-align: center;
+  padding: 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
 .error-msg {
   color: #d32f2f;
-  margin-top: 20px;
-  text-align: center;
-  font-size: 15px;
-  padding: 12px;
-  background-color: #ffebee;
-  border-radius: 8px;
-  border-left: 4px solid #d32f2f;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+}
+
+.success-msg {
+  color: #2e7d32;
+  background: #e8f5e9;
+  border: 1px solid #c8e6c9;
 }
 
 .proxy-warning {
