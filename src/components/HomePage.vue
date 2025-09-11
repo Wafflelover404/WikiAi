@@ -106,6 +106,12 @@
               <div class="action-title">Statistics</div>
               <div class="action-description">View your activity overview</div>
             </div>
+
+            <div v-if="userRole === 'user'" class="action-card" @click="openAskModal">
+              <div class="action-icon">💬</div>
+              <div class="action-title">Ask a Question</div>
+              <div class="action-description">Chat with your knowledge base</div>
+            </div>
           </div>
         </div>
 
@@ -203,12 +209,24 @@
         </div>
       </div>
     </div>
+    <!-- Ask a Question Modal -->
+    <AskQuestionModal
+      :visible="askModalVisible"
+      :token="token"
+      :serverUrl="serverUrl"
+      @close="askModalVisible = false"
+      @submitted="onAskSubmitted"
+    />
   </div>
 </template>
 
 <script>
+import AskQuestionModal from './AskQuestionModal.vue';
 export default {
   name: 'HomePage',
+  components: {
+    AskQuestionModal
+  },
   methods: {
     getActivityIcon(type) {
       const icons = {
@@ -296,7 +314,8 @@ export default {
         metrics: true,
         activity: true,
         trends: true
-      }
+      },
+      askModalVisible: false
     };
   },
   computed: {
@@ -326,6 +345,13 @@ export default {
   },
 
   methods: {
+    openAskModal() {
+      this.askModalVisible = true;
+    },
+    onAskSubmitted() {
+      // Refresh activity/widgets for the user after submission (best-effort)
+      this.fetchRecentActivity();
+    },
     async fetchDashboardMetrics() {
       this.loading.metrics = true;
       try {

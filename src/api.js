@@ -257,3 +257,13 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
   // For file content and other endpoints, return raw response
   return res;
 }
+
+// Submit manual report (POST /reports/submit/manual)
+export async function submitManualReport({ serverUrl, token, issue }) {
+  return await apiRequest({
+    url: `${serverUrl}/reports/submit/manual`,
+    method: 'POST',
+    token,
+    data: { issue }
+  });
+}
