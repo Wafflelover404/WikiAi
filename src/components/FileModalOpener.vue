@@ -123,6 +123,11 @@ export default {
   outline: none;
   animation: modalPop 0.22s cubic-bezier(.4,2,.6,1);
 }
+.dark-mode .modal-content {
+  background: #1f2122;
+  color: #e0e0e0;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.6);
+}
 .modal-close-btn {
   position: absolute;
   top: 12px;
@@ -137,6 +142,9 @@ export default {
 }
 .modal-close-btn:hover {
   color: #e53935;
+}
+.dark-mode .modal-close-btn {
+  color: #a0a6ac;
 }
 .modal-title {
   font-size: 1.3rem;
@@ -171,11 +179,16 @@ export default {
   color: #333;
   font-size: 16px;
 }
+.dark-mode .content-body { color: #e0e0e0; }
 .code-content {
   background: #fff;
   border: 1px solid #e9ecef;
   border-radius: 8px;
   overflow: hidden;
+}
+.dark-mode .code-content {
+  background: #1f2122;
+  border-color: #33393d;
 }
 .code-header {
   display: flex;
@@ -185,6 +198,10 @@ export default {
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
 }
+.dark-mode .code-header {
+  background: #181a1b;
+  border-bottom-color: #333;
+}
 .code-language {
   font-size: 14px;
   font-weight: 600;
@@ -192,6 +209,7 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.dark-mode .code-language { color: #c0c4c8; }
 .copy-code-btn {
   background: #1976d2;
   color: white;
@@ -224,6 +242,10 @@ export default {
   border-radius: 8px;
   overflow: hidden;
 }
+.dark-mode .plain-text-content {
+  background: #1f2122;
+  border-color: #33393d;
+}
 .text-header {
   display: flex;
   justify-content: space-between;
@@ -232,6 +254,10 @@ export default {
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
 }
+.dark-mode .text-header {
+  background: #181a1b;
+  border-bottom-color: #333;
+}
 .text-type {
   font-size: 14px;
   font-weight: 600;
@@ -239,6 +265,7 @@ export default {
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+.dark-mode .text-type { color: #c0c4c8; }
 .copy-text-btn {
   background: #28a745;
   color: white;
@@ -265,5 +292,9 @@ export default {
   overflow-x: auto;
   white-space: pre-wrap;
   word-break: break-word;
+}
+.dark-mode .text-block {
+  background: #2a2d2f;
+  color: #e0e0e0;
 }
 </style>

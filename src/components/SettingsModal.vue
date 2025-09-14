@@ -155,6 +155,9 @@ export default {
   color: #0078d4;
   font-weight: bold;
 }
+.dark-mode .check-result {
+  color: #66b3ff;
+}
 .modal-backdrop {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
@@ -192,6 +195,11 @@ export default {
   outline: none;
   animation: modalPop 0.22s cubic-bezier(.4,2,.6,1);
 }
+.dark-mode .modal-content {
+  background: #1f2122;
+  color: #e0e0e0;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.5);
+}
 .modal-content h3 {
   margin-top: 0;
 }
@@ -199,12 +207,20 @@ label {
   display: block;
   margin-bottom: 16px;
 }
+.dark-mode label {
+  color: #e0e0e0;
+}
 input[type="text"] {
   width: 100%;
   padding: 8px;
   margin-top: 4px;
   border: 1px solid #ccc;
   border-radius: 4px;
+}
+.dark-mode input[type="text"] {
+  background: #2a2d2f;
+  border-color: #3a3d3f;
+  color: #e0e0e0;
 }
 .modal-actions {
   display: flex;
@@ -233,5 +249,16 @@ input[type="text"] {
   margin-bottom: 2px;
   width: 100%;
   box-sizing: border-box;
+}
+.dark-mode .settings-fields input[type="text"],
+.dark-mode .settings-fields input[type="password"] {
+  background: #2a2d2f;
+  border-color: #3a3d3f;
+  color: #e0e0e0;
+}
+.dark-mode .modal-actions button {
+  background: #2a2d2f;
+  color: #e0e0e0;
+  border: 1px solid #3a3d3f;
 }
 </style>

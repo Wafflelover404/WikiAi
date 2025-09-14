@@ -1,7 +1,12 @@
 <template>
-  <div class="login-page">
-    <AnimatedBackground class="background" />
+  <div class="login-page" :class="{ 'dark-mode': isDark }">
+    <AnimatedBackground class="background" :dark-mode="isDark" />
     <div class="login-container">
+      <!-- Theme toggle control -->
+      <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
+        <span v-if="!isDark">🌙</span>
+        <span v-else>☀️</span>
+      </button>
       <div class="login-box" v-motion-slide-visible-once-bottom>
         <h2>Login</h2>
         <form @submit.prevent="handleLogin">
@@ -82,10 +87,21 @@ export default {
       error: '',
       success: '',
       showPassword: false,
-      showProxyWarning: !!import.meta.env.VITE_API_PROXY
+      showProxyWarning: !!import.meta.env.VITE_API_PROXY,
+      isDark: true
     };
   },
   mounted() {
+    // Initialize theme on login page (dark by default)
+    try {
+      const stored = localStorage.getItem('theme');
+      this.isDark = stored ? stored === 'dark' : true;
+    } catch (e) {
+      this.isDark = true;
+    }
+    document.body.classList.toggle('dark-mode', this.isDark);
+    this.$emit('theme-changed', this.isDark);
+
     const stored = JSON.parse(localStorage.getItem('loginData'));
     if (stored) {
       this.serverUrl = stored.serverUrl;
@@ -98,6 +114,14 @@ export default {
     this.showProxyWarning = !!import.meta.env.VITE_API_PROXY;
   },
   methods: {
+    toggleTheme() {
+      this.isDark = !this.isDark;
+      document.body.classList.toggle('dark-mode', this.isDark);
+      try {
+        localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
+      } catch (e) { /* ignore */ }
+      this.$emit('theme-changed', this.isDark);
+    },
     togglePasswordVisibility() {
       this.showPassword = !this.showPassword;
     },
@@ -191,6 +215,25 @@ export default {
 </script>
 
 <style scoped>
+.theme-toggle {
+  position: absolute;
+  top: 14px;
+  right: 20px;
+  background: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 999px;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 2;
+}
+:deep(.dark-mode) .theme-toggle {
+  border-color: rgba(255,255,255,0.2);
+  color: #e0e0e0;
+}
 .login-page {
   display: flex;
   align-items: center;
@@ -203,6 +246,36 @@ export default {
   left: 0;
   z-index: 1000;
   overflow: hidden;
+  transition: background 0.3s ease;
+}
+
+.login-page.dark-mode {
+  background: #0f1113;
+}
+
+.login-page.dark-mode .login-box {
+  background: rgba(27, 29, 31, 0.95);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+.login-page.dark-mode h2,
+.login-page.dark-mode label,
+.login-page.dark-mode .form-group input {
+  color: #e0e0e0;
+}
+
+.login-page.dark-mode .form-group input {
+  background: #2a2d31;
+  border-color: #3a3d41;
+  color: #e0e0e0;
+}
+
+.login-page.dark-mode .form-group input::placeholder {
+  color: #8e8e8e;
+}
+
+.login-page.dark-mode .toggle-password {
+  color: #e0e0e0;
 }
 
 .background {
@@ -225,6 +298,7 @@ export default {
   border-radius: 12px;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12);
   animation: fadeIn 0.5s ease-out;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
 }
 
 @keyframes fadeIn {
@@ -238,6 +312,9 @@ h2 {
   color: #333;
   font-weight: 600;
 }
+:deep(.dark-mode) h2 {
+  color: #e0e0e0;
+}
 
 .form-group {
   margin-bottom: 24px;
@@ -249,6 +326,9 @@ label {
   font-weight: 500;
   color: #444;
 }
+:deep(.dark-mode) label {
+  color: #e0e0e0;
+}
 
 input {
   width: 100%;
@@ -258,6 +338,11 @@ input {
   font-size: 16px;
   transition: border-color 0.3s, box-shadow 0.3s;
   box-sizing: border-box;
+}
+:deep(.dark-mode) input {
+  background: #232628;
+  border-color: #3a3d3f;
+  color: #e0e0e0;
 }
 
 input:focus {
@@ -357,7 +442,7 @@ button:disabled {
 .loading-spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid rgba(255, 255, 255, 0.3);
+  border: 3px solid rgba(255, 255, 255, 0.9);
   border-radius: 50%;
   border-top-color: #fff;
   animation: spin 1s linear infinite;
@@ -398,6 +483,12 @@ button:disabled {
 .toggle-password:hover {
   background-color: rgba(0, 0, 0, 0.05);
 }
+:deep(.dark-mode) .toggle-password {
+  color: #a0a6ac;
+}
+:deep(.dark-mode) .toggle-password:hover {
+  background-color: rgba(255, 255, 255, 0.06);
+}
 
 .status-msg {
   margin-top: 16px;
@@ -413,11 +504,21 @@ button:disabled {
   background: #ffebee;
   border: 1px solid #ffcdd2;
 }
+:deep(.dark-mode) .error-msg {
+  color: #ffb4a9;
+  background: #2a1b1a;
+  border-color: #ff8a80;
+}
 
 .success-msg {
   color: #2e7d32;
   background: #e8f5e9;
   border: 1px solid #c8e6c9;
+}
+:deep(.dark-mode) .success-msg {
+  color: #a5d6a7;
+  background: #1c2a1d;
+  border-color: #388e3c;
 }
 
 .proxy-warning {

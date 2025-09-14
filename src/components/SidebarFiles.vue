@@ -79,6 +79,11 @@ document.addEventListener('DOMContentLoaded', function() {
       display: flex;
       flex-direction: column;
     }
+    .dark-mode .sidebar-files {
+      background: #1f2122;
+      border-right-color: #333;
+      color: #e0e0e0;
+    }
     
     .sidebar-header {
       display: flex;
@@ -94,6 +99,9 @@ document.addEventListener('DOMContentLoaded', function() {
       color: #2c3e50;
       font-size: 18px;
       margin: 0;
+    }
+    .dark-mode .sidebar-header h3 {
+      color: #e0e0e0;
     }
     
     .header-actions {
@@ -115,6 +123,13 @@ document.addEventListener('DOMContentLoaded', function() {
     .action-btn:hover {
       background: #e3e6e9;
     }
+    .dark-mode .action-btn {
+      background: #2a2d2f;
+      color: #c0c4c8;
+    }
+    .dark-mode .action-btn:hover {
+      background: #33393d;
+    }
     
     .sidebar-files ul {
       list-style: none;
@@ -135,16 +150,28 @@ document.addEventListener('DOMContentLoaded', function() {
       background: #f8f9fa;
       border: 1px solid #e9ecef;
     }
+    .dark-mode .file-placeholder {
+      color: #e0e0e0;
+      background: #232628;
+      border-color: #33393d;
+    }
     
     .file-placeholder:hover {
       background: #e9ecef;
       transform: translateY(-1px);
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     }
+    .dark-mode .file-placeholder:hover {
+      background: #2a2d2f;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
     
     .file-placeholder:active {
       background: #dee2e6;
       transform: translateY(0);
+    }
+    .dark-mode .file-placeholder:active {
+      background: #2f3336;
     }
     
     .file-placeholder::before {
@@ -163,11 +190,15 @@ document.addEventListener('DOMContentLoaded', function() {
       align-items: center;
       background: #fafbfc;
     }
+    .dark-mode .content {
+      background: #181a1b;
+    }
     
     .content h1 {
       color: #2c3e50;
       margin-bottom: 20px;
     }
+    .dark-mode .content h1 { color: #e0e0e0; }
     
     .content p {
       color: #5a6778;
@@ -175,6 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
       max-width: 500px;
       text-align: center;
     }
+    .dark-mode .content p { color: #a0a6ac; }
     
     /* Responsive design */
     @media (max-width: 768px) {
@@ -189,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function() {
         border-right: none;
         border-bottom: 1px solid #eaecef;
       }
+      .dark-mode .sidebar-files { border-bottom-color: #333; }
     }
 
 </style>

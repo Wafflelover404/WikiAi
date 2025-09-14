@@ -5,6 +5,12 @@
 <script>
 export default {
   name: 'AnimatedBackground',
+  props: {
+    darkMode: {
+      type: Boolean,
+      default: false
+    }
+  },
   mounted() {
     this.initAnimation();
     window.addEventListener('resize', this.resizeCanvas);
@@ -36,6 +42,10 @@ export default {
 
       const animate = () => {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Set colors based on dark mode
+        const lineColor = this.darkMode ? 'rgba(100, 150, 255, 0.3)' : 'rgba(0, 120, 212, 0.3)';
+        const nodeColor = this.darkMode ? '#64b5f6' : '#0078d4';
         
         // Move nodes and apply repulsion
         nodes.forEach((node, index) => {
@@ -69,7 +79,10 @@ export default {
             const dy = nodes[i].y - nodes[j].y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             if (dist < connectDist) {
-              ctx.strokeStyle = `rgba(0,120,212,${1 - dist / connectDist})`;
+              const opacity = 0.3 + (0.7 * (1 - dist / connectDist));
+              ctx.strokeStyle = this.darkMode 
+                ? `rgba(100, 150, 255, ${opacity})`
+                : `rgba(0, 120, 212, ${opacity})`;
               ctx.lineWidth = 1.2;
               ctx.beginPath();
               ctx.moveTo(nodes[i].x, nodes[i].y);
@@ -83,8 +96,8 @@ export default {
         nodes.forEach(node => {
           ctx.beginPath();
           ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
-          ctx.fillStyle = '#0078d4';
-          ctx.shadowColor = '#0078d4';
+          ctx.fillStyle = nodeColor;
+          ctx.shadowColor = nodeColor;
           ctx.shadowBlur = 8;
           ctx.fill();
           ctx.shadowBlur = 0;

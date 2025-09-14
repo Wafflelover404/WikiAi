@@ -221,6 +221,11 @@ export default {
     position: relative;
     overflow-y: auto;
   }
+  .dark-mode .search-sidebar {
+    background: #1b1d1f;
+    border-left-color: #333;
+    color: #e0e0e0;
+  }
   .search-bar {
     display: flex;
     align-items: center;
@@ -233,6 +238,11 @@ export default {
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 15px;
+  }
+  .dark-mode .search-input {
+    background: #232628;
+    border-color: #3a3d3f;
+    color: #e0e0e0;
   }
   .search-btn {
     background: #0078d4;
@@ -247,12 +257,19 @@ export default {
     color: #333;
     margin-top: 8px;
   }
+  .dark-mode .search-results {
+    color: #e0e0e0;
+  }
   .search-result {
     background: #fff;
     border-radius: 4px;
     margin-bottom: 8px;
     padding: 8px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .dark-mode .search-result {
+    background: #232628;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
   }
   .ai-overview {
     background: #eaf6ff;
@@ -262,6 +279,11 @@ export default {
     color: #0078d4;
     font-size: 15px;
     box-shadow: 0 1px 2px rgba(0,120,212,0.04);
+  }
+  .dark-mode .ai-overview {
+    background: #14202b;
+    color: #66b3ff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
   }
 
   .loading-ai-overview {
@@ -309,6 +331,11 @@ export default {
     overflow-y: auto;
     position: relative;
   }
+  .dark-mode .file-modal-content {
+    background: #1f2122;
+    color: #e0e0e0;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  }
   .close-file-modal {
     position: absolute;
     top: 12px;
@@ -318,5 +345,8 @@ export default {
     font-size: 20px;
     color: #888;
     cursor: pointer;
+  }
+  .dark-mode .close-file-modal {
+    color: #a0a6ac;
   }
 </style>

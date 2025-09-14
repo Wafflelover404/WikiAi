@@ -112,6 +112,11 @@ export default {
   box-shadow: 0 2px 16px rgba(33,150,243,0.13);
   outline: none;
 }
+.dark-mode .modal-content {
+  background: #1f2122;
+  color: #e0e0e0;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+}
 .file-info {
   margin-bottom: 8px;
   font-size: 16px;
@@ -150,4 +155,10 @@ export default {
   color: #1976d2;
   font-size: 15px;
 }
+.dark-mode textarea {
+  background: #232628;
+  border: 1px solid #3a3d3f;
+  color: #e0e0e0;
+}
+.dark-mode .msg { color: #66b3ff; }
 </style>

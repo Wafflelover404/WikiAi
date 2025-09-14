@@ -105,6 +105,11 @@ export default {
   outline: none;
   box-sizing: border-box; /* Prevent overflow from padding */
 }
+.dark-mode .modal-content {
+  background: #1f2122;
+  color: #e0e0e0;
+  box-shadow: 0 10px 36px rgba(0,0,0,0.6);
+}
 .modal-content h3 {
   margin: 0 0 6px 0;
 }
@@ -113,6 +118,7 @@ export default {
   color: #5f6368;
   font-size: 14px;
 }
+.dark-mode .subtitle { color: #a0a6ac; }
 .question-input {
   width: 100%;
   border: 1px solid #dfe1e5;
@@ -124,11 +130,17 @@ export default {
   box-sizing: border-box; /* Include padding/border in width calc */
   overflow-wrap: anywhere; /* Avoid horizontal overflow on long text */
 }
+.dark-mode .question-input {
+  background: #232628;
+  border-color: #3a3d3f;
+  color: #e0e0e0;
+}
 .helper {
   font-size: 12px;
   color: #6b7280;
   margin-top: 6px;
 }
+.dark-mode .helper { color: #9aa0a6; }
 .modal-actions {
   display: flex;
   gap: 10px;
@@ -152,12 +164,18 @@ button.secondary {
   padding: 8px 14px;
   cursor: pointer;
 }
+.dark-mode button.secondary {
+  background: #2a2d2f;
+  color: #e0e0e0;
+}
 .status {
   margin-top: 10px;
   font-size: 13px;
 }
 .status.success { color: #1e8e3e; }
 .status.error { color: #d93025; }
+.dark-mode .status.success { color: #81c784; }
+.dark-mode .status.error { color: #ef9a9a; }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
 /* Mobile adjustments */

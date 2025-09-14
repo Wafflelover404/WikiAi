@@ -1,7 +1,7 @@
 <template>
   <div class="kb-app" :class="{ 'dark-mode': darkMode }">
     <!-- Login Screen -->
-    <LoginPage v-if="!token" @login-success="onLoginSuccess" />
+    <LoginPage v-if="!token" @login-success="onLoginSuccess" @theme-changed="applyTheme" />
     <!-- Main App -->
     <template v-else>
       <!-- Mobile Navigation Bar -->
@@ -329,7 +329,7 @@ export default {
       user: null,
       showAdminDashboard: false,
       showToken: false,
-      darkMode: false,
+      darkMode: true,
       globalSearch: '',
       loading: false,
       currentView: 'home',
@@ -341,6 +341,25 @@ export default {
       quizVisible: false,
       quizFilename: ''
     };
+  },
+  mounted() {
+    try {
+      const stored = localStorage.getItem('theme');
+      // Default to dark if nothing stored
+      this.darkMode = stored ? stored === 'dark' : true;
+      // Apply dark mode class to html element for better compatibility
+      if (this.darkMode) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
+      document.body.classList.toggle('dark-mode', this.darkMode);
+    } catch (e) {
+      console.error('Error initializing theme:', e);
+      this.darkMode = true;
+      document.documentElement.classList.add('dark-mode');
+      document.body.classList.add('dark-mode');
+    }
   },
   watch: {
       currentView(newView) {
@@ -433,6 +452,13 @@ export default {
       }
     },
     methods: {
+    applyTheme(isDark) {
+      this.darkMode = !!isDark;
+      document.body.classList.toggle('dark-mode', this.darkMode);
+      try {
+        localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+      } catch (e) { /* ignore */ }
+    },
         autoUpdateFiles() {
           if (this.currentView !== 'files' || !this.token || !this.serverUrl) return;
           this.fetchFilesForAutoUpdate();
@@ -500,7 +526,17 @@ export default {
     },
     toggleDarkMode() {
       this.darkMode = !this.darkMode;
+      if (this.darkMode) {
+        document.documentElement.classList.add('dark-mode');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+      }
       document.body.classList.toggle('dark-mode', this.darkMode);
+      try {
+        localStorage.setItem('theme', this.darkMode ? 'dark' : 'light');
+      } catch (e) {
+        console.error('Error saving theme preference:', e);
+      }
     },
     onGlobalSearchInput() {
       // Optionally add debounce for performance
@@ -897,6 +933,42 @@ export default {
     window.addEventListener('resize', () => {
       this.isMobileView = window.innerWidth <= 768;
     });
+
+    // Initialize theme from localStorage or system preference
+    let storedTheme = null;
+    try {
+      storedTheme = localStorage.getItem('theme');
+    } catch (e) {
+      storedTheme = null;
+    }
+
+    if (storedTheme === 'dark' || storedTheme === 'light') {
+      this.darkMode = storedTheme === 'dark';
+      document.body.classList.toggle('dark-mode', this.darkMode);
+    } else {
+      const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+      if (mql) {
+        this.darkMode = !!mql.matches;
+        document.body.classList.toggle('dark-mode', this.darkMode);
+        // Listen to system theme changes if user hasn't explicitly chosen
+        this._themeMql = mql;
+        this._onThemeChange = (e) => {
+          // only react if user hasn't explicitly chosen
+          let explicit = null;
+          try { explicit = localStorage.getItem('theme'); } catch (_) { explicit = null; }
+          if (explicit !== 'dark' && explicit !== 'light') {
+            this.darkMode = !!e.matches;
+            document.body.classList.toggle('dark-mode', this.darkMode);
+          }
+        };
+        if (mql.addEventListener) {
+          mql.addEventListener('change', this._onThemeChange);
+        } else if (mql.addListener) {
+          // Safari
+          mql.addListener(this._onThemeChange);
+        }
+      }
+    }
   },
 
   beforeDestroy() {
@@ -904,6 +976,14 @@ export default {
     window.removeEventListener('resize', () => {
       this.isMobileView = window.innerWidth <= 768;
     });
+    // Clean up theme listener
+    if (this._themeMql && this._onThemeChange) {
+      if (this._themeMql.removeEventListener) {
+        this._themeMql.removeEventListener('change', this._onThemeChange);
+      } else if (this._themeMql.removeListener) {
+        this._themeMql.removeListener(this._onThemeChange);
+      }
+    }
   }
 }
 </script>
@@ -947,6 +1027,10 @@ body {
   background: #181a1b !important;
   color: #e0e0e0;
 }
+.dark-mode body {
+  background: #181a1b !important;
+  color: #e0e0e0;
+}
 .sidebar-nav {
   position: fixed;
   left: 0;
@@ -961,6 +1045,11 @@ body {
   box-shadow: 2px 0 8px rgba(33, 150, 243, 0.04);
   z-index: 1000;
   overflow-y: auto;
+}
+.dark-mode .sidebar-nav {
+  background: #1f2122;
+  border-right-color: #2a2c2d;
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 }
 .sidebar-header {
   display: flex;
@@ -997,6 +1086,14 @@ body {
   background: #e3f2fd;
   color: #007BFF;
   border-left: 4px solid #007BFF;
+}
+.dark-mode .sidebar-tabs li {
+  color: #a8adb2;
+}
+.dark-mode .sidebar-tabs li.active, .dark-mode .sidebar-tabs li:focus, .dark-mode .sidebar-tabs li:hover {
+  background: #2a2d2f;
+  color: #66b3ff;
+  border-left-color: #66b3ff;
 }
 .sidebar-bottom {
   display: flex;
@@ -1039,6 +1136,9 @@ body {
   width: calc(100% - 220px);
   max-width: calc(100vw - 220px);
   overflow-x: hidden;
+}
+.dark-mode .app-layout {
+  background: #181a1b;
 }
 .main-content {
   flex: 1;
@@ -1089,6 +1189,9 @@ body {
   color: #007BFF;
   margin-bottom: 12px;
 }
+.dark-mode .loading-indicator {
+  color: #66b3ff;
+}
 .reload-btn {
   padding: 8px 20px;
   background: #fff;
@@ -1130,6 +1233,10 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
+}
+.dark-mode .file-tabs-card {
+  background: #1f2122;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
 }
 .admin-dashboard-wrapper {
   position: fixed;
@@ -1403,6 +1510,10 @@ body {
   margin-top: 8px;
   word-break: break-all;
 }
+.dark-mode .token-box {
+  background: #2a2d2f;
+  border-color: #3a3d3f;
+}
 .token-actions button {
   background: none;
   border: none;
@@ -1428,12 +1539,20 @@ body {
   min-height: 100vh;
   background: #f8f9fa;
 }
+.dark-mode .files-view {
+  background: #181a1b;
+}
 
 .view-header {
   background: white;
   padding: 32px 40px;
   border-bottom: 1px solid #e0e0e0;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+.dark-mode .view-header {
+  background: #1f2122;
+  border-bottom-color: #2a2c2d;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
 .view-header h1 {
@@ -1445,12 +1564,18 @@ body {
   align-items: center;
   gap: 12px;
 }
+.dark-mode .view-header h1 {
+  color: #e0e0e0;
+}
 
 .view-subtitle {
   font-size: 18px;
   color: #5f6368;
   margin: 0 0 24px 0;
   font-weight: 300;
+}
+.dark-mode .view-subtitle {
+  color: #9aa0a6;
 }
 
 .view-actions {
@@ -1474,6 +1599,14 @@ body {
   outline: none;
   transition: all 0.3s ease;
   background: #f8f9fa;
+}
+.dark-mode .files-search-input {
+  background: #2a2d2f;
+  color: #e0e0e0;
+  border-color: #3a3d3f;
+}
+.dark-mode .files-search-input::placeholder {
+  color: #8a8f94;
 }
 
 .files-search-input:focus {
@@ -1582,6 +1715,10 @@ body {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   margin-top: 16px;
 }
+.dark-mode .desktop-filters-panel {
+  background: #1f2122;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
 
 .desktop-filters-panel .search-bar {
   display: flex;
@@ -1608,6 +1745,11 @@ body {
   background: #fff;
   min-width: 130px;
   height: 38px; /* Match search input height */
+}
+.dark-mode .filter-select {
+  background: #2a2d2f;
+  color: #e0e0e0;
+  border-color: #3a3d3f;
 }
 
 /* Desktop horizontal layout */
@@ -1980,6 +2122,10 @@ body {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   z-index: 1001;
 }
+.dark-mode .mobile-navbar {
+  background: #1f2122;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
 
 .mobile-title {
   display: flex;
@@ -2013,6 +2159,9 @@ body {
   background: #333;
   transition: all 0.3s ease;
 }
+.dark-mode .hamburger-icon {
+  background: #e0e0e0;
+}
 
 .hamburger-icon::before,
 .hamburger-icon::after {
@@ -2022,6 +2171,10 @@ body {
   height: 2px;
   background: #333;
   transition: all 0.3s ease;
+}
+.dark-mode .hamburger-icon::before,
+.dark-mode .hamburger-icon::after {
+  background: #e0e0e0;
 }
 
 .hamburger-icon::before {
@@ -2527,4 +2680,27 @@ body {
 .desktop-file-tabs { position: relative; z-index: 1; }
 .desktop-quick-actions { z-index: 1002; }
 .quiz-btn { pointer-events: auto; }
+</style>
+
+<style>
+/* Global dark-mode base to ensure the entire canvas switches */
+body.dark-mode {
+  background: #0f1113;
+  color: #e0e0e0;
+}
+
+.kb-app.dark-mode {
+  background: #0f1113;
+  color: #e0e0e0;
+}
+
+/* Ensure links remain readable */
+body.dark-mode a { color: #8ab4f8; }
+
+/* Inputs base in dark mode if not overridden */
+body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
+  background: #232628;
+  color: #e0e0e0;
+  border-color: #3a3d3f;
+}
 </style>
