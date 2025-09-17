@@ -545,23 +545,21 @@ export default {
       this.globalSearch = '';
     },
     async saveSettings({ serverUrl }) {
-      this.serverUrl = serverUrl;
-      this.settingsVisible = false;
-      try {
-        this.loading = true;
-        const { apiRequest } = await import('./api.js');
-        const res = await apiRequest({ url: `${serverUrl}/`, method: 'GET' });
-        if (typeof res === 'object' && res.app) {
-          if (this.token) {
-            await this.reloadFiles();
-          }
-        } else {
-          this.files = [];
-        }
-      } catch (e) {
-        this.files = [];
-      } finally {
-        this.loading = false;
+      // Don't save serverUrl to localStorage, just update it in memory
+      if (serverUrl) {
+        this.serverUrl = serverUrl;
+        
+        // Update the API base URL
+        const { setApiBaseUrl } = await import('./api.js');
+        setApiBaseUrl(serverUrl);
+        
+        // Show success message
+        this.$toast.success('Settings updated');
+        
+        // Reload files after changing server URL
+        this.updateFiles();
+      } else {
+        this.$toast.error('Server URL cannot be empty');
       }
     },
     async reloadFiles() {

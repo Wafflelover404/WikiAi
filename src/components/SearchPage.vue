@@ -495,7 +495,11 @@ export default {
         let cleanFilename = this.fileModalName;
         if (cleanFilename.startsWith('temp_')) {
           cleanFilename = cleanFilename.substring(5);
+          if (cleanFilename.startsWith('_')) {
+            cleanFilename = cleanFilename.substring(4);
+          }
         }
+        
         
         const { getFileContent } = await import('../api.js');
         console.log('Fetching file:', { cleanFilename });

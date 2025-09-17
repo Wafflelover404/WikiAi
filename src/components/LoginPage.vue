@@ -104,11 +104,14 @@ export default {
 
     const stored = JSON.parse(localStorage.getItem('loginData'));
     if (stored) {
-      this.serverUrl = stored.serverUrl;
-      this.username = stored.username;
-      this.password = stored.password;
+      // Only load username and password, not serverUrl
+      this.username = stored.username || '';
+      this.password = stored.password || '';
       this.rememberMe = true;
-      this.autoLogin();
+      // Only auto-login if we have both username and password
+      if (this.username && this.password) {
+        this.autoLogin();
+      }
     }
 
     this.showProxyWarning = !!import.meta.env.VITE_API_PROXY;
@@ -178,7 +181,6 @@ export default {
             localStorage.setItem(
               'loginData',
               JSON.stringify({
-                serverUrl: this.serverUrl,
                 username: this.username,
                 password: this.password
               })
