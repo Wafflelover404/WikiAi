@@ -7,13 +7,120 @@ export async function login({ serverUrl, username, password }) {
   });
 }
 
-// Query knowledge base (POST /query)
-export async function queryKnowledgeBase({ serverUrl, token, question, session_id = null, model = null }) {
+// Query knowledge base using WebSocket (streaming support)
+export async function queryKnowledgeBase({ serverUrl, token, question, session_id = null, model = null, humanize = true, onMessage = null, useWebSocket = true }) {
+  // Use WebSocket if supported and requested
+  if (useWebSocket && typeof WebSocket !== 'undefined' && onMessage) {
+    return await queryKnowledgeBaseWebSocket({ serverUrl, token, question, session_id, model, humanize, onMessage });
+  }
+  
+  // Fallback to HTTP POST
   return await apiRequest({
     url: `${serverUrl}/query`,
     method: 'POST',
     token,
-    data: { question, session_id, model }
+    data: { question, session_id, model, humanize }
+  });
+}
+
+// Query knowledge base using WebSocket for streaming responses
+export async function queryKnowledgeBaseWebSocket({ serverUrl, token, question, session_id = null, model = null, humanize = true, onMessage }) {
+  return new Promise((resolve, reject) => {
+    try {
+      // Convert HTTP(S) URL to WS(S) URL
+      const url = new URL(serverUrl);
+      const wsProtocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${url.host}/ws/query?token=${encodeURIComponent(token)}`;
+      
+      const ws = new WebSocket(wsUrl);
+      let hasError = false;
+      let immediateData = null;
+      let overviewData = null;
+      let chunksData = null;
+      
+      ws.onopen = () => {
+        // Send query
+        ws.send(JSON.stringify({
+          question,
+          session_id: session_id || null,
+          model: model || null,
+          humanize: humanize
+        }));
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          
+          // Call the message handler
+          if (onMessage) {
+            onMessage(message);
+          }
+          
+          // Store data based on message type
+          switch (message.type) {
+            case 'status':
+              // Processing status update
+              break;
+            case 'immediate':
+              immediateData = message.data;
+              break;
+            case 'overview':
+              overviewData = message.data;
+              break;
+            case 'chunks':
+              chunksData = message.data;
+              break;
+            case 'error':
+              hasError = true;
+              reject(new Error(message.message || 'WebSocket query error'));
+              ws.close();
+              break;
+            case 'complete':
+              // Query completed successfully
+              ws.close();
+              
+              // Resolve with combined data
+              const result = {
+                status: 'success',
+                response: {
+                  immediate: immediateData,
+                  answer: overviewData,
+                  chunks: chunksData?.chunks,
+                  available_files: chunksData?.available_files,
+                  possible_files_by_title: chunksData?.possible_files_by_title,
+                  model: immediateData?.model,
+                  security_info: immediateData?.security_info
+                }
+              };
+              resolve(result);
+              break;
+          }
+        } catch (error) {
+          console.error('Error parsing WebSocket message:', error);
+          if (onMessage) {
+            onMessage({ type: 'error', message: 'Failed to parse message' });
+          }
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        if (!hasError) {
+          reject(new Error('WebSocket connection error'));
+        }
+      };
+      
+      ws.onclose = (event) => {
+        if (!hasError && event.code !== 1000) {
+          console.error('WebSocket closed unexpectedly:', event.code, event.reason);
+          reject(new Error(`WebSocket closed: ${event.reason || 'Unknown reason'}`));
+        }
+      };
+      
+    } catch (error) {
+      reject(error);
+    }
   });
 }
 

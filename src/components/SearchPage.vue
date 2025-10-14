@@ -308,89 +308,245 @@ export default {
       }
       
       try {
-        const { apiRequest } = await import('../api.js');
+        const { queryKnowledgeBase } = await import('../api.js');
         
-        // Get search results (unhumanized)
-        const res = await apiRequest({
-          url: `${this.serverUrl}/query`,
-          method: 'POST',
-          token: this.token,
-          data: { question: this.searchText, humanize: false }
-        });
+        // Use WebSocket for real-time streaming
+        let immediateReceived = false;
+        let overviewReceived = false;
         
-        if (res.status === 'success' && res.response && Array.isArray(res.response.chunks)) {
-          this.searchResults = res.response.chunks.map(rawChunk => {
-            // Extract filename and possible_files tags
-            const fnameMatch = rawChunk.match(/<filename>(.*?)<\/filename>/);
-            const filename = fnameMatch ? fnameMatch[1] : null;
-            const possMatch = rawChunk.match(/<possible_files>([\s\S]*?)<\/possible_files>/);
-            let possibleFiles = [];
-            if (possMatch && possMatch[1]) {
-              try { possibleFiles = JSON.parse(possMatch[1]); } catch (_) { possibleFiles = []; }
-            }
-            // Remove tags to get the main text
-            const text = rawChunk
-              .replace(/<filename>[\s\S]*?<\/filename>/g, '')
-              .replace(/<possible_files>[\s\S]*?<\/possible_files>/g, '')
-              .trim();
-            // Try to parse dict-like content to extract title/content
-            let displayTitle = '';
-            let displaySnippet = '';
-            try {
-              // Convert single quotes to double quotes carefully for the first JSON-like object
-              let candidate = text;
-              if (candidate.includes("'title'")) {
-                candidate = candidate.replace(/'/g, '"');
+        // Handler for WebSocket messages
+        const handleMessage = (message) => {
+          console.log('WebSocket message:', message);
+          
+          switch (message.type) {
+            case 'status':
+              // Could show status updates in UI if desired
+              console.log('Status:', message.message);
+              break;
+              
+            case 'immediate':
+              // Process immediate search results
+              immediateReceived = true;
+              if (message.data && message.data.snippets) {
+                this.searchResults = message.data.snippets.map(snippet => {
+                  const text = snippet.content || '';
+                  const filename = snippet.source || 'unknown';
+                  
+                  // Parse content for display
+                  let displayTitle = '';
+                  let displaySnippet = '';
+                  
+                  try {
+                    let candidate = text;
+                    if (candidate.includes("'title'")) {
+                      candidate = candidate.replace(/'/g, '"');
+                    }
+                    const objStart = candidate.indexOf('{');
+                    const objEnd = candidate.lastIndexOf('}');
+                    if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+                      const jsonStr = candidate.slice(objStart, objEnd + 1);
+                      const parsed = JSON.parse(jsonStr);
+                      if (parsed && typeof parsed === 'object') {
+                        if (typeof parsed.title === 'string') displayTitle = parsed.title;
+                        if (typeof parsed.content === 'string') displaySnippet = parsed.content;
+                      }
+                    }
+                  } catch (_) { /* ignore */ }
+                  
+                  if (!displaySnippet) {
+                    const single = text.match(/['"]content['"]\s*:\s*['"]([\s\S]*?)['"]/);
+                    if (single && single[1]) {
+                      displaySnippet = single[1];
+                    }
+                  }
+                  
+                  if (!displaySnippet) {
+                    const firstClean = (text.split('\n').map(l => l.trim()).filter(l => l && !/^<.*?>$/.test(l) && !/relevance\s*:/i.test(l)))[0] || '';
+                    displaySnippet = firstClean;
+                  }
+                  
+                  if (displaySnippet && displaySnippet.length > 280) {
+                    displaySnippet = displaySnippet.slice(0, 280) + '...';
+                  }
+                  
+                  return { text, filename, possibleFiles: [], displayTitle, displaySnippet };
+                });
               }
-              const objStart = candidate.indexOf('{');
-              const objEnd = candidate.lastIndexOf('}');
-              if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
-                const jsonStr = candidate.slice(objStart, objEnd + 1);
-                const parsed = JSON.parse(jsonStr);
-                if (parsed && typeof parsed === 'object') {
-                  if (typeof parsed.title === 'string') displayTitle = parsed.title;
-                  if (typeof parsed.content === 'string') displaySnippet = parsed.content;
+              break;
+              
+            case 'overview':
+              // Process AI overview
+              overviewReceived = true;
+              this.aiOverview = message.data || '';
+              this.aiOverviewLoading = false;
+              break;
+              
+            case 'chunks':
+              // Process raw chunks (for non-humanized queries)
+              if (message.data && message.data.chunks) {
+                this.searchResults = message.data.chunks.map(rawChunk => {
+                  const fnameMatch = rawChunk.match(/<filename>(.*?)<\/filename>/);
+                  const filename = fnameMatch ? fnameMatch[1] : null;
+                  const possMatch = rawChunk.match(/<possible_files>([\s\S]*?)<\/possible_files>/);
+                  let possibleFiles = [];
+                  if (possMatch && possMatch[1]) {
+                    try { possibleFiles = JSON.parse(possMatch[1]); } catch (_) { possibleFiles = []; }
+                  }
+                  const text = rawChunk
+                    .replace(/<filename>[\s\S]*?<\/filename>/g, '')
+                    .replace(/<possible_files>[\s\S]*?<\/possible_files>/g, '')
+                    .trim();
+                  
+                  let displayTitle = '';
+                  let displaySnippet = '';
+                  try {
+                    let candidate = text;
+                    if (candidate.includes("'title'")) {
+                      candidate = candidate.replace(/'/g, '"');
+                    }
+                    const objStart = candidate.indexOf('{');
+                    const objEnd = candidate.lastIndexOf('}');
+                    if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+                      const jsonStr = candidate.slice(objStart, objEnd + 1);
+                      const parsed = JSON.parse(jsonStr);
+                      if (parsed && typeof parsed === 'object') {
+                        if (typeof parsed.title === 'string') displayTitle = parsed.title;
+                        if (typeof parsed.content === 'string') displaySnippet = parsed.content;
+                      }
+                    }
+                  } catch (_) { /* ignore */ }
+                  
+                  if (!displaySnippet) {
+                    const single = text.match(/['"]content['"]\s*:\s*['"]([\s\S]*?)['"]/);
+                    if (single && single[1]) {
+                      displaySnippet = single[1];
+                    }
+                  }
+                  
+                  if (!displaySnippet) {
+                    const firstClean = (text.split('\n').map(l => l.trim()).filter(l => l && !/^<.*?>$/.test(l) && !/relevance\s*:/i.test(l)))[0] || '';
+                    displaySnippet = firstClean;
+                  }
+                  
+                  if (displaySnippet && displaySnippet.length > 280) {
+                    displaySnippet = displaySnippet.slice(0, 280) + '...';
+                  }
+                  
+                  return { text, filename, possibleFiles, displayTitle, displaySnippet };
+                });
+              }
+              break;
+              
+            case 'error':
+              this.aiOverviewError = message.message || 'Error processing query';
+              this.aiOverviewLoading = false;
+              break;
+              
+            case 'complete':
+              // Query completed
+              if (!overviewReceived) {
+                this.aiOverviewLoading = false;
+              }
+              this.searchTime = ((Date.now() - startTime) / 1000).toFixed(2);
+              break;
+          }
+        };
+        
+        // Execute query with WebSocket (sends both humanized and non-humanized)
+        try {
+          await queryKnowledgeBase({
+            serverUrl: this.serverUrl,
+            token: this.token,
+            question: this.searchText,
+            humanize: true,
+            onMessage: handleMessage,
+            useWebSocket: true
+          });
+        } catch (wsError) {
+          console.warn('WebSocket query failed, falling back to HTTP:', wsError);
+          
+          // Fallback to HTTP if WebSocket fails
+          const { apiRequest } = await import('../api.js');
+          
+          // Get search results (unhumanized) via HTTP
+          const res = await apiRequest({
+            url: `${this.serverUrl}/query`,
+            method: 'POST',
+            token: this.token,
+            data: { question: this.searchText, humanize: false }
+          });
+          
+          if (res.status === 'success' && res.response && Array.isArray(res.response.chunks)) {
+            this.searchResults = res.response.chunks.map(rawChunk => {
+              const fnameMatch = rawChunk.match(/<filename>(.*?)<\/filename>/);
+              const filename = fnameMatch ? fnameMatch[1] : null;
+              const possMatch = rawChunk.match(/<possible_files>([\s\S]*?)<\/possible_files>/);
+              let possibleFiles = [];
+              if (possMatch && possMatch[1]) {
+                try { possibleFiles = JSON.parse(possMatch[1]); } catch (_) { possibleFiles = []; }
+              }
+              const text = rawChunk
+                .replace(/<filename>[\s\S]*?<\/filename>/g, '')
+                .replace(/<possible_files>[\s\S]*?<\/possible_files>/g, '')
+                .trim();
+              
+              let displayTitle = '';
+              let displaySnippet = '';
+              try {
+                let candidate = text;
+                if (candidate.includes("'title'")) {
+                  candidate = candidate.replace(/'/g, '"');
+                }
+                const objStart = candidate.indexOf('{');
+                const objEnd = candidate.lastIndexOf('}');
+                if (objStart !== -1 && objEnd !== -1 && objEnd > objStart) {
+                  const jsonStr = candidate.slice(objStart, objEnd + 1);
+                  const parsed = JSON.parse(jsonStr);
+                  if (parsed && typeof parsed === 'object') {
+                    if (typeof parsed.title === 'string') displayTitle = parsed.title;
+                    if (typeof parsed.content === 'string') displaySnippet = parsed.content;
+                  }
+                }
+              } catch (_) { /* ignore */ }
+              
+              if (!displaySnippet) {
+                const single = text.match(/['"]content['"]\s*:\s*['"]([\s\S]*?)['"]/);
+                if (single && single[1]) {
+                  displaySnippet = single[1];
                 }
               }
-            } catch (_) { /* ignore parsing errors */ }
-            // Fallback: try regex to extract content field only (single or double quoted), avoid other fields
-            if (!displaySnippet) {
-              const single = text.match(/['"]content['"]\s*:\s*['"]([\s\S]*?)['"]/);
-              if (single && single[1]) {
-                displaySnippet = single[1];
+              
+              if (!displaySnippet) {
+                const firstClean = (text.split('\n').map(l => l.trim()).filter(l => l && !/^<.*?>$/.test(l) && !/relevance\s*:/i.test(l)))[0] || '';
+                displaySnippet = firstClean;
               }
-            }
-            // As a last resort, take first non-metadata line that doesn't include 'relevance'
-            if (!displaySnippet) {
-              const firstClean = (text.split('\n').map(l => l.trim()).filter(l => l && !/^<.*?>$/.test(l) && !/relevance\s*:/i.test(l)))[0] || '';
-              displaySnippet = firstClean;
-            }
-            // Ensure snippet is concise
-            if (displaySnippet && displaySnippet.length > 280) {
-              displaySnippet = displaySnippet.slice(0, 280) + '...';
-            }
-            return { text, filename, possibleFiles, displayTitle, displaySnippet };
+              
+              if (displaySnippet && displaySnippet.length > 280) {
+                displaySnippet = displaySnippet.slice(0, 280) + '...';
+              }
+              
+              return { text, filename, possibleFiles, displayTitle, displaySnippet };
+            });
+          } else if (res.status === 'error') {
+            this.aiOverviewError = res.message || 'Failed to fetch search results';
+          }
+          
+          // Get AI overview (humanized) via HTTP
+          const res2 = await apiRequest({
+            url: `${this.serverUrl}/query`,
+            method: 'POST',
+            token: this.token,
+            data: { question: this.searchText, humanize: true }
           });
-        } else if (res.status === 'error') {
-          // Show backend error in AI card for visibility
-          this.aiOverviewError = res.message || 'Failed to fetch search results';
+          
+          if (res2.status === 'success' && res2.response && res2.response.answer) {
+            this.aiOverview = res2.response.answer;
+          } else if (res2.status === 'error') {
+            this.aiOverviewError = res2.message || 'Error generating AI overview';
+          }
+          
+          this.searchTime = ((Date.now() - startTime) / 1000).toFixed(2);
         }
-        
-        // Get AI overview (humanized)
-        const res2 = await apiRequest({
-          url: `${this.serverUrl}/query`,
-          method: 'POST',
-          token: this.token,
-          data: { question: this.searchText, humanize: true }
-        });
-        
-        if (res2.status === 'success' && res2.response && res2.response.answer) {
-          this.aiOverview = res2.response.answer;
-        } else if (res2.status === 'error') {
-          this.aiOverviewError = res2.message || 'Error generating AI overview';
-        }
-        
-        this.searchTime = ((Date.now() - startTime) / 1000).toFixed(2);
         
       } catch (error) {
         console.error('Search error:', error);
