@@ -245,6 +245,16 @@ export async function editUser({ serverUrl, token, userData }) {
   });
 }
 
+// Update user (PUT /user/:username) - RESTful alternative
+export async function updateUser({ serverUrl, token, username, userData }) {
+  return await apiRequest({
+    url: `${serverUrl}/user/${encodeURIComponent(username)}`,
+    method: 'PUT',
+    token,
+    data: userData
+  });
+}
+
 // Upload file (POST /upload)
 export async function uploadFile({ serverUrl, token, file }) {
   const formData = new FormData();
@@ -357,7 +367,9 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
       fullUrl.includes('/register') ||
       fullUrl.includes('/user/') ||
       fullUrl.includes('/upload') ||
-      fullUrl.includes('/files/delete_')) {
+      fullUrl.includes('/files/delete_') ||
+      fullUrl.includes('/files/edit') ||
+      method === 'PUT' || method === 'DELETE') {
     return await res.json();
   }
   

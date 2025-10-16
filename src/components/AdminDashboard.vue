@@ -111,7 +111,38 @@
                     <span v-else class="never-logged">Never</span>
                   </td>
                   <td class="files-access-cell">
-                    <span class="files-count">{{ getFileAccessText(user) }}</span>
+                    <div class="permissions-display">
+                      <button 
+                        class="permissions-toggle" 
+                        @click="togglePermissions(user.username)"
+                        :class="{ expanded: expandedPermissions === user.username }"
+                      >
+                        <span class="permission-badge" :class="getPermissionBadgeClass(user)">
+                          {{ getFileAccessText(user) }}
+                        </span>
+                        <span class="toggle-icon">{{ expandedPermissions === user.username ? '▲' : '▼' }}</span>
+                      </button>
+                      <div v-if="expandedPermissions === user.username" class="permissions-dropdown">
+                        <div class="permissions-header">
+                          <span class="header-icon">📁</span>
+                          <strong>File Access Details</strong>
+                        </div>
+                        <div v-if="user.allowed_files && user.allowed_files.includes('all')" class="permission-all">
+                          <span class="all-icon">🌐</span>
+                          <span>Full access to all files (including future uploads)</span>
+                        </div>
+                        <div v-else-if="user.allowed_files && user.allowed_files.length > 0" class="permissions-list">
+                          <div v-for="filename in user.allowed_files" :key="filename" class="permission-item">
+                            <span class="file-icon">{{ getFileIconByName(filename) }}</span>
+                            <span class="file-name">{{ getOriginalFilename(filename) }}</span>
+                          </div>
+                        </div>
+                        <div v-else class="permission-none">
+                          <span class="none-icon">🚫</span>
+                          <span>No file access granted</span>
+                        </div>
+                      </div>
+                    </div>
                   </td>
                   <td class="actions-cell">
                     <div class="action-buttons">
@@ -142,46 +173,151 @@
           <div class="admin-section-sub">
             <h3>Create New User</h3>
             <form @submit.prevent="createUser" class="user-form">
-              <input v-model="newUser.username" placeholder="Username" required />
-              <div style="position: relative; display: flex; align-items: center;">
-                <input
-                  v-model="newUser.password"
-                  :type="showPassword ? 'text' : 'password'"
-                  placeholder="Password"
-                  required
-                  style="flex: 1;"
-                />
-                <button
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">👤</span>
+                  <span class="label-text">Username</span>
+                </label>
+                <div class="input-wrapper">
+                  <span class="input-icon">@</span>
+                  <input 
+                    v-model="newUser.username" 
+                    placeholder="Enter username" 
+                    required 
+                    class="enhanced-input"
+                  />
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">🔒</span>
+                  <span class="label-text">Password</span>
+                </label>
+                <div class="input-wrapper password-wrapper">
+                  <span class="input-icon">🔑</span>
+                  <input
+                    v-model="newUser.password"
+                    :type="showPassword ? 'text' : 'password'"
+                    placeholder="Enter password"
+                    required
+                    class="enhanced-input"
+                  />
+                  <button
+                    type="button"
+                    @click="showPassword = !showPassword"
+                    class="password-toggle-btn"
+                    :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                    tabindex="-1"
+                  >
+                    {{ showPassword ? '🙈' : '👁️' }}
+                  </button>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">⚡</span>
+                  <span class="label-text">Role</span>
+                </label>
+                <div class="select-wrapper">
+                  <span class="input-icon">🎭</span>
+                  <select v-model="newUser.role" class="enhanced-select">
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                  <span class="select-arrow">▼</span>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">🔐</span>
+                  <span class="label-text">File Permissions</span>
+                </label>
+              </div>
+              
+              <!-- Permission Summary for Create User -->
+              <div class="permission-summary-create">
+                <div class="summary-item">
+                  <span class="summary-icon">📁</span>
+                  <span class="summary-text">
+                    <strong>{{ getNewUserFilesCount() }}</strong> of <strong>{{ files.length }}</strong> files will be accessible
+                  </span>
+                </div>
+              </div>
+
+              <!-- File Selection Mode Toggle -->
+              <div class="file-mode-toggle">
+                <button 
                   type="button"
-                  @click="showPassword = !showPassword"
-                  style="position: absolute; right: 6px; background: none; border: none; cursor: pointer; font-size: 16px; color: #1976d2;"
-                  :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                  tabindex="-1"
+                  class="mode-btn" 
+                  :class="{ active: allowedFilesMode === 'all' }"
+                  @click="allowedFilesMode = 'all'"
                 >
-                  {{ showPassword ? '🙈' : '👁️' }}
+                  <span class="mode-icon">🌐</span>
+                  <span class="mode-text">All Files</span>
+                  <span class="mode-hint">Full access</span>
+                </button>
+                <button 
+                  type="button"
+                  class="mode-btn" 
+                  :class="{ active: allowedFilesMode === 'select' }"
+                  @click="allowedFilesMode = 'select'"
+                >
+                  <span class="mode-icon">🎯</span>
+                  <span class="mode-text">Select Files</span>
+                  <span class="mode-hint">Custom access</span>
                 </button>
               </div>
-              <select v-model="newUser.role">
-                <option value="user">User</option>
-                <option value="admin">Admin</option>
-              </select>
-              <label>Allowed Files:</label>
-              <div class="allowed-files-radio-group">
-                <label>
-                  <input type="radio" value="all" v-model="allowedFilesMode" />
-                  All Files
-                </label>
-                <label>
-                  <input type="radio" value="select" v-model="allowedFilesMode" />
-                  Select Files
-                </label>
+
+              <!-- File Selection Interface (only shown in select mode) -->
+              <div v-if="allowedFilesMode === 'select'" class="file-selection-interface">
+                <!-- Search and Bulk Actions -->
+                <div class="file-selection-controls-create">
+                  <div class="search-box-create">
+                    <span class="search-icon">🔍</span>
+                    <input 
+                      v-model="createUserFileSearch" 
+                      type="text"
+                      placeholder="Search files..." 
+                      class="file-search-input-create"
+                    />
+                    <span v-if="createUserFileSearch" class="clear-search" @click="createUserFileSearch = ''" title="Clear search">×</span>
+                  </div>
+                  <div class="bulk-actions-create">
+                    <button type="button" class="bulk-btn-create" @click="selectAllNewUserFiles" :disabled="allNewUserFilesSelected">
+                      <span class="btn-icon">✓</span> All
+                    </button>
+                    <button type="button" class="bulk-btn-create" @click="clearAllNewUserFiles" :disabled="newUser.allowed_files.length === 0">
+                      <span class="btn-icon">✗</span> None
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Files List -->
+                <div class="allowed-files-checkboxes-create">
+                  <div v-if="filteredCreateUserFiles.length === 0" class="no-files-message">
+                    <span class="empty-icon">📂</span>
+                    <p v-if="createUserFileSearch">No files match "{{ createUserFileSearch }}"</p>
+                    <p v-else>No files available</p>
+                  </div>
+                  <label 
+                    v-for="file in filteredCreateUserFiles" 
+                    :key="file.filename" 
+                    class="file-checkbox-label-create"
+                    :class="{ selected: newUser.allowed_files.includes(file.filename) }"
+                  >
+                    <input type="checkbox" :value="file.filename" v-model="newUser.allowed_files" />
+                    <span class="file-info-create">
+                      <span class="file-icon">{{ getFileIcon(file) }}</span>
+                      <span class="file-name">{{ file.original_filename || file.filename }}</span>
+                      <span v-if="file.size" class="file-size">{{ formatFileSize(file.size) }}</span>
+                    </span>
+                  </label>
+                </div>
               </div>
-              <div v-if="allowedFilesMode === 'select'" class="allowed-files-checkboxes">
-                <label v-for="file in files" :key="file.filename" class="file-checkbox-label">
-                  <input type="checkbox" :value="file.filename" v-model="newUser.allowed_files" />
-                  {{ file.filename }}
-                </label>
-              </div>
+              
               <button type="submit" class="create-btn">Create User</button>
             </form>
             <div v-if="userCreateMsg" class="msg">{{ userCreateMsg }}</div>
@@ -234,9 +370,33 @@
               </div>
             </div>
             <div v-else class="manual-file-entry">
-              <input v-model="manualFilename" placeholder="Filename" style="display:block; margin-bottom:0.5rem; width:100%; max-width:400px;" />
-              <textarea v-model="manualContent" placeholder="File content" rows="8" style="width:100%; max-width:600px;"></textarea>
-              <button class="upload-btn" @click="submitManualFile" style="margin-top:0.5rem;">Submit</button>
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">📝</span>
+                  <span class="label-text">Filename</span>
+                </label>
+                <div class="input-wrapper">
+                  <span class="input-icon">📄</span>
+                  <input 
+                    v-model="manualFilename" 
+                    placeholder="e.g., document.txt" 
+                    class="enhanced-input"
+                  />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">
+                  <span class="label-icon">✍️</span>
+                  <span class="label-text">File Content</span>
+                </label>
+                <textarea 
+                  v-model="manualContent" 
+                  placeholder="Enter or paste your file content here..." 
+                  rows="8" 
+                  class="enhanced-textarea"
+                ></textarea>
+              </div>
+              <button class="upload-btn" @click="submitManualFile">Submit File</button>
             </div>
           </div>
 
@@ -653,6 +813,7 @@
     <!-- User Edit Modal: always mounted at root for proper overlay -->
     <UserEditModal
       v-if="editUserModal && editUserData"
+      ref="userEditModal"
       :editUserData="editUserData"
       :editUserMsg="editUserMsg"
       :files="files"
@@ -746,6 +907,8 @@ export default {
         fileUploadTab: 'upload',
         manualFilename: '',
         manualContent: '',
+        createUserFileSearch: '',
+        expandedPermissions: null,
       };
   },
   computed: {
@@ -767,6 +930,20 @@ export default {
         const name = (file.original_filename || file.filename || '').toLowerCase();
         return name.includes(search);
       });
+    },
+    filteredCreateUserFiles() {
+      if (!this.createUserFileSearch) return this.files;
+      const search = this.createUserFileSearch.toLowerCase();
+      return this.files.filter(file => {
+        const name = (file.original_filename || file.filename || '').toLowerCase();
+        return name.includes(search);
+      });
+    },
+    allNewUserFilesSelected() {
+      if (this.files.length === 0) return true;
+      return this.filteredCreateUserFiles.every(file => 
+        this.newUser.allowed_files.includes(file.filename)
+      );
     }
   },
   watch: {
@@ -1072,21 +1249,52 @@ export default {
       this.editUserMsg = '';
     },
     async saveEditUser() {
+      // Get reference to the modal component to control its state
+      const modalComponent = this.$refs.userEditModal;
+      
+      if (modalComponent) {
+        modalComponent.setSaving(true);
+        modalComponent.setMessageType('info');
+      }
+      
       try {
-        const { editUser } = await import('../api.js');
-        const res = await editUser({
+        const { updateUser } = await import('../api.js');
+        
+        // Use the new PUT endpoint
+        const data = await updateUser({
           serverUrl: this.API_BASE_URL,
           token: this.token,
-          userData: this.editUserData
+          username: this.editUserData.username,
+          userData: {
+            new_username: this.editUserData.new_username,
+            password: this.editUserData.password,
+            role: this.editUserData.role,
+            allowed_files: this.editUserData.allowed_files
+          }
         });
-        const data = await res.json();
-        this.editUserMsg = data.message || 'User updated.';
+        
+        this.editUserMsg = data.message || 'User updated successfully!';
+        
+        if (modalComponent) {
+          modalComponent.setMessageType('success');
+          modalComponent.setSaving(false);
+        }
+        
         if (data.status === 'success') {
-          this.fetchUsers();
-          setTimeout(() => this.closeEditUser(), 1200);
+          // Refresh users list
+          await this.fetchUsers();
+          
+          // Close modal after showing success message
+          setTimeout(() => this.closeEditUser(), 1500);
         }
       } catch (e) {
-        this.editUserMsg = 'Failed to update user.';
+        console.error('Error updating user:', e);
+        this.editUserMsg = e.message || 'Failed to update user. Please try again.';
+        
+        if (modalComponent) {
+          modalComponent.setMessageType('error');
+          modalComponent.setSaving(false);
+        }
       }
     },
     openEditFile(file) {
@@ -1428,6 +1636,49 @@ export default {
       if (diffSeconds < 60) return `${diffSeconds}s ago`;
       if (diffMinutes < 60) return `${diffMinutes}m ago`;
       return lastUpdate.toLocaleTimeString();
+    },
+    getNewUserFilesCount() {
+      if (this.allowedFilesMode === 'all') {
+        return this.files.length;
+      }
+      return this.newUser.allowed_files.filter(f => f !== 'all').length;
+    },
+    selectAllNewUserFiles() {
+      this.newUser.allowed_files = this.files.map(f => f.filename);
+    },
+    clearAllNewUserFiles() {
+      this.newUser.allowed_files = [];
+    },
+    togglePermissions(username) {
+      if (this.expandedPermissions === username) {
+        this.expandedPermissions = null;
+      } else {
+        this.expandedPermissions = username;
+      }
+    },
+    getPermissionBadgeClass(user) {
+      if (!user.allowed_files || !Array.isArray(user.allowed_files) || user.allowed_files.length === 0) {
+        return 'no-access';
+      }
+      if (user.allowed_files.includes('all')) {
+        return 'full-access';
+      }
+      return 'partial-access';
+    },
+    getFileIconByName(filename) {
+      if (!filename) return '📁';
+      if (filename.endsWith('.pdf')) return '📄';
+      if (filename.endsWith('.doc') || filename.endsWith('.docx')) return '📝';
+      if (filename.endsWith('.txt') || filename.endsWith('.md')) return '📄';
+      if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return '🖼️';
+      if (filename.endsWith('.zip') || filename.endsWith('.rar')) return '📦';
+      if (filename.endsWith('.xls') || filename.endsWith('.xlsx')) return '📊';
+      return '📁';
+    },
+    getOriginalFilename(filename) {
+      // Try to find the file in the files array to get original_filename
+      const file = this.files.find(f => f.filename === filename);
+      return file && file.original_filename ? file.original_filename : filename;
     }
   },
   mounted() {
@@ -4431,5 +4682,867 @@ body.dark-mode .report-priority.low {
 .manual-file-entry .upload-btn:active {
   transform: translateY(0);
   box-shadow: none;
+}
+
+/* Create User Form - Enhanced File Selection Styles */
+.permission-summary-create {
+  background: #f0f7ff;
+  border: 1px solid #bdd7f5;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.file-mode-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 12px;
+  background: #fff;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: center;
+}
+
+.mode-btn:hover {
+  border-color: #1976d2;
+  background: #f7fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(25, 118, 210, 0.1);
+}
+
+.mode-btn.active {
+  border-color: #1976d2;
+  background: #e3f2fd;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.mode-icon {
+  font-size: 1.8rem;
+}
+
+.mode-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.mode-hint {
+  font-size: 0.8rem;
+  color: #718096;
+  font-weight: 400;
+}
+
+.file-selection-interface {
+  margin-top: 16px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.file-selection-controls-create {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.search-box-create {
+  flex: 1;
+  min-width: 200px;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.file-search-input-create {
+  width: 100%;
+  padding: 8px 36px 8px 36px;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.file-search-input-create:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 3px rgba(25, 118, 210, 0.1);
+}
+
+.bulk-actions-create {
+  display: flex;
+  gap: 8px;
+}
+
+.bulk-btn-create {
+  padding: 8px 14px;
+  background: #fff;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.bulk-btn-create:hover:not(:disabled) {
+  background: #f7fafc;
+  border-color: #1976d2;
+  color: #1976d2;
+}
+
+.bulk-btn-create:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.allowed-files-checkboxes-create {
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px;
+  background: #fafafa;
+}
+
+.file-checkbox-label-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+  cursor: pointer;
+  margin-bottom: 4px;
+}
+
+.file-checkbox-label-create:hover {
+  background: #f0f4f8;
+}
+
+.file-checkbox-label-create.selected {
+  background: #e3f2fd;
+  border-color: #90caf9;
+}
+
+.file-checkbox-label-create input[type="checkbox"] {
+  accent-color: #1976d2;
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.file-info-create {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.file-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.file-size {
+  font-size: 0.85rem;
+  color: #718096;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.no-files-message {
+  text-align: center;
+  padding: 32px 16px;
+  color: #718096;
+}
+
+.empty-icon {
+  font-size: 2.5rem;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.no-files-message p {
+  margin: 4px 0;
+  font-size: 0.95rem;
+}
+
+/* Responsive adjustments for create user form */
+@media (max-width: 768px) {
+  .file-mode-toggle {
+    grid-template-columns: 1fr;
+  }
+  
+  .file-selection-controls-create {
+    flex-direction: column;
+  }
+  
+  .search-box-create {
+    width: 100%;
+  }
+  
+  .bulk-actions-create {
+    width: 100%;
+    justify-content: stretch;
+  }
+  
+  .bulk-btn-create {
+    flex: 1;
+  }
+}
+
+/* Enhanced Form Inputs - Modern Design System */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #2d3748;
+}
+
+.label-icon {
+  font-size: 1.1rem;
+}
+
+.label-text {
+  color: #2d3748;
+}
+
+.input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon {
+  position: absolute;
+  left: 14px;
+  font-size: 1rem;
+  color: #718096;
+  pointer-events: none;
+  z-index: 1;
+  transition: color 0.2s;
+}
+
+.enhanced-input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #2d3748;
+  background: #ffffff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.enhanced-input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+}
+
+.enhanced-input:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.enhanced-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.1), 0 2px 8px rgba(25, 118, 210, 0.15);
+}
+
+.enhanced-input:focus + .input-icon,
+.input-wrapper:focus-within .input-icon {
+  color: #1976d2;
+}
+
+/* Password Input Specific */
+.password-wrapper {
+  position: relative;
+}
+
+.password-toggle-btn {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #718096;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.2s;
+  z-index: 2;
+}
+
+.password-toggle-btn:hover {
+  color: #1976d2;
+  background: rgba(25, 118, 210, 0.08);
+}
+
+.password-toggle-btn:active {
+  transform: scale(0.95);
+}
+
+/* Enhanced Select Dropdown */
+.select-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.enhanced-select {
+  width: 100%;
+  padding: 12px 44px 12px 44px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #2d3748;
+  background: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+.enhanced-select:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.enhanced-select:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.1), 0 2px 8px rgba(25, 118, 210, 0.15);
+}
+
+.enhanced-select:focus + .select-arrow {
+  color: #1976d2;
+}
+
+.select-wrapper:focus-within .input-icon {
+  color: #1976d2;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 14px;
+  font-size: 0.7rem;
+  color: #718096;
+  pointer-events: none;
+  transition: color 0.2s;
+}
+
+/* Enhanced Textarea */
+.enhanced-textarea {
+  width: 100%;
+  padding: 14px 16px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #2d3748;
+  background: #ffffff;
+  font-family: 'SF Mono', 'Monaco', 'Menlo', 'Courier New', monospace;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 120px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.enhanced-textarea::placeholder {
+  color: #a0aec0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.enhanced-textarea:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.enhanced-textarea:focus {
+  outline: none;
+  border-color: #1976d2;
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.1), 0 2px 8px rgba(25, 118, 210, 0.15);
+}
+
+/* Search Input Enhancements */
+.search-input {
+  padding: 10px 16px 10px 40px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #2d3748;
+  background: #ffffff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.search-input::placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+}
+
+.search-input:hover {
+  border-color: #cbd5e0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #1976d2;
+  box-shadow: 0 0 0 4px rgba(25, 118, 210, 0.1), 0 2px 8px rgba(25, 118, 210, 0.15);
+}
+
+/* Input Validation States */
+.enhanced-input:invalid:not(:placeholder-shown) {
+  border-color: #e53935;
+}
+
+.enhanced-input:valid:not(:placeholder-shown) {
+  border-color: #43a047;
+}
+
+/* Disabled State */
+.enhanced-input:disabled,
+.enhanced-select:disabled,
+.enhanced-textarea:disabled {
+  background: #f7fafc;
+  border-color: #e2e8f0;
+  color: #a0aec0;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Loading State */
+.enhanced-input.loading {
+  background: linear-gradient(90deg, #f7fafc 25%, #edf2f7 50%, #f7fafc 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Dark Mode Support for Enhanced Inputs */
+body.dark-mode .enhanced-input,
+body.dark-mode .enhanced-select,
+body.dark-mode .enhanced-textarea {
+  background: #2d3748;
+  border-color: #4a5568;
+  color: #e2e8f0;
+}
+
+body.dark-mode .enhanced-input::placeholder,
+body.dark-mode .enhanced-textarea::placeholder {
+  color: #718096;
+}
+
+body.dark-mode .enhanced-input:hover,
+body.dark-mode .enhanced-select:hover,
+body.dark-mode .enhanced-textarea:hover {
+  border-color: #718096;
+  background: #374151;
+}
+
+body.dark-mode .enhanced-input:focus,
+body.dark-mode .enhanced-select:focus,
+body.dark-mode .enhanced-textarea:focus {
+  border-color: #4299e1;
+  background: #2d3748;
+  box-shadow: 0 0 0 4px rgba(66, 153, 225, 0.2), 0 2px 8px rgba(66, 153, 225, 0.25);
+}
+
+body.dark-mode .input-icon,
+body.dark-mode .select-arrow {
+  color: #a0aec0;
+}
+
+body.dark-mode .input-wrapper:focus-within .input-icon,
+body.dark-mode .select-wrapper:focus-within .input-icon,
+body.dark-mode .enhanced-select:focus + .select-arrow {
+  color: #4299e1;
+}
+
+body.dark-mode .form-label,
+body.dark-mode .label-text {
+  color: #e2e8f0;
+}
+
+body.dark-mode .password-toggle-btn {
+  color: #a0aec0;
+}
+
+body.dark-mode .password-toggle-btn:hover {
+  color: #4299e1;
+  background: rgba(66, 153, 225, 0.15);
+}
+
+/* Responsive Input Adjustments */
+@media (max-width: 768px) {
+  .enhanced-input,
+  .enhanced-select,
+  .enhanced-textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 12px 14px 12px 40px;
+  }
+  
+  .form-label {
+    font-size: 0.9rem;
+  }
+  
+  .input-icon {
+    left: 12px;
+    font-size: 0.95rem;
+  }
+}
+
+/* Animation for form groups */
+.form-group {
+  animation: fadeInUp 0.4s ease backwards;
+}
+
+.form-group:nth-child(1) { animation-delay: 0.05s; }
+.form-group:nth-child(2) { animation-delay: 0.1s; }
+.form-group:nth-child(3) { animation-delay: 0.15s; }
+.form-group:nth-child(4) { animation-delay: 0.2s; }
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Enhanced Permissions Display in Users Table */
+.permissions-display {
+  position: relative;
+}
+
+.permissions-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f7fafc;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.permissions-toggle:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.permissions-toggle.expanded {
+  background: #e3f2fd;
+  border-color: #90caf9;
+}
+
+.permission-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.permission-badge.full-access {
+  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.permission-badge.partial-access {
+  background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(33, 150, 243, 0.3);
+}
+
+.permission-badge.no-access {
+  background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+  color: #ffffff;
+  box-shadow: 0 2px 4px rgba(244, 67, 54, 0.3);
+}
+
+.toggle-icon {
+  font-size: 0.7rem;
+  color: #718096;
+  transition: transform 0.2s;
+}
+
+.permissions-toggle.expanded .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.permissions-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 320px;
+  max-width: 400px;
+  background: #ffffff;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: dropdownSlide 0.3s ease;
+  overflow: hidden;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.permissions-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+  border-bottom: 2px solid #cbd5e0;
+  font-size: 0.95rem;
+  color: #2d3748;
+}
+
+.header-icon {
+  font-size: 1.2rem;
+}
+
+.permission-all,
+.permission-none {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  font-size: 0.9rem;
+  color: #2d3748;
+}
+
+.permission-all {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+}
+
+.permission-none {
+  background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+}
+
+.all-icon,
+.none-icon {
+  font-size: 1.5rem;
+}
+
+.permissions-list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.permission-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+  background: #f7fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+
+.permission-item:hover {
+  background: #edf2f7;
+  border-color: #cbd5e0;
+  transform: translateX(4px);
+}
+
+.permission-item .file-icon {
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+.permission-item .file-name {
+  font-size: 0.9rem;
+  color: #2d3748;
+  font-weight: 500;
+  word-break: break-word;
+  flex: 1;
+}
+
+/* Custom scrollbar for permissions list */
+.permissions-list::-webkit-scrollbar {
+  width: 8px;
+}
+
+.permissions-list::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.permissions-list::-webkit-scrollbar-thumb {
+  background: #cbd5e0;
+  border-radius: 4px;
+}
+
+.permissions-list::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
+}
+
+/* Dark mode for permissions display */
+body.dark-mode .permissions-toggle {
+  background: #2d3748;
+  border-color: #4a5568;
+  color: #e2e8f0;
+}
+
+body.dark-mode .permissions-toggle:hover {
+  background: #374151;
+  border-color: #718096;
+}
+
+body.dark-mode .permissions-toggle.expanded {
+  background: #1e3a5f;
+  border-color: #4299e1;
+}
+
+body.dark-mode .permissions-dropdown {
+  background: #1a202c;
+  border-color: #2d3748;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .permissions-header {
+  background: linear-gradient(135deg, #2d3748 0%, #374151 100%);
+  border-bottom-color: #4a5568;
+  color: #e2e8f0;
+}
+
+body.dark-mode .permission-all {
+  background: linear-gradient(135deg, #1e4620 0%, #2d5a2f 100%);
+  color: #e2e8f0;
+}
+
+body.dark-mode .permission-none {
+  background: linear-gradient(135deg, #4a1f1f 0%, #5a2d2d 100%);
+  color: #e2e8f0;
+}
+
+body.dark-mode .permission-item {
+  background: #2d3748;
+  border-color: #4a5568;
+}
+
+body.dark-mode .permission-item:hover {
+  background: #374151;
+  border-color: #718096;
+}
+
+body.dark-mode .permission-item .file-name {
+  color: #e2e8f0;
+}
+
+body.dark-mode .permissions-list::-webkit-scrollbar-track {
+  background: #1a202c;
+}
+
+body.dark-mode .permissions-list::-webkit-scrollbar-thumb {
+  background: #4a5568;
+}
+
+body.dark-mode .permissions-list::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+/* Responsive adjustments for permissions */
+@media (max-width: 768px) {
+  .permissions-dropdown {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 90vw;
+    max-width: 90vw;
+  }
+  
+  @keyframes dropdownSlide {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1);
+    }
+  }
 }
 </style>
