@@ -1,4 +1,4 @@
-# KB-Sage Technical Documentation
+# WikiAi Technical Documentation
 
 ## Table of Contents
 1. [Application Architecture](#application-architecture)
@@ -19,7 +19,7 @@
 
 ## Application Architecture
 
-KB-Sage follows a component-based architecture using Vue 3's Composition API. The application is structured as a Single Page Application (SPA) with client-side routing.
+WikiAi follows a component-based architecture using Vue 3's Composition API. The application is structured as a Single Page Application (SPA) with client-side routing.
 
 ### Core Technologies
 - **Vue 3**: Progressive JavaScript framework

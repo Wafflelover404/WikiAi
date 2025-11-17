@@ -1,6 +1,6 @@
-# KB-Sage: Knowledge Base Management System
+# WikiAi: Knowledge Base Management System
 
-KB-Sage is a modern, responsive web application for managing and interacting with a knowledge base. Built with Vue 3 and Vite, it provides an intuitive interface for searching, viewing, and managing documents with support for various file types.
+WikiAi is a modern, responsive web application for managing and interacting with a knowledge base. Built with Vue 3 and Vite, it provides an intuitive interface for searching, viewing, and managing documents with support for various file types.
 
 ## 🌟 Features
 
@@ -25,7 +25,7 @@ KB-Sage is a modern, responsive web application for managing and interacting wit
 ## 📁 Project Structure
 
 ```
-kb-sage/
+WikiAi/
 ├── public/                  # Static files
 │   └── favicon.ico          # Application favicon
 ├── src/
@@ -69,7 +69,7 @@ kb-sage/
 1. Clone the repository:
    ```bash
    git clone <repository-url>
-   cd kb-sage
+   cd WikiAi
    ```
 
 2. Install dependencies:
