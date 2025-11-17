@@ -4,22 +4,22 @@
     <div class="admin-header">
       <div class="admin-header-content">
         <div class="admin-title-section">
-          <h1 class="admin-title">🛠️ Administration</h1>
-          <p class="admin-subtitle">Manage users, files, and system settings</p>
+          <h1 class="admin-title">🛠️ {{ t.admin.title }}</h1>
+          <p class="admin-subtitle">{{ t.admin.manageUsers }}, {{ t.files.title }}, {{ t.admin.systemSettings }}</p>
         </div>
         <div class="admin-header-actions">
           <div class="admin-stats-quick">
             <div class="stat-item">
               <span class="stat-number">{{ users.length }}</span>
-              <span class="stat-label">Users</span>
+              <span class="stat-label">{{ t.admin.users }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-number">{{ files.length }}</span>
-              <span class="stat-label">Files</span>
+              <span class="stat-label">{{ t.files.title }}</span>
             </div>
             <div class="stat-item">
               <span class="stat-number">{{ totalReports }}</span>
-              <span class="stat-label">Reports</span>
+              <span class="stat-label">{{ t.admin.reportsTitle }}</span>
             </div>
           </div>
           <!-- <button @click="testAPIConnection" class="debug-btn" title="Test API Connection">
@@ -59,10 +59,10 @@
         <div v-if="activeTab === 'Users'" class="users-section">
           <div class="admin-section-header">
             <div class="admin-section-user-top">
-              <h2>👥 User Management</h2>
+              <h2>👥 {{ t.admin.manageUsers }}</h2>
               <div class="auto-refresh-status">
                   <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
-                  <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                  <span class="status-text">{{ isAutoRefreshEnabled ? t.admin.autoRefreshOn : t.admin.autoRefreshOff }}</span>
                   <span class="last-update">Updated {{ getLastUpdateTime('users') }}</span>
               </div>
             </div>
@@ -70,7 +70,7 @@
               <div class="search-users">
                 <input 
                   v-model="userSearch" 
-                  placeholder="Search users..." 
+                  :placeholder="t.admin.username" 
                   class="search-input"
                   :disabled="loadingUsers"
                 />
@@ -81,18 +81,18 @@
           
           <div v-if="loadingUsers" class="loading-state">
             <div class="loading-spinner">⟳</div>
-            <p>Loading users...</p>
+            <p>{{ t.common.loading }}</p>
           </div>
           
           <div v-else-if="filteredUsers.length" class="users-table-container">
             <table class="modern-users-table">
               <thead>
                 <tr>
-                  <th>Username</th>
-                  <th>Role</th>
-                  <th>Last Login</th>
-                  <th>Files Access</th>
-                  <th class="actions-header">Actions</th>
+                  <th>{{ t.admin.username }}</th>
+                  <th>{{ t.admin.role }}</th>
+                  <th>{{ t.admin.lastLogin }}</th>
+                  <th>{{ t.admin.filesAccess }}</th>
+                  <th class="actions-header">{{ t.admin.actions }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -100,7 +100,7 @@
                   <td class="username-cell">
                     <div class="user-info">
                       <span class="username">{{ user.username }}</span>
-                      <span v-if="user.username === 'admin'" class="admin-badge">Admin</span>
+                      <span v-if="user.username === 'admin'" class="admin-badge">{{ t.admin.adminBadge }}</span>
                     </div>
                   </td>
                   <td>
@@ -108,7 +108,7 @@
                   </td>
                   <td class="last-login-cell">
                     <span v-if="user.last_login" class="login-time">{{ formatLoginTime(user.last_login) }}</span>
-                    <span v-else class="never-logged">Never</span>
+                    <span v-else class="never-logged">{{ t.admin.never }}</span>
                   </td>
                   <td class="files-access-cell">
                     <div class="permissions-display">
@@ -147,15 +147,15 @@
                   <td class="actions-cell">
                     <div class="action-buttons">
                       <button class="btn-edit" @click="openEditUser(user)" :disabled="loadingUsers">
-                        ✏️ Edit
+                        ✏️ {{ t.admin.edit }}
                       </button>
                       <button 
                         class="btn-delete" 
                         @click="deleteUser(user.username)" 
                         :disabled="loadingUsers || user.username === 'admin'"
-                        :title="user.username === 'admin' ? 'Cannot delete admin user' : 'Delete user'"
+                        :title="user.username === 'admin' ? t.admin.cannotDeleteAdmin : t.admin.deleteBtn"
                       >
-                        🗑️ Delete
+                        🗑️ {{ t.admin.deleteBtn }}
                       </button>
                     </div>
                   </td>
@@ -166,23 +166,23 @@
           
           <div v-else class="empty-state">
             <div class="empty-icon">👥</div>
-            <h3>No users found</h3>
-            <p v-if="userSearch">Try adjusting your search terms</p>
-            <p v-else>Create your first user to get started</p>
+            <h3>{{ t.admin.noUsers }}</h3>
+            <p v-if="userSearch">{{ t.admin.tryAdjustingSearch }}</p>
+            <p v-else>{{ t.admin.createFirstUser }}</p>
           </div>
           <div class="admin-section-sub">
-            <h3>Create New User</h3>
+            <h3>{{ t.admin.createNewUser }}</h3>
             <form @submit.prevent="createUser" class="user-form">
               <div class="form-group">
                 <label class="form-label">
                   <span class="label-icon">👤</span>
-                  <span class="label-text">Username</span>
+                  <span class="label-text">{{ t.admin.username }}</span>
                 </label>
                 <div class="input-wrapper">
                   <span class="input-icon">@</span>
                   <input 
                     v-model="newUser.username" 
-                    placeholder="Enter username" 
+                    :placeholder="t.admin.username" 
                     required 
                     class="enhanced-input"
                   />
@@ -192,14 +192,14 @@
               <div class="form-group">
                 <label class="form-label">
                   <span class="label-icon">🔒</span>
-                  <span class="label-text">Password</span>
+                  <span class="label-text">{{ t.admin.password }}</span>
                 </label>
                 <div class="input-wrapper password-wrapper">
                   <span class="input-icon">🔑</span>
                   <input
                     v-model="newUser.password"
                     :type="showPassword ? 'text' : 'password'"
-                    placeholder="Enter password"
+                    :placeholder="t.admin.password"
                     required
                     class="enhanced-input"
                   />
@@ -218,13 +218,13 @@
               <div class="form-group">
                 <label class="form-label">
                   <span class="label-icon">⚡</span>
-                  <span class="label-text">Role</span>
+                  <span class="label-text">{{ t.admin.role }}</span>
                 </label>
                 <div class="select-wrapper">
                   <span class="input-icon">🎭</span>
                   <select v-model="newUser.role" class="enhanced-select">
-                    <option value="user">User</option>
-                    <option value="admin">Admin</option>
+                    <option value="user">{{ t.admin.user }}</option>
+                    <option value="admin">{{ t.admin.admin }}</option>
                   </select>
                   <span class="select-arrow">▼</span>
                 </div>
@@ -233,7 +233,7 @@
               <div class="form-group">
                 <label class="form-label">
                   <span class="label-icon">🔐</span>
-                  <span class="label-text">File Permissions</span>
+                  <span class="label-text">{{ t.admin.filePermissions }}</span>
                 </label>
               </div>
               
@@ -242,7 +242,7 @@
                 <div class="summary-item">
                   <span class="summary-icon">📁</span>
                   <span class="summary-text">
-                    <strong>{{ getNewUserFilesCount() }}</strong> of <strong>{{ files.length }}</strong> files will be accessible
+                    <strong>{{ getNewUserFilesCount() }}</strong> {{ t.admin.of }} <strong>{{ files.length }}</strong> {{ t.admin.filesAccessible }}
                   </span>
                 </div>
               </div>
@@ -256,8 +256,8 @@
                   @click="allowedFilesMode = 'all'"
                 >
                   <span class="mode-icon">🌐</span>
-                  <span class="mode-text">All Files</span>
-                  <span class="mode-hint">Full access</span>
+                  <span class="mode-text">{{ t.admin.allFiles }}</span>
+                  <span class="mode-hint">{{ t.admin.fullAccess }}</span>
                 </button>
                 <button 
                   type="button"
@@ -266,8 +266,8 @@
                   @click="allowedFilesMode = 'select'"
                 >
                   <span class="mode-icon">🎯</span>
-                  <span class="mode-text">Select Files</span>
-                  <span class="mode-hint">Custom access</span>
+                  <span class="mode-text">{{ t.admin.selectFiles }}</span>
+                  <span class="mode-hint">{{ t.admin.customAccess }}</span>
                 </button>
               </div>
 
@@ -280,17 +280,17 @@
                     <input 
                       v-model="createUserFileSearch" 
                       type="text"
-                      placeholder="Search files..." 
+                      :placeholder="t.admin.searchFiles" 
                       class="file-search-input-create"
                     />
                     <span v-if="createUserFileSearch" class="clear-search" @click="createUserFileSearch = ''" title="Clear search">×</span>
                   </div>
                   <div class="bulk-actions-create">
                     <button type="button" class="bulk-btn-create" @click="selectAllNewUserFiles" :disabled="allNewUserFilesSelected">
-                      <span class="btn-icon">✓</span> All
+                      <span class="btn-icon">✓</span> {{ t.admin.all }}
                     </button>
                     <button type="button" class="bulk-btn-create" @click="clearAllNewUserFiles" :disabled="newUser.allowed_files.length === 0">
-                      <span class="btn-icon">✗</span> None
+                      <span class="btn-icon">✗</span> {{ t.admin.none }}
                     </button>
                   </div>
                 </div>
@@ -299,8 +299,8 @@
                 <div class="allowed-files-checkboxes-create">
                   <div v-if="filteredCreateUserFiles.length === 0" class="no-files-message">
                     <span class="empty-icon">📂</span>
-                    <p v-if="createUserFileSearch">No files match "{{ createUserFileSearch }}"</p>
-                    <p v-else>No files available</p>
+                    <p v-if="createUserFileSearch">{{ t.admin.noFilesMatch }} "{{ createUserFileSearch }}"</p>
+                    <p v-else>{{ t.admin.noFilesAvailable }}</p>
                   </div>
                   <label 
                     v-for="file in filteredCreateUserFiles" 
@@ -318,7 +318,7 @@
                 </div>
               </div>
               
-              <button type="submit" class="create-btn">Create User</button>
+              <button type="submit" class="create-btn">{{ t.admin.createUser }}</button>
             </form>
             <div v-if="userCreateMsg" class="msg">{{ userCreateMsg }}</div>
           </div>
@@ -326,10 +326,10 @@
         <div v-else-if="activeTab === 'Files'" class="files-section">
           <div class="admin-section-header">
             <div class="files-section-top-header">
-              <h2>📁 File Management</h2>
+              <h2>📁 {{ t.admin.fileManagement }}</h2>
               <div class="auto-refresh-status">
                 <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
-                <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                <span class="status-text">{{ isAutoRefreshEnabled ? t.admin.autoRefreshOn : t.admin.autoRefreshOff }}</span>
                 <span class="last-update">Updated {{ getLastUpdateTime('files') }}</span>
               </div>
             </div>
@@ -350,8 +350,8 @@
           <!-- Drag and Drop Upload Area -->
           <div class="file-upload-tabs-container">
             <div class="file-upload-tabs">
-              <button :class="{ active: fileUploadTab === 'upload' }" @click="fileUploadTab = 'upload'">Upload File</button>
-              <button :class="{ active: fileUploadTab === 'enter' }" @click="fileUploadTab = 'enter'">Enter File</button>
+              <button :class="{ active: fileUploadTab === 'upload' }" @click="fileUploadTab = 'upload'">{{ t.admin.uploadFile }}</button>
+              <button :class="{ active: fileUploadTab === 'enter' }" @click="fileUploadTab = 'enter'">{{ t.admin.enterFile }}</button>
             </div>
             <div v-if="fileUploadTab === 'upload'" class="file-upload-zone-container">
               <div 
@@ -363,8 +363,8 @@
               >
                 <div class="upload-content">
                   <div class="upload-icon">📤</div>
-                  <h3 class="drag-and-drop-sign">Drag & Drop Files Here</h3>
-                  <p>or <button class="upload-link" @click="$refs.fileInput.click()">browse files</button></p>
+                  <h3 class="drag-and-drop-sign">{{ t.admin.dragDropFiles }}</h3>
+                  <p>{{ t.common.or }} <button class="upload-link" @click="$refs.fileInput.click()">{{ t.admin.browseFiles }}</button></p>
                   <input type="file" ref="fileInput" @change="handleFileSelect" multiple style="display: none;" />
                 </div>
               </div>
@@ -373,13 +373,13 @@
               <div class="form-group">
                 <label class="form-label">
                   <span class="label-icon">📝</span>
-                  <span class="label-text">Filename</span>
+                  <span class="label-text">{{ t.admin.filename }}</span>
                 </label>
                 <div class="input-wrapper">
                   <span class="input-icon">📄</span>
                   <input 
                     v-model="manualFilename" 
-                    placeholder="e.g., document.txt" 
+                    :placeholder="t.admin.filename" 
                     class="enhanced-input"
                   />
                 </div>
@@ -387,7 +387,7 @@
               <div class="form-group">
                 <label class="form-label">
                   <span class="label-icon">✍️</span>
-                  <span class="label-text">File Content</span>
+                  <span class="label-text">{{ t.admin.fileContent }}</span>
                 </label>
                 <textarea 
                   v-model="manualContent" 
@@ -396,13 +396,13 @@
                   class="enhanced-textarea"
                 ></textarea>
               </div>
-              <button class="upload-btn" @click="submitManualFile">Submit File</button>
+              <button class="upload-btn" @click="submitManualFile">{{ t.admin.submitFile }}</button>
             </div>
           </div>
 
           <div v-if="loadingFiles" class="loading-state">
             <div class="loading-spinner">⟳</div>
-            <p>Loading files...</p>
+            <p>{{ t.common.loading }}</p>
           </div>
 
           <div v-else-if="filteredFiles.length" class="files-table-container">
@@ -410,11 +410,11 @@
             <table class="modern-users-table desktop-table">
               <thead>
                 <tr>
-                  <th>File</th>
-                  <th>Type</th>
-                  <th>Size</th>
-                  <th>Uploaded</th>
-                  <th class="actions-header">Actions</th>
+                  <th>{{ t.admin.file }}</th>
+                  <th>{{ t.admin.type }}</th>
+                  <th>{{ t.admin.size }}</th>
+                  <th>{{ t.admin.uploaded }}</th>
+                  <th class="actions-header">{{ t.admin.actions }}</th>
                 </tr>
               </thead>
               <tbody>
@@ -436,14 +436,14 @@
                   </td>
                   <td class="actions-cell">
                     <div class="action-buttons">
-                      <button class="btn-preview" @click="previewFile(file)" title="Preview">
-                        👁️ Preview
+                      <button class="btn-preview" @click="previewFile(file)" :title="t.admin.preview">
+                        👁️ {{ t.admin.preview }}
                       </button>
-                      <button class="btn-edit" @click="openEditFile(file)" title="Edit">
-                        ✏️ Edit
+                      <button class="btn-edit" @click="openEditFile(file)" :title="t.admin.edit">
+                        ✏️ {{ t.admin.edit }}
                       </button>
-                      <button class="btn-delete" @click="deleteFile(file)" title="Delete">
-                        🗑️ Delete
+                      <button class="btn-delete" @click="deleteFile(file)" :title="t.admin.deleteBtn">
+                        🗑️ {{ t.admin.deleteBtn }}
                       </button>
                     </div>
                   </td>
@@ -468,26 +468,26 @@
                 </div>
                 <div v-if="expandedFile === file.filename" class="mobile-file-details">
                   <div class="detail-row">
-                    <span class="detail-label">Type:</span>
+                    <span class="detail-label">{{ t.admin.type }}:</span>
                     <span class="file-type-badge">{{ getFileType(file) }}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Size:</span>
+                    <span class="detail-label">{{ t.admin.size }}:</span>
                     <span>{{ formatFileSize(file.size) }}</span>
                   </div>
                   <div class="detail-row">
-                    <span class="detail-label">Uploaded:</span>
+                    <span class="detail-label">{{ t.admin.uploaded }}:</span>
                     <span>{{ formatFileDate(file.created_at || file.uploaded_at) }}</span>
                   </div>
                   <div class="mobile-file-actions">
                     <button class="btn-preview" @click="previewFile(file)">
-                      👁️ Preview
+                      👁️ {{ t.admin.preview }}
                     </button>
                     <button class="btn-edit" @click="openEditFile(file)">
-                      ✏️ Edit
+                      ✏️ {{ t.admin.edit }}
                     </button>
                     <button class="btn-delete" @click="deleteFile(file)">
-                      🗑️ Delete
+                      🗑️ {{ t.admin.deleteBtn }}
                     </button>
                   </div>
                 </div>
@@ -497,9 +497,8 @@
 
           <div v-else class="empty-state">
             <div class="empty-icon">📁</div>
-            <h3>No files found</h3>
-            <p v-if="fileSearch">Try adjusting your search terms</p>
-            <p v-else>Upload your first file to get started</p>
+            <h3>{{ t.admin.noFilesFound }}</h3>
+            <p>{{ t.admin.tryAdjustingSearch }}</p>
           </div>
 
           <div v-if="fileUploadMsg" class="msg">{{ fileUploadMsg }}</div>
@@ -512,7 +511,7 @@
                 <h2>📊 Reports & Analytics</h2>
                 <div class="auto-refresh-status">
                   <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
-                  <span class="status-text">{{ isAutoRefreshEnabled ? 'Auto-refresh ON' : 'Auto-refresh OFF' }}</span>
+                  <span class="status-text">{{ isAutoRefreshEnabled ? t.admin.autoRefreshOn : t.admin.autoRefreshOff }}</span>
                   <span class="last-update">Updated {{ getLastUpdateTime('reports') }}</span>
                 </div>
               </div>
@@ -843,13 +842,15 @@ import UserEditModal from './UserEditModal.vue';
 import ReportTable from './ReportTable.vue';
 import FileEditModal from './FileEditModal.vue';
 import FileModalOpener from './FileModalOpener.vue';
+import { translations } from '../i18n.js';
 
 export default {
   name: 'AdminDashboard',
   components: { UserEditModal, ReportTable, FileEditModal, FileModalOpener },
   props: {
     token: { type: String, required: true },
-    API_BASE_URL: { type: String, required: true }
+    API_BASE_URL: { type: String, required: true },
+    language: { type: String, default: 'en' }
   },
   data() {
       return {
@@ -912,6 +913,9 @@ export default {
       };
   },
   computed: {
+    t() {
+      return translations[this.language] || translations.en;
+    },
     totalReports() {
       return this.autoReports.length + this.manualReports.length;
     },
