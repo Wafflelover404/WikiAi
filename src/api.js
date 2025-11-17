@@ -7,6 +7,24 @@ export async function login({ serverUrl, username, password }) {
   });
 }
 
+// Validate token (GET /token/validate) - lightweight endpoint for checking token validity
+export async function validateToken({ serverUrl, token }) {
+  return await apiRequest({
+    url: `${serverUrl}/token/validate`,
+    method: 'GET',
+    token
+  });
+}
+
+// Check admin access (GET /admin/access) - admin-only endpoint with role restriction
+export async function checkAdminAccess({ serverUrl, token }) {
+  return await apiRequest({
+    url: `${serverUrl}/admin/access`,
+    method: 'GET',
+    token
+  });
+}
+
 // Query knowledge base using WebSocket (streaming support)
 export async function queryKnowledgeBase({ serverUrl, token, question, session_id = null, model = null, humanize = true, onMessage = null, useWebSocket = true }) {
   // Use WebSocket if supported and requested
@@ -369,6 +387,8 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
       fullUrl.includes('/upload') ||
       fullUrl.includes('/files/delete_') ||
       fullUrl.includes('/files/edit') ||
+      fullUrl.includes('/token/validate') ||
+      fullUrl.includes('/admin/access') ||
       method === 'PUT' || method === 'DELETE') {
     return await res.json();
   }
