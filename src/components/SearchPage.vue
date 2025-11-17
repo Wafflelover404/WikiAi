@@ -16,7 +16,7 @@
               <input 
                 v-model="searchText" 
                 type="text" 
-                placeholder="Search your knowledge base..." 
+                :placeholder="t.search.searchPlaceholder" 
                 class="search-input"
                 @focus="searchFocused = true"
                 @blur="handleSearchBlur"
@@ -43,7 +43,7 @@
           
           <div class="search-buttons">
             <button class="search-btn primary" @click="runSearch" :disabled="!searchText.trim()">
-              WikiAi Search
+              {{ t.search.search }}
             </button>
             <!-- <button class="search-btn secondary" @click="feelingLucky" :disabled="!searchText.trim()">
               I'm Feeling Lucky
@@ -159,6 +159,7 @@
 
 <script>
 import { marked } from 'marked';
+import { translations } from '../i18n.js';
 import FileModalOpener from './FileModalOpener.vue';
 
 export default {
@@ -178,6 +179,10 @@ export default {
     initialSearch: {
       type: String,
       default: ''
+    },
+    language: {
+      type: String,
+      default: 'en'
     }
   },
   data() {
@@ -204,6 +209,7 @@ export default {
     };
   },
   computed: {
+    t() { return translations[this.language] || translations.en },
     markedOverview() {
       if (!this.aiOverview) return '';
       marked.setOptions({

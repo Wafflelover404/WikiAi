@@ -4,8 +4,8 @@
     <div class="hero-section">
       <div class="hero-content">
         <div class="welcome-message">
-          <h1>Welcome to <span class="brand">WikiAi</span></h1>
-          <p class="subtitle">Your intelligent knowledge base companion</p>
+          <h1>{{ t.home.welcomeTitle }} <span class="brand">{{ t.home.welcomeBrand }}</span></h1>
+          <p class="subtitle">{{ t.home.subtitle }}</p>
         </div>
         
         <!-- Quick Search Bar -->
@@ -15,14 +15,14 @@
             <input 
               v-model="quickSearchText" 
               type="text" 
-              placeholder="Quick search your knowledge base..." 
+              :placeholder="t.home.quickSearchPlaceholder" 
               class="quick-search-input"
               @keyup.enter="performQuickSearch"
             />
             <button v-if="quickSearchText" class="clear-quick-search" @click="quickSearchText = ''">✖</button>
           </div>
           <button class="quick-search-btn" @click="performQuickSearch" :disabled="!quickSearchText.trim()">
-            Search
+            {{ t.home.quickSearchButton }}
           </button>
         </div>
       </div>
@@ -33,13 +33,13 @@
       <div class="dashboard-grid">
         <!-- Statistics Cards -->
         <div class="stats-section">
-          <h2 class="section-title">📊 Overview</h2>
+          <h2 class="section-title">📊 {{ t.home.overviewTitle }}</h2>
           <div class="stats-grid">
             <div class="stat-card">
               <div class="stat-icon">📄</div>
               <div class="stat-info">
                 <div class="stat-number">{{ files.length }}</div>
-                <div class="stat-label">Total Documents</div>
+                <div class="stat-label">{{ t.home.totalDocuments }}</div>
               </div>
               <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
@@ -48,7 +48,7 @@
               <div class="stat-icon">🔍</div>
               <div class="stat-info">
                 <div class="stat-number">{{ dashboardMetrics.total_queries_24h }}</div>
-                <div class="stat-label">Searches Today</div>
+                <div class="stat-label">{{ t.home.searchesToday }}</div>
               </div>
               <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
@@ -57,7 +57,7 @@
               <div class="stat-icon">⚡</div>
               <div class="stat-info">
                 <div class="stat-number">{{ Math.round(dashboardMetrics.avg_response_time_ms) }}ms</div>
-                <div class="stat-label">Avg Response Time</div>
+                <div class="stat-label">{{ t.home.avgResponseTime }}</div>
               </div>
               <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
@@ -66,7 +66,7 @@
               <div class="stat-icon">👤</div>
               <div class="stat-info">
                 <div class="stat-number">{{ userRole === 'admin' ? dashboardMetrics.active_users_24h : dashboardMetrics.active_sessions }}</div>
-                <div class="stat-label">{{ userRole === 'admin' ? 'Active Users Today' : 'Active Sessions' }}</div>
+                <div class="stat-label">{{ userRole === 'admin' ? t.home.activeUsersToday : t.home.activeSessions }}</div>
               </div>
               <div v-if="loading.metrics" class="loading-overlay"></div>
             </div>
@@ -75,42 +75,42 @@
 
         <!-- Quick Actions -->
         <div class="actions-section">
-          <h2 class="section-title">⚡ Quick Actions</h2>
+          <h2 class="section-title">⚡ {{ t.home.quickActionsTitle }}</h2>
           <div class="actions-grid">
             <div class="action-card" @click="$emit('navigate-to', 'search')">
               <div class="action-icon">🔍</div>
-              <div class="action-title">Advanced Search</div>
-              <div class="action-description">Search across all documents with AI</div>
+              <div class="action-title">{{ t.home.actionAdvancedSearchTitle }}</div>
+              <div class="action-description">{{ t.home.actionAdvancedSearchDesc }}</div>
             </div>
             
             <div class="action-card" @click="$emit('navigate-to', 'files')">
               <div class="action-icon">📁</div>
-              <div class="action-title">Browse Files</div>
-              <div class="action-description">Explore your document library</div>
+              <div class="action-title">{{ t.home.actionBrowseFilesTitle }}</div>
+              <div class="action-description">{{ t.home.actionBrowseFilesDesc }}</div>
             </div>
             
             <div v-if="userRole === 'admin'" class="action-card" @click="$emit('navigate-to', 'admin')">
               <div class="action-icon">⚙️</div>
-              <div class="action-title">Admin Panel</div>
-              <div class="action-description">Manage users and system settings</div>
+              <div class="action-title">{{ t.home.actionAdminPanelTitle }}</div>
+              <div class="action-description">{{ t.home.actionAdminPanelDesc }}</div>
             </div>
             
             <div v-if="userRole === 'admin'" class="action-card" @click="viewAnalytics">
               <div class="action-icon">📊</div>
-              <div class="action-title">Analytics</div>
-              <div class="action-description">View usage statistics and insights</div>
+              <div class="action-title">{{ t.home.actionAnalyticsTitle }}</div>
+              <div class="action-description">{{ t.home.actionAnalyticsDesc }}</div>
             </div>
 
             <div v-if="userRole === 'user'" class="action-card" @click="viewStats">
               <div class="action-icon">📊</div>
-              <div class="action-title">Statistics</div>
-              <div class="action-description">View your activity overview</div>
+              <div class="action-title">{{ t.home.actionStatisticsTitle }}</div>
+              <div class="action-description">{{ t.home.actionStatisticsDesc }}</div>
             </div>
 
             <div v-if="userRole === 'user'" class="action-card" @click="openAskModal">
               <div class="action-icon">💬</div>
-              <div class="action-title">Ask a Question</div>
-              <div class="action-description">Chat with your knowledge base</div>
+              <div class="action-title">{{ t.home.actionAskTitle }}</div>
+              <div class="action-description">{{ t.home.actionAskDesc }}</div>
             </div>
           </div>
         </div>
@@ -138,7 +138,7 @@
 
         <!-- Popular Searches (admin only) -->
         <div v-if="userRole === 'admin'" class="popular-section">
-          <h2 class="section-title">🔥 Most Referenced Files</h2>
+          <h2 class="section-title">🔥 {{ t.home.popularFilesTitle }}</h2>
           <div class="popular-searches">
             <div 
               v-for="(file, idx) in popularFiles" 
@@ -149,37 +149,37 @@
               <div class="search-rank">#{{ idx + 1 }}</div>
               <div class="search-info">
                 <div class="search-query">{{ file.query }}</div>
-                <div class="search-count">{{ file.count }} references</div>
+                <div class="search-count">{{ file.count }} {{ t.home.popularRefs }}</div>
               </div>
               <div class="search-trend" :class="file.trend">
                 {{ file.trend === 'up' ? '📈' : file.trend === 'down' ? '📉' : '➡️' }}
               </div>
             </div>
             <div v-if="loading.metrics && !popularFiles.length" class="loading-state">
-              Loading popular files...
+              {{ t.home.popularLoading }}
             </div>
             <div v-if="!loading.metrics && !popularFiles.length" class="empty-state">
-              No file references yet
+              {{ t.home.popularEmpty }}
             </div>
           </div>
         </div>
 
         <!-- System Status -->
         <div v-if="userRole === 'admin'" class="status-section">
-          <h2 class="section-title">🟢 System Status</h2>
+          <h2 class="section-title">🟢 {{ t.home.systemStatusTitle }}</h2>
           <div class="status-grid">
             <div class="status-item">
               <div class="status-indicator healthy"></div>
               <div class="status-info">
-                <div class="status-name">Search Engine</div>
-                <div class="status-value">Operational</div>
+                <div class="status-name">{{ t.home.systemSearchEngine }}</div>
+                <div class="status-value">{{ t.home.systemOperational }}</div>
               </div>
             </div>
             
             <div class="status-item">
               <div class="status-indicator healthy"></div>
               <div class="status-info">
-                <div class="status-name">AI Processing</div>
+                <div class="status-name">{{ t.home.systemAIProcessing }}</div>
                 <div class="status-value">{{ aiProcessingStatus }}</div>
               </div>
             </div>
@@ -187,8 +187,8 @@
             <div class="status-item">
               <div class="status-indicator" :class="storageStatusClass"></div>
               <div class="status-info">
-                <div class="status-name">Storage</div>
-                <div class="status-value">{{ storageUsage }}% Used</div>
+                <div class="status-name">{{ t.home.systemStorage }}</div>
+                <div class="status-value">{{ storageUsage }}% {{ t.home.systemStorageUsed }}</div>
               </div>
             </div>
           </div>
@@ -196,13 +196,13 @@
 
         <!-- Tips & Tricks -->
         <div class="tips-section">
-          <h2 class="section-title">💡 Tips & Tricks</h2>
+          <h2 class="section-title">💡 {{ t.home.tipsTitle }}</h2>
           <div class="tips-carousel">
             <div class="tip-item active">
               <div class="tip-icon">🎯</div>
               <div class="tip-content">
-                <div class="tip-title">Use specific keywords</div>
-                <div class="tip-description">Try searching with technical terms and specific file names for better results</div>
+                <div class="tip-title">{{ t.home.tipsUseSpecificKeywordsTitle }}</div>
+                <div class="tip-description">{{ t.home.tipsUseSpecificKeywordsDesc }}</div>
               </div>
             </div>
           </div>
@@ -222,6 +222,7 @@
 
 <script>
 import AskQuestionModal from './AskQuestionModal.vue';
+import { translations } from '../i18n.js';
 export default {
   name: 'HomePage',
   components: {
@@ -294,6 +295,10 @@ export default {
     userRole: {
       type: String,
       default: 'user'
+    },
+    language: {
+      type: String,
+      default: 'en'
     }
   },
   data() {
@@ -324,6 +329,10 @@ export default {
       if (usage < 70) return 'healthy';
       if (usage < 90) return 'warning';
       return 'critical';
+    },
+    t() {
+      const lang = this.language || (typeof localStorage !== 'undefined' && localStorage.getItem('language')) || 'en';
+      return translations[lang] || translations.en;
     }
   },
   mounted() {
