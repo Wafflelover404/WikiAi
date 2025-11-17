@@ -107,17 +107,17 @@ export const translations = {
         {
           name: 'Ivan Afanasyeff',
           role: 'Lead Developer',
-          bio: 'Full-stack expert building scalable AI solutions'
+          bio: 'Software development and support, search algorithms'
         },
         {
-          name: 'Team Member',
-          role: 'Backend Engineer',
-          bio: 'Database and API architecture specialist'
+          name: 'Victoria Beznoshchenko',
+          role: 'Operations Director',
+          bio: 'Operational activities and internal processes'
         },
         {
-          name: 'Team Member',
-          role: 'UI/UX Designer',
-          bio: 'Creating beautiful and intuitive experiences'
+          name: 'Ilya Ermalkevich',
+          role: 'CEO',
+          bio: 'Business process management and strategic planning'
         }
       ]
     },
@@ -459,17 +459,17 @@ export const translations = {
         {
           name: 'Иван Афанасьев',
           role: 'Ведущий разработчик',
-          bio: 'Разработка и поддержка ПО'
+          bio: 'Разработка и поддержка программного обеспечения и алгоритмов поиска'
         },
         {
           name: 'Безнощенко Виктория',
-          role: 'Эксперт по продажам',
-          bio: 'Продажи, маркетинг, реклама, работа с аудиторией'
+          role: 'Операционный директор',
+          bio: 'Операционная деятельность и внутренние процессы'
         },
         {
           name: 'Ермалкевич Илья',
           role: 'CEO',
-          bio: 'Управление бизнес процессами'
+          bio: 'Управление бизнес процессами и стратегическим планированием'
         }
       ]
     },
