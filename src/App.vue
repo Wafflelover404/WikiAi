@@ -1,12 +1,17 @@
 <template>
   <div class="kb-app" :class="{ 'dark-mode': darkMode }">
-    <!-- Login Screen -->
-    <LoginPage v-if="!token" @login-success="onLoginSuccess" @theme-changed="applyTheme" />
+    <!-- Loading screen while checking token -->
+    <div v-if="isCheckingToken" class="token-check-loading">
+      <div class="loading-spinner"></div>
+      <p>{{ t.nav.loadingSession }}</p>
+    </div>
+    <!-- Login Screen (only show after token check is complete) -->
+    <LoginPage v-else-if="!token" :language="language" @login-success="onLoginSuccess" @theme-changed="applyTheme" />
     <!-- Main App -->
     <template v-else>
       <!-- Mobile Navigation Bar -->
       <div class="mobile-navbar">
-        <button class="hamburger-btn" @click="toggleMobileMenu" :class="{ 'is-active': isMobileMenuOpen }" aria-label="Toggle menu">
+        <button class="hamburger-btn" @click="toggleMobileMenu" :class="{ 'is-active': isMobileMenuOpen }" :aria-label="t.nav.toggleMenu">
           <span class="hamburger-icon"></span>
         </button>
         <div class="mobile-title">
@@ -15,7 +20,7 @@
         </div>
       </div>
       <!-- Sidebar Navigation -->
-      <!-- Mobile Menu Overlay -->
+      <!-- Mobile Menu Overlay -->ч
       <div 
         class="mobile-menu-overlay" 
         :style="{ display: isMobileMenuOpen ? 'block' : 'none' }"
@@ -29,12 +34,38 @@
           <span class="sidebar-title">WikiAi</span>
         </div>
         <ul class="sidebar-tabs">
-          <li :class="{active: currentView === 'home' && !showAdminDashboard}" @click="navigateTo('home')" tabindex="0" aria-label="Home">🏠 Home</li>
-          <li :class="{active: currentView === 'files' && !showAdminDashboard}" @click="navigateTo('files')" tabindex="0" aria-label="Files">📁 Files</li>
-          <li :class="{active: currentView === 'search' && !showAdminDashboard}" @click="navigateTo('search')" tabindex="0" aria-label="Search">🔍 Search</li>
-          <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="showAdminDashboard = true" tabindex="0" aria-label="Admin">🛠 Admin</li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="/">🏠 {{ t.nav.home }}</a></li>
+          <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="/files.html">📁 {{ t.nav.files }}</a></li>
+          <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="/search.html">🔍 {{ t.nav.search }}</a></li>
+          <li :class="{active: currentView === 'landing' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><a href="/landing.html">ℹ️ {{ t.nav.about }}</a></li>
+          <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="validateTokenAndShowAdmin" tabindex="0" :aria-label="t.nav.admin"><a href="#" @click.prevent="validateTokenAndShowAdmin">🛠 {{ t.nav.admin }}</a></li>
         </ul>
         <div class="sidebar-bottom">
+          <div class="lang-dropdown-wrapper">
+            <button class="lang-dropdown-btn" @click="langDropdownOpen = !langDropdownOpen" :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`" aria-label="Language selector" aria-haspopup="true" :aria-expanded="langDropdownOpen">
+              <span class="lang-flag">{{ language === 'en' ? '🇬🇧' : '🇷🇺' }}</span>
+              <span class="lang-label">{{ language === 'en' ? 'EN' : 'RU' }}</span>
+              <span class="lang-dropdown-icon">▼</span>
+            </button>
+            <div v-if="langDropdownOpen" class="lang-dropdown-menu" @click.stop>
+              <button 
+                class="lang-option-item" 
+                :class="{ active: language === 'en' }"
+                @click="setLanguage('en'); langDropdownOpen = false"
+              >
+                <span class="lang-flag">🇬🇧</span>
+                <span class="lang-label">English</span>
+              </button>
+              <button 
+                class="lang-option-item" 
+                :class="{ active: language === 'ru' }"
+                @click="setLanguage('ru'); langDropdownOpen = false"
+              >
+                <span class="lang-flag">🇷🇺</span>
+                <span class="lang-label">Русский</span>
+              </button>
+            </div>
+          </div>
           <button class="darkmode-toggle" @click="toggleDarkMode" :aria-pressed="darkMode" aria-label="Toggle dark mode">
             <span v-if="!darkMode">🌙</span>
             <span v-else>☀️</span>
@@ -46,7 +77,13 @@
       </div>
       <div class="app-layout">
         <template v-if="showAdminDashboard">
-          <AdminDashboard :token="token" :API_BASE_URL="serverUrl" :activeTabAdmin="activeTabAdmin" @close="showAdminDashboard = false" />
+          <AdminDashboard
+            :token="token"
+            :API_BASE_URL="serverUrl"
+            :activeTabAdmin="activeTabAdmin"
+            :language="language"
+            @close="showAdminDashboard = false"
+          />
         </template>
         <template v-else>
           <!-- Home View -->
@@ -56,6 +93,7 @@
             :token="token"
             :serverUrl="serverUrl"
             :userRole="user?.role || 'user'"
+            :language="language"
             @navigate-to="navigateTo"
             @perform-search="performSearch"
             @open-file="openFileFromHome"
@@ -66,15 +104,15 @@
               <div class="view-header">
                 <!-- Mobile Header -->
                 <div class="mobile-view-header">
-                  <h1>📁 Files</h1>
-                  <p class="view-subtitle">Browse and manage your document library</p>
+                  <h1>📁 {{ t.files.title }}</h1>
+                  <p class="view-subtitle">{{ t.files.subtitle }}</p>
                 </div>
                 <!-- Desktop Header -->
                 <div class="desktop-view-header">
                   <div class="header-content">
                     <div class="header-left">
-                      <h1>📁 Files</h1>
-                      <p class="view-subtitle">Browse and manage your document library</p>
+                      <h1>📁 {{ t.files.title }}</h1>
+                      <p class="view-subtitle">{{ t.files.subtitle }}</p>
                     </div>
                   </div>
                 </div>
@@ -84,26 +122,26 @@
                     <input 
                       type="text" 
                       v-model="globalSearch" 
-                      placeholder="Search files..." 
+                      :placeholder="t.files.searchPlaceholder" 
                       class="files-search-input"
                     />
                     <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
                   </div>
                   <div class="filter-options">
                     <select v-model="fileTypeFilter" class="filter-select">
-                      <option value="">All Types</option>
-                      <option value="document">Documents</option>
-                      <option value="image">Images</option>
-                      <option value="pdf">PDFs</option>
+                      <option value="">{{ t.files.allTypes }}</option>
+                      <option value="document">{{ t.files.documents }}</option>
+                      <option value="image">{{ t.files.images }}</option>
+                      <option value="pdf">{{ t.files.pdfs }}</option>
                     </select>
                     <select v-model="dateSortOrder" class="filter-select">
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
+                      <option value="newest">{{ t.files.newestFirst }}</option>
+                      <option value="oldest">{{ t.files.oldestFirst }}</option>
                     </select>
                   </div>
                   <div class="file-status">
-                    <span class="status-text">{{ loading ? 'Loading...' : `${filteredFiles.length} files` }}</span>
-                    <span v-if="!loading" class="last-update">Last updated: {{ getLastUpdateTime() }}</span>
+                    <span class="status-text">{{ loading ? t.files.loading : `${filteredFiles.length} ${t.files.filesCount}` }}</span>
+                    <span v-if="!loading" class="last-update">{{ t.files.lastUpdated }} {{ getLastUpdateTime() }}</span>
                   </div>
                 </div>
                 <!-- Mobile Search and Filters Panel -->
@@ -112,30 +150,30 @@
                     <input 
                       type="text" 
                       v-model="globalSearch" 
-                      placeholder="Search files..." 
+                      :placeholder="t.files.searchPlaceholder" 
                       class="files-search-input"
                     />
                     <button v-if="globalSearch" @click="clearGlobalSearch" class="clear-search-btn">✖</button>
                   </div>
                   <div class="mobile-filter-options">
                     <select v-model="fileTypeFilter" class="mobile-filter-select">
-                      <option value="">All Types</option>
-                      <option value="document">Documents</option>
-                      <option value="image">Images</option>
-                      <option value="pdf">PDFs</option>
+                      <option value="">{{ t.files.allTypes }}</option>
+                      <option value="document">{{ t.files.documents }}</option>
+                      <option value="image">{{ t.files.images }}</option>
+                      <option value="pdf">{{ t.files.pdfs }}</option>
                     </select>
                     <select v-model="dateSortOrder" class="mobile-filter-select">
-                      <option value="newest">Newest First</option>
-                      <option value="oldest">Oldest First</option>
+                      <option value="newest">{{ t.files.newestFirst }}</option>
+                      <option value="oldest">{{ t.files.oldestFirst }}</option>
                     </select>
                   </div>
                   <div class="file-status">
-                    <span class="status-text">{{ loading ? 'Loading...' : `${filteredFiles.length} files` }}</span>
-                    <span v-if="!loading" class="last-update">Last updated: {{ getLastUpdateTime() }}</span>
+                    <span class="status-text">{{ loading ? t.files.loading : `${filteredFiles.length} ${t.files.filesCount}` }}</span>
+                    <span v-if="!loading" class="last-update">{{ t.files.lastUpdated }} {{ getLastUpdateTime() }}</span>
                   </div>
                 </div>
               </div>
-            <div v-if="loading" class="loading-indicator" role="status" aria-live="polite">Loading...</div>
+            <div v-if="loading" class="loading-indicator" role="status" aria-live="polite">{{ t.files.loading }}</div>
             <div class="main-content-area">
               <!-- Desktop View - Always render FileTabs -->
               <FileTabs
@@ -185,13 +223,13 @@
                   </div>
                   <div class="mobile-actions-list">
                     <button @click="downloadFile(selectedFile)" class="mobile-action-item">
-                      <span>💾</span> Download
+                      <span>💾</span> {{ t.files.download }}
                     </button>
                     <button @click="openQuiz(selectedFile)" class="mobile-action-item">
-                      <span>🧠</span> Quiz !
+                      <span>🧠</span> {{ t.files.quiz }}
                     </button>
                     <button @click="shareFile(selectedFile)" class="mobile-action-item">
-                      <span>↗️</span> Share
+                      <span>↗️</span> {{ t.common.share }}
                     </button>
                   </div>
                 </div>
@@ -199,7 +237,7 @@
               <!-- Mobile Content Display -->
               <div v-if="isMobileView && mobileActiveContent !== null" class="mobile-content-view">
                 <div class="mobile-content-header">
-                  <button @click="closeMobileContent" class="back-btn">← Back</button>
+                  <button @click="closeMobileContent" class="back-btn">← {{ t.common.back }}</button>
                   <h3 class="mobile-content-title">{{ mobileActiveFilename }}</h3>
                   <div class="mobile-content-actions">
                     <button 
@@ -254,6 +292,7 @@
             :token="token"
             :serverUrl="serverUrl"
             :initial-search="pendingSearch"
+            :language="language"
             @search-performed="pendingSearch = ''"
           />
           <!-- Settings Modal -->
@@ -263,6 +302,7 @@
             :initialPassword="password"
             :initialServerUrl="serverUrl"
             :accessToken="token"
+            :language="language"
             @close="settingsVisible = false"
             @save="saveSettings"
             @logout="handleLogout"
@@ -277,6 +317,7 @@
     :filename="quizFilename"
     :token="token"
     :serverUrl="serverUrl"
+    :language="language"
     @close="quizVisible = false"
   />
 </template>
@@ -293,9 +334,16 @@ import QuizModal from './components/QuizModal.vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
+import { translations } from './i18n.js';
 
 export default {
   name: 'App',
+  props: {
+    initialView: {
+      type: String,
+      default: 'home'
+    }
+  },
   components: {
     FileTabs,
     SearchSidebar,
@@ -330,16 +378,19 @@ export default {
       showAdminDashboard: false,
       showToken: false,
       darkMode: true,
+      language: 'en',
       globalSearch: '',
       loading: false,
-      currentView: 'home',
+      currentView: this.initialView || 'home',
       pendingSearch: '',
       fileListCache: [],
       mobileActiveContent: null, 
       mobileActiveFilename: null, 
       fileListInterval: null,
       quizVisible: false,
-      quizFilename: ''
+      quizFilename: '',
+      isCheckingToken: true,  // Flag to track if we're checking token on mount
+      langDropdownOpen: false  // Language dropdown state
     };
   },
   mounted() {
@@ -359,6 +410,44 @@ export default {
       this.darkMode = true;
       document.documentElement.classList.add('dark-mode');
       document.body.classList.add('dark-mode');
+    }
+
+    // Load language preference
+    try {
+      const savedLanguage = localStorage.getItem('language') || 'en'
+      this.language = savedLanguage
+      document.documentElement.lang = this.language
+    } catch (e) {
+      console.error('Error loading language:', e)
+    }
+
+    // Add window resize listener for mobile view
+    window.addEventListener('resize', () => {
+      this.isMobileView = window.innerWidth <= 768;
+    });
+
+    // Check for stored token on page load (restore session if available)
+    this.restoreTokenFromStorage();
+
+    // Setup theme change listener
+    const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (mql) {
+      this._themeMql = mql;
+      this._onThemeChange = (e) => {
+        // only react if user hasn't explicitly chosen
+        let explicit = null;
+        try { explicit = localStorage.getItem('theme'); } catch (_) { explicit = null; }
+        if (explicit !== 'dark' && explicit !== 'light') {
+          this.darkMode = !!e.matches;
+          document.body.classList.toggle('dark-mode', this.darkMode);
+        }
+      };
+      if (mql.addEventListener) {
+        mql.addEventListener('change', this._onThemeChange);
+      } else if (mql.addListener) {
+        // Safari
+        mql.addListener(this._onThemeChange);
+      }
     }
   },
   watch: {
@@ -382,6 +471,9 @@ export default {
       }
   },
   computed: {
+    t() {
+      return translations[this.language] || translations.en
+    },
       isAdmin() {
         return this.user && this.user.role === 'admin';
       },
@@ -503,13 +595,114 @@ export default {
       navigator.clipboard.writeText(this.token).then(() => alert('Token copied!'));
     },
     onLoginSuccess({ username, password, role, token, serverUrl }) {
+      console.log('[Login Success] Storing credentials...', { username, role, hasToken: !!token, hasUrl: !!serverUrl });
+      
       this.username = username;
       this.password = password;
       this.user = { username, role };
       this.token = token || this.$root.token;
       this.serverUrl = serverUrl;
+      
+      // Store token and serverUrl in localStorage for persistence
+      try {
+        localStorage.setItem('authToken', this.token);
+        localStorage.setItem('serverUrl', this.serverUrl);
+        localStorage.setItem('username', username);
+        localStorage.setItem('userRole', role);
+        console.log('[Login Success] ✅ Credentials stored to localStorage');
+        console.log('[Login Success] Stored:', {
+          authToken: localStorage.getItem('authToken')?.substring(0, 10) + '...',
+          serverUrl: localStorage.getItem('serverUrl'),
+          username: localStorage.getItem('username'),
+          userRole: localStorage.getItem('userRole')
+        });
+      } catch (e) {
+        console.warn('[Login Success] ❌ Failed to store auth data:', e);
+      }
       this.updateFiles();
     },
+
+    async restoreTokenFromStorage() {
+      try {
+        const storedToken = localStorage.getItem('authToken');
+        const storedServerUrl = localStorage.getItem('serverUrl');
+        const storedUsername = localStorage.getItem('username');
+        const storedRole = localStorage.getItem('userRole') || 'user';
+
+        console.log('[Token Restore] Checking localStorage...', {
+          hasToken: !!storedToken,
+          hasServerUrl: !!storedServerUrl,
+          hasUsername: !!storedUsername
+        });
+
+        if (storedToken && storedServerUrl) {
+          // Try to validate the stored token
+          try {
+            const { apiRequest } = await import('./api.js');
+            console.log('[Token Restore] Calling /token/validate...');
+            
+            const res = await apiRequest({
+              url: `${storedServerUrl}/token/validate`,
+              method: 'GET',
+              token: storedToken
+            });
+
+            console.log('[Token Restore] Response:', res);
+
+            // Check if response indicates success (be flexible with response format)
+            const isValid = (res && res.status === 'success') || (res && res.response && res.response.valid);
+            
+            if (isValid) {
+              // Token is valid, restore session
+              this.token = storedToken;
+              this.serverUrl = storedServerUrl;
+              this.username = storedUsername || '';
+              this.user = {
+                username: res.response?.username || storedUsername || 'unknown',
+                role: res.response?.role || storedRole
+              };
+              console.log('[Token Restore] ✅ Token valid! Session restored.', this.user);
+              this.updateFiles();
+              this.isCheckingToken = false; // Mark token check as complete
+              return; // Successfully restored
+            } else {
+              console.warn('[Token Restore] Invalid response structure:', res);
+              throw new Error('Invalid response from token validation');
+            }
+          } catch (validationError) {
+            console.error('[Token Restore] ❌ Validation error:', validationError.message);
+            // If validation fails, clear and show login
+          }
+
+          // Token is invalid/expired - clear storage and show login
+          console.log('[Token Restore] Clearing auth storage - token invalid');
+          this.clearAuthStorage();
+        } else {
+          console.log('[Token Restore] No stored credentials found');
+        }
+      } catch (e) {
+        console.error('[Token Restore] Error:', e);
+      } finally {
+        // Always mark token check as complete, even if it failed
+        this.isCheckingToken = false;
+      }
+    },
+
+    clearAuthStorage() {
+      try {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('serverUrl');
+        localStorage.removeItem('username');
+        localStorage.removeItem('userRole');
+      } catch (e) {
+        console.warn('Failed to clear auth storage:', e);
+      }
+      this.token = '';
+      this.serverUrl = '';
+      this.username = '';
+      this.user = null;
+    },
+
     handleLogout() {
       this.token = '';
       this.username = '';
@@ -520,6 +713,8 @@ export default {
       this.activeTab = null;
       this.searchVisible = false;
       this.settingsVisible = false;
+      // Also clear from localStorage
+      this.clearAuthStorage();
     },
     toggleSearch() {
       this.searchVisible = !this.searchVisible;
@@ -537,6 +732,28 @@ export default {
       } catch (e) {
         console.error('Error saving theme preference:', e);
       }
+    },
+    toggleLanguage() {
+      this.language = this.language === 'en' ? 'ru' : 'en'
+      try {
+        localStorage.setItem('language', this.language)
+        document.documentElement.lang = this.language
+      } catch (e) {
+        console.error('Error saving language preference:', e)
+      }
+      // Trigger re-render to update all translations
+      this.$forceUpdate()
+    },
+    setLanguage(lang) {
+      this.language = lang
+      try {
+        localStorage.setItem('language', this.language)
+        document.documentElement.lang = this.language
+      } catch (e) {
+        console.error('Error saving language preference:', e)
+      }
+      // Trigger re-render to update all translations
+      this.$forceUpdate()
     },
     onGlobalSearchInput() {
       // Optionally add debounce for performance
@@ -799,6 +1016,44 @@ export default {
       this.currentView = 'search';
     },
     
+    async validateTokenAndShowAdmin() {
+      console.log('[Admin Check] Starting admin validation...', {
+        hasToken: !!this.token,
+        hasServerUrl: !!this.serverUrl,
+        userRole: this.user?.role
+      });
+
+      if (!this.token || !this.serverUrl) {
+        console.warn('[Admin Check] ❌ No token or server URL');
+        return;
+      }
+      
+      try {
+        const { apiRequest } = await import('./api.js');
+        console.log('[Admin Check] Calling /admin/access endpoint...');
+        
+        // Call admin-specific endpoint that has role restrictions
+        const res = await apiRequest({
+          url: `${this.serverUrl}/admin/access`,
+          method: 'GET',
+          token: this.token
+        });
+
+        console.log('[Admin Check] Response:', res);
+        
+        // If successful and user is admin, show dashboard
+        if (res && res.status === 'success' && res.response && res.response.is_admin) {
+          this.showAdminDashboard = true;
+          console.log('[Admin Check] ✅ Admin access granted!');
+        } else {
+          console.warn('[Admin Check] ❌ Admin access denied - not an admin user');
+        }
+      } catch (e) {
+        console.error('[Admin Check] ❌ Admin access check error:', e);
+        // Silently fail - don't show admin if check fails
+      }
+    },
+    
     async openFileFromHome(fileOrFilename) {
       this.currentView = 'files';
       await this.handleMobileFileClick(fileOrFilename);
@@ -926,49 +1181,6 @@ export default {
     }
   },
 
-  mounted() {
-    // Add window resize listener for mobile view
-    window.addEventListener('resize', () => {
-      this.isMobileView = window.innerWidth <= 768;
-    });
-
-    // Initialize theme from localStorage or system preference
-    let storedTheme = null;
-    try {
-      storedTheme = localStorage.getItem('theme');
-    } catch (e) {
-      storedTheme = null;
-    }
-
-    if (storedTheme === 'dark' || storedTheme === 'light') {
-      this.darkMode = storedTheme === 'dark';
-      document.body.classList.toggle('dark-mode', this.darkMode);
-    } else {
-      const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-      if (mql) {
-        this.darkMode = !!mql.matches;
-        document.body.classList.toggle('dark-mode', this.darkMode);
-        // Listen to system theme changes if user hasn't explicitly chosen
-        this._themeMql = mql;
-        this._onThemeChange = (e) => {
-          // only react if user hasn't explicitly chosen
-          let explicit = null;
-          try { explicit = localStorage.getItem('theme'); } catch (_) { explicit = null; }
-          if (explicit !== 'dark' && explicit !== 'light') {
-            this.darkMode = !!e.matches;
-            document.body.classList.toggle('dark-mode', this.darkMode);
-          }
-        };
-        if (mql.addEventListener) {
-          mql.addEventListener('change', this._onThemeChange);
-        } else if (mql.addListener) {
-          // Safari
-          mql.addListener(this._onThemeChange);
-        }
-      }
-    }
-  },
-
   beforeDestroy() {
     // Clean up resize listener
     window.removeEventListener('resize', () => {
@@ -984,6 +1196,7 @@ export default {
     }
   }
 }
+
 </script>
 
 
@@ -1072,7 +1285,7 @@ body {
   flex: 1;
 }
 .sidebar-tabs li {
-  padding: 14px 24px;
+  padding: 0;
   font-size: 18px;
   color: #6C757D;
   cursor: pointer;
@@ -1080,18 +1293,35 @@ body {
   transition: background 0.2s, color 0.2s, border-color 0.2s;
   outline: none;
 }
+.sidebar-tabs li a {
+  display: block;
+  padding: 14px 24px;
+  color: inherit;
+  text-decoration: none;
+  font-size: inherit;
+  transition: inherit;
+}
 .sidebar-tabs li.active, .sidebar-tabs li:focus, .sidebar-tabs li:hover {
   background: #e3f2fd;
   color: #007BFF;
   border-left: 4px solid #007BFF;
 }
+.sidebar-tabs li.active a, .sidebar-tabs li:focus a, .sidebar-tabs li:hover a {
+  color: #007BFF;
+}
 .dark-mode .sidebar-tabs li {
   color: #a8adb2;
+}
+.dark-mode .sidebar-tabs li a {
+  color: inherit;
 }
 .dark-mode .sidebar-tabs li.active, .dark-mode .sidebar-tabs li:focus, .dark-mode .sidebar-tabs li:hover {
   background: #2a2d2f;
   color: #66b3ff;
   border-left-color: #66b3ff;
+}
+.dark-mode .sidebar-tabs li.active a, .dark-mode .sidebar-tabs li:focus a, .dark-mode .sidebar-tabs li:hover a {
+  color: #66b3ff;
 }
 .sidebar-bottom {
   display: flex;
@@ -2700,5 +2930,204 @@ body.dark-mode input, body.dark-mode select, body.dark-mode textarea {
   background: #232628;
   color: #e0e0e0;
   border-color: #3a3d3f;
+}
+
+/* Token Check Loading Screen */
+.token-check-loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  z-index: 9999;
+  gap: 16px;
+}
+
+.kb-app.dark-mode .token-check-loading {
+  background: #0f1113;
+  color: #e0e0e0;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #4a90e2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.kb-app.dark-mode .loading-spinner {
+  border-color: rgba(255, 255, 255, 0.1);
+  border-top-color: #66b3ff;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.token-check-loading p {
+  font-size: 16px;
+  font-weight: 500;
+  margin: 0;
+  color: #333;
+}
+
+.kb-app.dark-mode .token-check-loading p {
+  color: #e0e0e0;
+}
+
+/* Beautiful Language Dropdown Styles */
+.lang-dropdown-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.lang-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #007BFF 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.3);
+  min-height: 36px;
+  white-space: nowrap;
+}
+
+.lang-dropdown-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.4);
+  background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
+}
+
+.lang-dropdown-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.lang-flag {
+  font-size: 18px;
+  display: inline-block;
+}
+
+.lang-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.lang-dropdown-icon {
+  font-size: 11px;
+  transition: transform 0.3s ease;
+  display: inline-block;
+}
+
+.lang-dropdown-btn[aria-expanded="true"] .lang-dropdown-icon {
+  transform: rotate(180deg);
+}
+
+.lang-dropdown-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 8px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  min-width: 160px;
+  z-index: 1001;
+  animation: slideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dark-mode .lang-dropdown-menu {
+  background: #242526;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.lang-option-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #333;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.lang-option-item:hover {
+  background: #f0f7ff;
+}
+
+.lang-option-item.active {
+  background: #e3f2fd;
+  color: #007BFF;
+  font-weight: 600;
+}
+
+.lang-option-item.active::before {
+  content: '✓';
+  position: absolute;
+  left: 8px;
+  font-weight: bold;
+  color: #007BFF;
+}
+
+.dark-mode .lang-option-item {
+  color: #e0e0e0;
+}
+
+.dark-mode .lang-option-item:hover {
+  background: #2a2d2f;
+}
+
+.dark-mode .lang-option-item.active {
+  background: #1e3a5f;
+  color: #66b3ff;
+}
+
+.dark-mode .lang-option-item.active::before {
+  color: #66b3ff;
+}
+
+.lang-option-item .lang-flag {
+  font-size: 20px;
+  min-width: 24px;
+}
+
+.lang-option-item .lang-label {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
 }
 </style>
