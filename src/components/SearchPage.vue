@@ -59,7 +59,7 @@
         
         <!-- Search Stats -->
         <div class="search-stats">
-          About {{ searchResults.length }} results ({{ searchTime }}s)
+          About {{ searchResults.length }} results ({{ totalSearchTime }}s)
         </div>
 
         <!-- AI Overview -->
@@ -187,7 +187,7 @@ export default {
       searchResults: [],
       searchSuggestions: [],
       hasSearched: false,
-      searchTime: 0,
+      totalSearchTime: 0,
       aiOverview: '',
       aiOverviewLoading: false,
       aiOverviewExpanded: false,
@@ -379,6 +379,7 @@ export default {
               overviewReceived = true;
               this.aiOverview = message.data || '';
               this.aiOverviewLoading = false;
+              this.totalSearchTime = ((Date.now() - startTime) / 1000).toFixed(2);
               break;
               
             case 'chunks':
@@ -431,7 +432,6 @@ export default {
                   if (displaySnippet && displaySnippet.length > 280) {
                     displaySnippet = displaySnippet.slice(0, 280) + '...';
                   }
-                  
                   return { text, filename, possibleFiles, displayTitle, displaySnippet };
                 });
               }
@@ -440,6 +440,7 @@ export default {
             case 'error':
               this.aiOverviewError = message.message || 'Error processing query';
               this.aiOverviewLoading = false;
+              this.totalSearchTime = ((Date.now() - startTime) / 1000).toFixed(3);
               break;
               
             case 'complete':
@@ -447,7 +448,7 @@ export default {
               if (!overviewReceived) {
                 this.aiOverviewLoading = false;
               }
-              this.searchTime = ((Date.now() - startTime) / 1000).toFixed(2);
+              this.totalSearchTime = ((Date.now() - startTime) / 1000).toFixed(3); // - Deprecated. Total time of search and Ai response
               break;
           }
         };
@@ -477,6 +478,7 @@ export default {
           });
           
           if (res.status === 'success' && res.response && Array.isArray(res.response.chunks)) {
+            
             this.searchResults = res.response.chunks.map(rawChunk => {
               const fnameMatch = rawChunk.match(/<filename>(.*?)<\/filename>/);
               const filename = fnameMatch ? fnameMatch[1] : null;
@@ -545,7 +547,7 @@ export default {
             this.aiOverviewError = res2.message || 'Error generating AI overview';
           }
           
-          this.searchTime = ((Date.now() - startTime) / 1000).toFixed(2);
+          // this.totalSearchTime = ((Date.now() - startTime) / 1000).toFixed(2);
         }
         
       } catch (error) {

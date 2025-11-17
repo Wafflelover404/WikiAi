@@ -660,7 +660,7 @@ export default {
     },
     
     viewAnalytics() {
-      this.$emit('navigate-to', 'admin');
+      this.$emit('show-analytics');
     },
 
     viewStats() {

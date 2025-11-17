@@ -29,10 +29,11 @@
           <span class="sidebar-title">WikiAi</span>
         </div>
         <ul class="sidebar-tabs">
-          <li :class="{active: currentView === 'home' && !showAdminDashboard}" @click="navigateTo('home')" tabindex="0" aria-label="Home">🏠 Home</li>
-          <li :class="{active: currentView === 'files' && !showAdminDashboard}" @click="navigateTo('files')" tabindex="0" aria-label="Files">📁 Files</li>
-          <li :class="{active: currentView === 'search' && !showAdminDashboard}" @click="navigateTo('search')" tabindex="0" aria-label="Search">🔍 Search</li>
-          <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="showAdminDashboard = true" tabindex="0" aria-label="Admin">🛠 Admin</li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard && !showAnalyticsDashboard}" @click="navigateTo('home')" tabindex="0" aria-label="Home">🏠 Home</li>
+          <li :class="{active: currentView === 'files' && !showAdminDashboard && !showAnalyticsDashboard}" @click="navigateTo('files')" tabindex="0" aria-label="Files">📁 Files</li>
+          <li :class="{active: currentView === 'search' && !showAdminDashboard && !showAnalyticsDashboard}" @click="navigateTo('search')" tabindex="0" aria-label="Search">🔍 Search</li>
+          <li v-if="isAdmin" :class="{active: showAnalyticsDashboard}" @click="showAnalyticsDashboard = true; showAdminDashboard = false; isMobileMenuOpen = false" tabindex="0" aria-label="Analytics">📊 Analytics</li>
+          <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="showAdminDashboard = true; showAnalyticsDashboard = false; isMobileMenuOpen = false" tabindex="0" aria-label="Admin">🛠 Admin</li>
         </ul>
         <div class="sidebar-bottom">
           <button class="darkmode-toggle" @click="toggleDarkMode" :aria-pressed="darkMode" aria-label="Toggle dark mode">
@@ -45,7 +46,10 @@
         </div>
       </div>
       <div class="app-layout">
-        <template v-if="showAdminDashboard">
+        <template v-if="showAnalyticsDashboard">
+          <AnalyticsDashboard :token="token" :API_BASE_URL="serverUrl" @close="showAnalyticsDashboard = false" />
+        </template>
+        <template v-else-if="showAdminDashboard">
           <AdminDashboard :token="token" :API_BASE_URL="serverUrl" :activeTabAdmin="activeTabAdmin" @close="showAdminDashboard = false" />
         </template>
         <template v-else>
@@ -57,6 +61,7 @@
             :serverUrl="serverUrl"
             :userRole="user?.role || 'user'"
             @navigate-to="navigateTo"
+            @show-analytics="showAnalyticsDashboard = true; isMobileMenuOpen = false"
             @perform-search="performSearch"
             @open-file="openFileFromHome"
             @upload-files="handleFileUpload"
@@ -287,6 +292,7 @@ import SearchSidebar from './components/SearchSidebar.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import LoginPage from './components/LoginPage.vue';
 import AdminDashboard from './components/AdminDashboard.vue';
+import AnalyticsDashboard from './components/AnalyticsDashboard.vue';
 import HomePage from './components/HomePage.vue';
 import SearchPage from './components/SearchPage.vue';
 import QuizModal from './components/QuizModal.vue';
@@ -302,6 +308,7 @@ export default {
     SettingsModal,
     LoginPage,
     AdminDashboard,
+    AnalyticsDashboard,
     HomePage,
     SearchPage,
     QuizModal
@@ -328,6 +335,7 @@ export default {
       password: '',
       user: null,
       showAdminDashboard: false,
+      showAnalyticsDashboard: false,
       showToken: false,
       darkMode: true,
       globalSearch: '',
@@ -736,6 +744,7 @@ export default {
     navigateTo(view) {
       this.currentView = view;
       this.showAdminDashboard = false;
+      this.showAnalyticsDashboard = false;
       this.isMobileMenuOpen = false; // Close mobile menu after navigation
       
       // Reset active tab when switching views

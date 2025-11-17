@@ -1,6 +1,5 @@
 <template>
   <div class="admin-dashboard">
-    <!-- Modern Header with Navigation -->
     <div class="admin-header">
       <div class="admin-header-content">
         <div class="admin-title-section">
@@ -53,7 +52,6 @@
       </div>
     </div>
     
-    <!-- Content Area with better layout -->
     <div class="admin-content">
       <div class="admin-tab-content">
         <div v-if="activeTab === 'Users'" class="users-section">
@@ -5373,6 +5371,7 @@ body.dark-mode .password-toggle-btn:hover {
   border-bottom: 2px solid #cbd5e0;
   font-size: 0.95rem;
   color: #2d3748;
+  z-index: 1000;
 }
 
 .header-icon {
