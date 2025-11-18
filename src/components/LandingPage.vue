@@ -17,19 +17,28 @@
             <p class="tagline">{{ t.header.tagline }}</p>
           </div>
         </div>
-        <nav class="header-nav">
-          <a href="#product" class="nav-link">{{ t.header.product }}</a>
-          <a href="#team" class="nav-link">{{ t.header.team }}</a>
-          <a href="#goals" class="nav-link">{{ t.header.goals }}</a>
-          <a href="#contact" class="nav-link">{{ t.header.contact }}</a>
-          <button class="lang-toggle" @click="toggleLanguage" :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`">
-            {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
-          </button>
-          <button class="theme-toggle" @click="toggleDarkMode" :title="darkMode ? t.header.lightMode : t.header.darkMode">
-            <span v-if="!darkMode">🌙</span>
-            <span v-else>☀️</span>
-          </button>
-          <a href="/index.html" class="btn-primary">{{ t.header.getStarted }}</a>
+        <button class="mobile-menu-toggle" @click="toggleMobileMenu" :aria-expanded="isMobileMenuOpen">
+          <span class="menu-icon" :class="{ 'open': isMobileMenuOpen }">
+            <span></span>
+            <span></span>
+            <span></span>
+          </span>
+        </button>
+        <nav class="header-nav" :class="{ 'mobile-visible': isMobileMenuOpen }">
+          <a href="#product" class="nav-link" @click="closeMobileMenu">{{ t.header.product }}</a>
+          <a href="#team" class="nav-link" @click="closeMobileMenu">{{ t.header.team }}</a>
+          <a href="#goals" class="nav-link" @click="closeMobileMenu">{{ t.header.goals }}</a>
+          <a href="#contact" class="nav-link" @click="closeMobileMenu">{{ t.header.contact }}</a>
+          <div class="nav-actions">
+            <button class="lang-toggle" @click="toggleLanguage" :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`">
+              {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
+            </button>
+            <button class="theme-toggle" @click="toggleDarkMode" :title="darkMode ? t.header.lightMode : t.header.darkMode">
+              <span v-if="!darkMode">🌙</span>
+              <span v-else>☀️</span>
+            </button>
+            <a href="/index.html" class="btn-primary">{{ t.header.getStarted }}</a>
+          </div>
         </nav>
       </div>
     </header>
@@ -190,7 +199,9 @@ export default {
     return {
       darkMode: false,
       showScrollTop: false,
-      language: 'en'
+      language: 'en',
+      isMobileMenuOpen: false,
+      isMobile: window.innerWidth <= 768
     }
   },
   computed: {
@@ -205,6 +216,7 @@ export default {
     
     this.darkMode = darkMode
     this.language = language
+    this.isMobile = window.innerWidth <= 768
     
     if (darkMode) {
       document.documentElement.classList.add('dark-mode')
@@ -214,9 +226,12 @@ export default {
     document.documentElement.lang = language
     
     window.addEventListener('scroll', this.handleScroll)
+    window.addEventListener('resize', this.handleResize)
   },
   beforeUnmount() {
     window.removeEventListener('scroll', this.handleScroll)
+    window.removeEventListener('resize', this.handleResize)
+    document.body.style.overflow = '';
   },
   methods: {
     toggleDarkMode() {
@@ -228,6 +243,24 @@ export default {
       this.language = this.language === 'en' ? 'ru' : 'en'
       localStorage.setItem('language', this.language)
       document.documentElement.lang = this.language
+    },
+    toggleMobileMenu() {
+      this.isMobileMenuOpen = !this.isMobileMenuOpen
+      if (this.isMobileMenuOpen) {
+        document.body.style.overflow = 'hidden';
+      } else {
+        document.body.style.overflow = '';
+      }
+    },
+    closeMobileMenu() {
+      this.isMobileMenuOpen = false;
+      document.body.style.overflow = '';
+    },
+    handleResize() {
+      this.isMobile = window.innerWidth <= 768;
+      if (!this.isMobile) {
+        this.closeMobileMenu();
+      }
     },
     handleScroll() {
       this.showScrollTop = window.scrollY > 300
@@ -405,7 +438,13 @@ export default {
 
 .header-nav {
   display: flex;
-  gap: 24px;
+  gap: 20px;
+  align-items: center;
+}
+
+.nav-actions {
+  display: flex;
+  gap: 12px;
   align-items: center;
 }
 
@@ -413,9 +452,10 @@ export default {
   color: #1a1a2e;
   text-decoration: none;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 15px;
   position: relative;
-  transition: color 0.3s ease;
+  transition: all 0.3s ease;
+  padding: 6px 0;
 }
 
 .dark-mode .nav-link {
@@ -508,9 +548,12 @@ export default {
 .hero {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 120px 24px 80px;
+  padding: 100px 24px 80px;
   position: relative;
   z-index: 10;
+  min-height: calc(100vh - 80px);
+  display: flex;
+  align-items: center;
 }
 
 .hero-grid {
@@ -521,7 +564,7 @@ export default {
 }
 
 .hero-title {
-  font-size: 56px;
+  font-size: clamp(36px, 6vw, 56px);
   font-weight: 800;
   line-height: 1.2;
   margin-bottom: 24px;
@@ -561,7 +604,7 @@ export default {
 }
 
 .hero-subtitle {
-  font-size: 18px;
+  font-size: clamp(16px, 2vw, 18px);
   color: #666;
   line-height: 1.6;
   margin-bottom: 32px;
@@ -1181,23 +1224,209 @@ export default {
   box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
 }
 
+/* Mobile Menu Toggle */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: none;
+  padding: 12px;
+  cursor: pointer;
+  z-index: 1001;
+}
+
+.menu-icon {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 24px;
+  height: 20px;
+  position: relative;
+}
+
+.menu-icon span {
+  display: block;
+  width: 100%;
+  height: 2px;
+  background-color: #1a1a2e;
+  transition: all 0.3s ease;
+  transform-origin: center;
+}
+
+.dark-mode .menu-icon span {
+  background-color: #e0e0e0;
+}
+
+.menu-icon.open span:nth-child(1) {
+  transform: translateY(9px) rotate(45deg);
+}
+
+.menu-icon.open span:nth-child(2) {
+  opacity: 0;
+}
+
+.menu-icon.open span:nth-child(3) {
+  transform: translateY(-9px) rotate(-45deg);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
+  .mobile-menu-toggle {
+    display: block;
+  }
+
   .header-container {
-    flex-direction: column;
-    gap: 16px;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
   }
 
   .header-nav {
+    position: fixed;
+    top: 0;
+    right: -100%;
+    width: 80%;
+    max-width: 320px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(10px);
     flex-direction: column;
+    justify-content: flex-start;
+    padding: 80px 24px 24px;
+    transition: right 0.3s ease-in-out;
+    z-index: 1000;
+    box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+  }
+
+  .dark-mode .header-nav {
+    background: rgba(15, 17, 19, 0.98);
+  }
+
+  .header-nav.mobile-visible {
+    right: 0;
+  }
+
+  .nav-link {
+    padding: 12px 0;
+    font-size: 16px;
+    display: block;
     width: 100%;
-    text-align: center;
-    gap: 12px;
+    text-align: left;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .dark-mode .nav-link {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .nav-actions {
+    margin-top: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .theme-toggle,
+  .lang-toggle {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .hero {
+    padding: 80px 16px 60px;
   }
 
   .hero-grid {
     grid-template-columns: 1fr;
-    gap: 40px;
+    gap: 32px;
+  }
+
+  .hero-title {
+    font-size: 36px;
+    margin-bottom: 16px;
+  }
+
+  .hero-subtitle {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+
+  .hero-buttons {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 32px;
+  }
+
+  .btn-large {
+    width: 100%;
+    text-align: center;
+  }
+
+  .hero-stats {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .hero-visual {
+    height: 300px;
+    margin-top: 20px;
+  }
+
+  .floating-card {
+    padding: 16px;
+    max-width: 140px;
+  }
+
+  .section-header h2 {
+    font-size: 32px;
+  }
+
+  .section-header p {
+    font-size: 16px;
+  }
+
+  .features-grid,
+  .team-grid,
+  .goals-grid,
+  .contact-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-card,
+  .team-card,
+  .goal-card,
+  .contact-card {
+    padding: 24px 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+  }
+
+  .footer-container {
+    flex-direction: column;
+    text-align: center;
+    gap: 24px;
+  }
+
+  .footer-links {
+    justify-content: center;
+  }
+
+  .scroll-to-top {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+  
+  .hero {
     padding: 60px 24px 40px;
   }
 
@@ -1247,7 +1476,6 @@ export default {
     gap: 12px;
     text-align: center;
   }
-}
 
 @media (max-width: 480px) {
   .logo-text h1 {
@@ -1266,5 +1494,6 @@ export default {
     width: 100%;
     text-align: center;
   }
+}
 }
 </style>
