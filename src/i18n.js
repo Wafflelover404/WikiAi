@@ -151,15 +151,15 @@ export const translations = {
       items: [
         {
           title: 'Email',
-          text: 'contact@WikiAi.com'
+          text: 'info.wikiai@gmail.com'
         },
         {
-          title: 'LinkedIn',
-          text: 'Follow us on LinkedIn'
+          title: 'Phone',
+          text: '+375297345682'
         },
         {
-          title: 'GitHub',
-          text: 'Check our GitHub'
+          title: 'Telegram',
+          text: '@vikigolubeva'
         },
         {
           title: 'Support',
@@ -331,7 +331,17 @@ export const translations = {
       password: 'Password',
       login: 'Login',
       loginError: 'Invalid username or password',
-      loggingIn: 'Logging in...'
+      loggingIn: 'Logging in...',
+      apiUrl: 'API URL',
+      apiUrlPlaceholder: 'http://localhost:9001',
+      rememberMe: 'Remember Me',
+      proxyWarning: 'Using proxy - set VITE_API_PROXY in .env',
+      selectServer: 'Select a saved server URL',
+      noSavedServers: 'No saved servers yet',
+      viewServerAddress: 'View server address',
+      hideServerAddress: 'Hide server address',
+      serverPanelTitle: 'Connection settings',
+      serverPanelSubtitle: 'Update or reuse an API endpoint'
     },
     // Common
     common: {
@@ -503,15 +513,15 @@ export const translations = {
       items: [
         {
           title: 'Электронная почта',
-          text: 'contact@WikiAi.com'
+          text: 'info.wikiai@gmail.com'
         },
         {
-          title: 'LinkedIn',
-          text: 'Следите за нами в LinkedIn'
+          title: 'Phone',
+          text: '+375297345682'
         },
         {
-          title: 'GitHub',
-          text: 'Посмотрите наш GitHub'
+          title: 'Telegram',
+          text: '@vikigolubeva'
         },
         {
           title: 'Поддержка',
@@ -683,7 +693,17 @@ export const translations = {
       password: 'Пароль',
       login: 'Вход',
       loginError: 'Неверное имя пользователя или пароль',
-      loggingIn: 'Вход...'
+      loggingIn: 'Вход...',
+      apiUrl: 'API URL',
+      apiUrlPlaceholder: 'http://localhost:9001',
+      rememberMe: 'Запомнить меня',
+      proxyWarning: 'Используется прокси — задайте VITE_API_PROXY в .env',
+      selectServer: 'Выберите сохранённый сервер',
+      noSavedServers: 'Сохранённых серверов пока нет',
+      viewServerAddress: 'Показать адрес сервера',
+      hideServerAddress: 'Скрыть адрес сервера',
+      serverPanelTitle: 'Настройки подключения',
+      serverPanelSubtitle: 'Обновите или используйте сохранённый адрес API'
     },
     // Common
     common: {

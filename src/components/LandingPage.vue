@@ -269,7 +269,12 @@ export default {
       window.scrollTo({ top: 0, behavior: 'smooth' })
     },
     getContactHref(index) {
-      const hrefs = ['mailto:contact@WikiAi.com', 'https://linkedin.com', 'https://github.com', '/index.html']
+      const hrefs = [
+        'mailto:info.wikiai@gmail.com',  // Email
+        'tel:+375297345682',            // Phone
+        'https://t.me/vikigolubeva',    // Telegram
+        '/index.html'                    // Support
+      ]
       return hrefs[index] || '#'
     },
     getContactTarget(index) {
