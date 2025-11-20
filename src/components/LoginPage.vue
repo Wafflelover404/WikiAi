@@ -2,33 +2,41 @@
   <div class="login-page" :class="{ 'dark-mode': isDark }">
     <AnimatedBackground class="background" :dark-mode="isDark" />
     <div class="login-container">
-      <!-- Theme toggle control -->
-      <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
-        <span v-if="!isDark">🌙</span>
-        <span v-else>☀️</span>
+      <button
+        class="home-button-icon"
+        type="button"
+        @click="goToLanding"
+        aria-label="Go to home"
+      >
+        🏠
       </button>
+      <!-- Top controls: language + theme -->
+      <div class="top-controls">
+        <button
+          class="lang-toggle"
+          type="button"
+          @click="handleLanguageToggle"
+          :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`"
+          aria-label="Language selector"
+        >
+          <span v-if="language === 'en'">🇷🇺</span>
+          <span v-else>🇬🇧</span>
+        </button>
+        <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
+          <span v-if="!isDark">🌙</span>
+          <span v-else>☀️</span>
+        </button>
+      </div>
       <div class="login-box" v-motion-slide-visible-once-bottom>
-        <h2>Login</h2>
+        <h2>{{ t.login.title }}</h2>
+        <p class="login-subtitle">{{ t.login.subtitle }}</p>
         <form @submit.prevent="handleLogin">
-          <div class="form-group" v-if="defaultServerUrl">
-            <label for="serverUrl">API URL</label>
-            <input 
-              id="serverUrl" 
-              v-model="serverUrl" 
-              type="text" 
-              placeholder="http://localhost:9001" 
-              required 
-            />
-            <small v-if="showProxyWarning" class="proxy-warning">
-              Using proxy - set VITE_API_PROXY in .env
-            </small>
-          </div>
           <div class="form-group">
-            <label for="username">Username</label>
+            <label for="username">{{ t.login.username }}</label>
             <input id="username" v-model="username" type="text" required />
           </div>
           <div class="form-group password-group">
-            <label for="password">Password</label>
+            <label for="password">{{ t.login.password }}</label>
             <div class="password-input-wrapper">
               <input 
                 id="password" 
@@ -51,11 +59,11 @@
             <label class="checkbox-label">
               <input type="checkbox" v-model="rememberMe" />
               <span class="checkmark"></span>
-              Remember Me
+              {{ t.login.rememberMe }}
             </label>
           </div>
           <button type="submit" :disabled="loading" v-motion-fade-visible-once>
-            <span v-if="!loading">Login</span>
+            <span v-if="!loading">{{ t.login.login }}</span>
             <span v-else class="loading-spinner"></span>
           </button>
           <div v-if="error || success" 
@@ -65,20 +73,106 @@
           </div>
         </form>
       </div>
+      <div class="server-panel">
+        <div class="server-panel-header">
+          <div class="server-panel-text">
+            <span class="server-panel-title">{{ t.login.serverPanelTitle }}</span>
+            <span class="server-panel-subtitle">{{ t.login.serverPanelSubtitle }}</span>
+          </div>
+          <button 
+            type="button" 
+            class="server-panel-toggle"
+            @click="toggleServerSection"
+            :aria-expanded="showServerSection"
+          >
+            <span>{{ showServerSection ? t.login.hideServerAddress : t.login.viewServerAddress }}</span>
+            <span :class="['arrow', { open: showServerSection }]">▾</span>
+          </button>
+        </div>
+        <transition name="server-slide">
+          <div class="server-panel-content" v-show="showServerSection">
+            <div class="form-group">
+              <label for="serverUrl">{{ t.login.apiUrl }}</label>
+              <div class="server-input-wrapper" ref="serverSelector">
+                <input 
+                  id="serverUrl" 
+                  v-model="serverUrl" 
+                  type="text" 
+                  :placeholder="t.login.apiUrlPlaceholder" 
+                  required 
+                />
+                <button
+                  type="button"
+                  class="server-dropdown-toggle"
+                  @click.stop="toggleServerDropdown"
+                  :aria-expanded="serverDropdownOpen"
+                  aria-haspopup="listbox"
+                  :disabled="!serverOptions.length"
+                  :title="serverOptions.length ? t.login.selectServer : t.login.noSavedServers"
+                >
+                  <span v-if="serverDropdownOpen">▴</span>
+                  <span v-else>▾</span>
+                </button>
+                <ul 
+                  v-if="serverDropdownOpen && serverOptions.length" 
+                  class="server-options" 
+                  role="listbox"
+                  @click.stop
+                >
+                  <li v-for="option in serverOptions" :key="option">
+                    <button 
+                      type="button" 
+                      @click="selectServerOption(option)"
+                      :class="{ active: serverUrl === option }"
+                    >
+                      {{ option }}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              <small v-if="showProxyWarning" class="proxy-warning">
+                {{ t.login.proxyWarning }}
+              </small>
+            </div>
+          </div>
+        </transition>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import AnimatedBackground from './AnimatedBackground.vue';
+import { useI18n } from '../i18n.js';
 
 export default {
   name: 'LoginPage',
   components: { AnimatedBackground },
+  props: {
+    language: {
+      type: String,
+      default: 'en'
+    }
+  },
   data() {
     const defaultServerUrl = import.meta.env.VITE_API_URL?.trim() || import.meta.env.VITE_API_PROXY || '';
+    const envOptions = (import.meta.env.VITE_API_URL_OPTIONS || '')
+      .split(',')
+      .map(url => url.trim())
+      .filter(Boolean);
+
+    let storedOptions = [];
+    try {
+      const raw = typeof localStorage !== 'undefined' ? localStorage.getItem('serverUrlOptions') : null;
+      storedOptions = raw ? JSON.parse(raw) : [];
+    } catch (e) {
+      storedOptions = [];
+    }
+
+    const uniqueServerOptions = Array.from(new Set([defaultServerUrl, ...envOptions, ...storedOptions].filter(Boolean)));
 
     return {
+      defaultServerUrl,
       serverUrl: defaultServerUrl,
       username: '',
       password: '',
@@ -88,8 +182,16 @@ export default {
       success: '',
       showPassword: false,
       showProxyWarning: !!import.meta.env.VITE_API_PROXY,
-      isDark: true
+      isDark: true,
+      serverOptions: uniqueServerOptions,
+      serverDropdownOpen: false,
+      showServerSection: false
     };
+  },
+  computed: {
+    t() {
+      return useI18n(this.language);
+    }
   },
   mounted() {
     // Initialize theme on login page (dark by default)
@@ -115,8 +217,20 @@ export default {
     }
 
     this.showProxyWarning = !!import.meta.env.VITE_API_PROXY;
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('click', this.handleGlobalClick);
+    }
+  },
+  beforeUnmount() {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('click', this.handleGlobalClick);
+    }
   },
   methods: {
+    goToLanding() {
+      window.location.href = '/landing';
+    },
     toggleTheme() {
       this.isDark = !this.isDark;
       document.body.classList.toggle('dark-mode', this.isDark);
@@ -124,6 +238,53 @@ export default {
         localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
       } catch (e) { /* ignore */ }
       this.$emit('theme-changed', this.isDark);
+    },
+    toggleServerDropdown() {
+      if (!this.serverOptions.length) return;
+      this.serverDropdownOpen = !this.serverDropdownOpen;
+    },
+    toggleServerSection() {
+      this.showServerSection = !this.showServerSection;
+      if (!this.showServerSection) {
+        this.serverDropdownOpen = false;
+      }
+    },
+    selectServerOption(option) {
+      this.serverUrl = option;
+      this.serverDropdownOpen = false;
+    },
+    handleGlobalClick(event) {
+      if (!this.serverDropdownOpen) {
+        return;
+      }
+      const selector = this.$refs.serverSelector;
+      if (selector && !selector.contains(event.target)) {
+        this.serverDropdownOpen = false;
+      }
+    },
+    persistServerOption(url) {
+      if (!url) return;
+      if (!this.serverOptions.includes(url)) {
+        this.serverOptions.push(url);
+      }
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('serverUrlOptions', JSON.stringify(this.serverOptions));
+        }
+      } catch (e) { /* ignore */ }
+    },
+    handleLanguageToggle() {
+      const nextLang = this.language === 'en' ? 'ru' : 'en';
+
+      if (this.$root && typeof this.$root.setLanguage === 'function') {
+        this.$root.setLanguage(nextLang);
+      } else {
+        try {
+          localStorage.setItem('language', nextLang);
+          document.documentElement.lang = nextLang;
+        } catch (e) { /* ignore */ }
+        this.$emit('language-changed', nextLang);
+      }
     },
     togglePasswordVisibility() {
       this.showPassword = !this.showPassword;
@@ -149,6 +310,7 @@ export default {
         }
 
         this.$root.serverUrl = cleanUrl;
+        this.persistServerOption(cleanUrl);
 
         const { login } = await import('../api.js');
         const response = await login({
@@ -217,20 +379,89 @@ export default {
 </script>
 
 <style scoped>
-.theme-toggle {
+.top-controls {
   position: absolute;
   top: 14px;
   right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 2;
+}
+
+.theme-toggle,
+.lang-toggle {
   background: none;
   border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 999px;
-  width: 40px;
-  height: 40px;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.lang-toggle span {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.theme-toggle:hover,
+.lang-toggle:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+::deep(.dark-mode) .theme-toggle,
+::deep(.dark-mode) .lang-toggle {
+  border-color: rgba(255,255,255,0.2);
+  color: #e0e0e0;
+}
+
+::deep(.dark-mode) .theme-toggle:hover,
+::deep(.dark-mode) .lang-toggle:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.home-button-icon {
+  position: absolute;
+  top: 14px;
+  left: 20px;
+  background: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  transition: background 0.2s ease, border-color 0.2s ease;
   z-index: 2;
+}
+
+.home-button-icon:hover {
+  background: rgba(0,0,0,0.05);
+}
+
+::deep(.dark-mode) .home-button-icon {
+  border-color: rgba(255,255,255,0.2);
+  color: #e0e0e0;
+}
+
+::deep(.dark-mode) .home-button-icon:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.theme-toggle {
+  position: static;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
 }
 :deep(.dark-mode) .theme-toggle {
   border-color: rgba(255,255,255,0.2);
@@ -318,8 +549,228 @@ h2 {
   color: #e0e0e0;
 }
 
+.login-subtitle {
+  text-align: center;
+  margin-top: -12px;
+  margin-bottom: 32px;
+  color: #666;
+  font-size: 0.95rem;
+}
+
+:deep(.dark-mode) .login-subtitle {
+  color: #b5b8bd;
+}
+
 .form-group {
   margin-bottom: 24px;
+}
+
+.server-panel {
+  margin-top: 24px;
+  padding: 20px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+  position: relative;
+  overflow: visible;
+  z-index: 10;
+}
+
+:deep(.dark-mode) .server-panel {
+  background: rgba(20,22,25,0.9);
+  border-color: rgba(255,255,255,0.08);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+}
+
+
+.server-panel-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.server-panel-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.server-panel-title {
+  font-weight: 700;
+  color: #0f2238;
+}
+
+.server-panel-subtitle {
+  font-size: 0.85rem;
+  color: rgba(15,34,56,0.7);
+}
+
+.server-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,0.1);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  color: #0f2238;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.server-panel-toggle .arrow {
+  transition: transform 0.2s ease;
+}
+
+.server-panel-toggle .arrow.open {
+  transform: rotate(180deg);
+}
+
+.server-panel-toggle:hover {
+  border-color: rgba(0,120,212,0.4);
+  background: rgba(0,120,212,0.08);
+}
+
+:deep(.dark-mode) .server-panel-title {
+  color: #f3f4f6;
+}
+
+:deep(.dark-mode) .server-panel-subtitle {
+  color: rgba(255,255,255,0.6);
+}
+
+:deep(.dark-mode) .server-panel-toggle {
+  border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.05);
+  color: #e0e0e0;
+}
+
+:deep(.dark-mode) .server-panel-toggle:hover {
+  border-color: rgba(255,255,255,0.3);
+  background: rgba(255,255,255,0.1);
+}
+
+.server-panel-content {
+  margin-top: 18px;
+  overflow: visible;
+}
+
+.server-slide-enter-active,
+.server-slide-leave-active {
+  transition: all 0.25s ease;
+}
+
+.server-slide-enter-from,
+.server-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-6px);
+}
+
+.server-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.server-input-wrapper input {
+  padding-right: 44px;
+}
+
+.server-dropdown-toggle {
+  position: absolute;
+  right: 8px;
+  background: none;
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.server-dropdown-toggle:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.server-dropdown-toggle:hover:not(:disabled) {
+  background: rgba(0,0,0,0.05);
+}
+
+.server-options {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+  max-height: 200px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  z-index: 500;
+}
+
+.server-options li {
+  margin: 0;
+  margin-bottom: 5px;
+}
+
+.server-options button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: inherit;
+}
+
+.server-options button:hover {
+  background: rgba(0, 120, 212, 0.1);
+}
+
+.server-options button.active {
+  background: #0078d4;
+  color: #fff;
+}
+
+:deep(.dark-mode) .server-dropdown-toggle {
+  border-color: rgba(255,255,255,0.2);
+  color: #e0e0e0;
+}
+
+:deep(.dark-mode) .server-dropdown-toggle:hover:not(:disabled) {
+  background: rgba(255,255,255,0.08);
+}
+
+:deep(.dark-mode) .server-options {
+  background: #1f2226;
+  border-color: #34363a;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+:deep(.dark-mode) .server-options button:hover {
+  background: rgba(0, 120, 212, 0.25);
+}
+
+:deep(.dark-mode) .server-options button.active {
+  background: #0078d4;
+  color: #fff;
 }
 
 label {
