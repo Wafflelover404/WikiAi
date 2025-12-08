@@ -5,6 +5,8 @@
       <div class="loading-spinner"></div>
       <p>{{ t.nav.loadingSession }}</p>
     </div>
+    <!-- Landing Page (public, no authentication required) -->
+    <LandingPage v-else-if="$route.path === '/' && !token" :language="language" @navigate-to="navigateTo" />
     <!-- Login Screen (only show after token check is complete) -->
     <LoginPage v-else-if="!token" :language="language" @login-success="onLoginSuccess" @theme-changed="applyTheme" />
     <!-- Main App -->
@@ -327,6 +329,7 @@ import FileTabs from './components/FileTabs.vue';
 import SearchSidebar from './components/SearchSidebar.vue';
 import SettingsModal from './components/SettingsModal.vue';
 import LoginPage from './components/LoginPage.vue';
+import LandingPage from './components/LandingPage.vue';
 import AdminDashboard from './components/AdminDashboard.vue';
 import HomePage from './components/HomePage.vue';
 import SearchPage from './components/SearchPage.vue';
@@ -349,6 +352,7 @@ export default {
     SearchSidebar,
     SettingsModal,
     LoginPage,
+    LandingPage,
     AdminDashboard,
     HomePage,
     SearchPage,

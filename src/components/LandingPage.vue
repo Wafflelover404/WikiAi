@@ -1,5 +1,8 @@
 <template>
   <div class="landing-page" :class="{ 'dark-mode': darkMode }">
+    <!-- Scroll Progress Bar -->
+    <div class="scroll-progress" :style="{ width: scrollProgress + '%' }"></div>
+
     <!-- Animated Background -->
     <div class="animated-bg">
       <div class="blob blob-1"></div>
@@ -11,7 +14,9 @@
     <header class="landing-header">
       <div class="header-container">
         <div class="logo-section">
-          <div class="logo-icon">✨</div>
+          <div class="logo-icon">
+            <SvgIcons icon="sparkles" />
+          </div>
           <div class="logo-text">
             <h1>WikiAi</h1>
             <p class="tagline">{{ t.header.tagline }}</p>
@@ -34,8 +39,8 @@
               {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
             </button>
             <button class="theme-toggle" @click="toggleDarkMode" :title="darkMode ? t.header.lightMode : t.header.darkMode">
-              <span v-if="!darkMode">🌙</span>
-              <span v-else>☀️</span>
+              <SvgIcons v-if="!darkMode" icon="moon" />
+              <SvgIcons v-else icon="sun" />
             </button>
             <a href="/index.html" class="btn-primary">{{ t.header.getStarted }}</a>
           </div>
@@ -71,16 +76,22 @@
           </div>
         </div>
         <div class="hero-visual">
-          <div class="floating-card card-1">
-            <div class="card-icon">📚</div>
+          <div class="floating-card card-1" data-scroll>
+            <div class="card-icon">
+              <SvgIcons icon="books" />
+            </div>
             <p>{{ t.heroCards.knowledgeBase }}</p>
           </div>
-          <div class="floating-card card-2">
-            <div class="card-icon">🔍</div>
+          <div class="floating-card card-2" data-scroll>
+            <div class="card-icon">
+              <SvgIcons icon="search" />
+            </div>
             <p>{{ t.heroCards.smartSearch }}</p>
           </div>
-          <div class="floating-card card-3">
-            <div class="card-icon">🤖</div>
+          <div class="floating-card card-3" data-scroll>
+            <div class="card-icon">
+              <SvgIcons icon="robot" />
+            </div>
             <p>{{ t.heroCards.aiInsights }}</p>
           </div>
           <svg class="circle-svg" viewBox="0 0 200 200">
@@ -106,9 +117,11 @@
         </div>
         
         <div class="features-grid">
-          <div class="feature-card" v-for="(feature, index) in t.product.features" :key="index" :style="{ '--index': index }">
+          <div class="feature-card" v-for="(feature, index) in t.product.features" :key="index" :style="{ '--index': index }" data-scroll>
             <div class="feature-bg"></div>
-            <div class="feature-icon">{{ ['📚', '🔍', '🤖', '📊', '🔐', '⚡'][index] }}</div>
+            <div class="feature-icon">
+              <SvgIcons :icon="['books', 'search', 'robot', 'chart', 'lock', 'lightning'][index]" />
+            </div>
             <h3>{{ feature.title }}</h3>
             <p>{{ feature.description }}</p>
             <div class="feature-arrow">→</div>
@@ -126,8 +139,10 @@
         </div>
         
         <div class="team-grid">
-          <div class="team-card" v-for="(member, index) in t.team.members" :key="index" :style="{ '--delay': index * 0.1 + 's' }">
-            <div class="team-avatar">{{ ['🧑‍💻', '👩‍💻', '🧑‍💼'][index] }}</div>
+          <div class="team-card" v-for="(member, index) in t.team.members" :key="index" :style="{ '--delay': index * 0.1 + 's' }" data-scroll>
+            <div class="team-avatar">
+              <SvgIcons :icon="['user', 'user', 'user'][index]" />
+            </div>
             <h3>{{ member.name }}</h3>
             <p class="role">{{ member.role }}</p>
             <p class="bio">{{ member.bio }}</p>
@@ -145,7 +160,7 @@
         </div>
         
         <div class="goals-grid">
-          <div class="goal-card" v-for="(goal, index) in t.goals.items" :key="index" :style="{ '--delay': index * 0.15 + 's' }">
+          <div class="goal-card" v-for="(goal, index) in t.goals.items" :key="index" :style="{ '--delay': index * 0.15 + 's' }" data-scroll>
             <div class="goal-number">{{ String(index + 1).padStart(2, '0') }}</div>
             <h3>{{ goal.title }}</h3>
             <p>{{ goal.description }}</p>
@@ -163,8 +178,10 @@
         </div>
         
         <div class="contact-grid">
-          <div class="contact-card" v-for="(contact, index) in t.contact.items" :key="index" :style="{ '--delay': index * 0.1 + 's' }">
-            <div class="contact-icon">{{ ['📧', '💼', '🐙', '💬'][index] }}</div>
+          <div class="contact-card" v-for="(contact, index) in t.contact.items" :key="index" :style="{ '--delay': index * 0.1 + 's' }" data-scroll>
+            <div class="contact-icon">
+              <SvgIcons :icon="['mail', 'briefcase', 'telegram', 'code'][index]" />
+            </div>
             <h3>{{ contact.title }}</h3>
             <a :href="getContactHref(index)" :target="getContactTarget(index)">{{ contact.text }}</a>
           </div>
@@ -184,7 +201,9 @@
             <a href="#contact">{{ t.footer.contact }}</a>
           </div>
         </div>
-        <button class="scroll-to-top" @click="scrollToTop" v-if="showScrollTop">↑</button>
+        <button class="scroll-to-top" @click="scrollToTop" v-if="showScrollTop">
+          <SvgIcons icon="arrowUp" />
+        </button>
       </div>
     </footer>
   </div>
@@ -192,16 +211,22 @@
 
 <script>
 import { translations } from '../i18n.js'
+import SvgIcons from './SvgIcons.vue'
 
 export default {
   name: 'LandingPage',
+  components: {
+    SvgIcons
+  },
   data() {
     return {
       darkMode: false,
       showScrollTop: false,
       language: 'en',
       isMobileMenuOpen: false,
-      isMobile: window.innerWidth <= 768
+      isMobile: window.innerWidth <= 768,
+      scrollProgress: 0,
+      scrollElements: []
     }
   },
   computed: {
@@ -225,6 +250,12 @@ export default {
     // Set HTML lang attribute
     document.documentElement.lang = language
     
+    // Setup scroll elements for intersection observer
+    this.$nextTick(() => {
+      this.scrollElements = document.querySelectorAll('[data-scroll]')
+      this.setupIntersectionObserver()
+    })
+    
     window.addEventListener('scroll', this.handleScroll)
     window.addEventListener('resize', this.handleResize)
   },
@@ -238,6 +269,8 @@ export default {
       this.darkMode = !this.darkMode
       localStorage.setItem('darkMode', this.darkMode)
       document.documentElement.classList.toggle('dark-mode')
+      // Notify icon components about dark mode change
+      window.dispatchEvent(new Event('darkModeChange'))
     },
     toggleLanguage() {
       this.language = this.language === 'en' ? 'ru' : 'en'
@@ -264,6 +297,11 @@ export default {
     },
     handleScroll() {
       this.showScrollTop = window.scrollY > 300
+      
+      // Calculate scroll progress
+      const windowHeight = document.documentElement.scrollHeight - window.innerHeight
+      const scrolled = (window.scrollY / windowHeight) * 100
+      this.scrollProgress = Math.min(scrolled, 100)
     },
     scrollToTop() {
       window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -279,6 +317,25 @@ export default {
     },
     getContactTarget(index) {
       return index < 2 ? '_blank' : ''
+    },
+    setupIntersectionObserver() {
+      const options = {
+        threshold: 0.1,
+        rootMargin: '0px 0px -100px 0px'
+      }
+      
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('scroll-visible')
+            observer.unobserve(entry.target)
+          }
+        })
+      }, options)
+      
+      this.scrollElements.forEach((el) => {
+        observer.observe(el)
+      })
     }
   }
 }
@@ -289,6 +346,18 @@ export default {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+}
+
+/* Scroll Progress Bar */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4a90e2, #66b3ff, #4a90e2);
+  z-index: 2000;
+  transition: width 0.1s ease-out;
+  box-shadow: 0 0 8px rgba(74, 144, 226, 0.5);
 }
 
 .landing-page {
@@ -302,6 +371,7 @@ export default {
   display: block;
   visibility: visible;
   opacity: 1;
+  scroll-behavior: smooth;
 }
 
 .dark-mode .landing-page {
@@ -415,6 +485,10 @@ export default {
 .logo-icon {
   font-size: 28px;
   animation: spin 3s linear infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a90e2;
 }
 
 @keyframes spin {
@@ -497,6 +571,14 @@ export default {
   cursor: pointer;
   transition: transform 0.3s ease;
   padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a90e2;
+}
+
+.dark-mode .theme-toggle {
+  color: #66b3ff;
 }
 
 .theme-toggle:hover {
@@ -736,6 +818,15 @@ export default {
 
 .card-icon {
   font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a90e2;
+  min-height: 32px;
+}
+
+.dark-mode .card-icon {
+  color: #66b3ff;
 }
 
 .floating-card p {
@@ -844,10 +935,18 @@ export default {
 .feature-icon {
   font-size: 40px;
   margin-bottom: 16px;
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 0.3s ease;
   z-index: 1;
   position: relative;
+  color: #4a90e2;
+  min-height: 40px;
+}
+
+.dark-mode .feature-icon {
+  color: #66b3ff;
 }
 
 .feature-card:hover .feature-icon {
@@ -899,6 +998,65 @@ export default {
   box-shadow: 0 12px 24px rgba(74, 144, 226, 0.15);
 }
 
+/* Scroll Reveal Animation */
+[data-scroll] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+[data-scroll].scroll-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Staggered Animation for Cards */
+.floating-card[data-scroll],
+.feature-card[data-scroll],
+.team-card[data-scroll],
+.goal-card[data-scroll],
+.contact-card[data-scroll] {
+  transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.floating-card[data-scroll]:nth-child(1),
+.feature-card[data-scroll]:nth-child(1),
+.team-card[data-scroll]:nth-child(1),
+.goal-card[data-scroll]:nth-child(1),
+.contact-card[data-scroll]:nth-child(1) {
+  transition-delay: 0s;
+}
+
+.floating-card[data-scroll]:nth-child(2),
+.feature-card[data-scroll]:nth-child(2),
+.team-card[data-scroll]:nth-child(2),
+.goal-card[data-scroll]:nth-child(2),
+.contact-card[data-scroll]:nth-child(2) {
+  transition-delay: 0.1s;
+}
+
+.floating-card[data-scroll]:nth-child(3),
+.feature-card[data-scroll]:nth-child(3),
+.team-card[data-scroll]:nth-child(3),
+.goal-card[data-scroll]:nth-child(3),
+.contact-card[data-scroll]:nth-child(3) {
+  transition-delay: 0.2s;
+}
+
+.feature-card[data-scroll]:nth-child(4),
+.goal-card[data-scroll]:nth-child(4),
+.contact-card[data-scroll]:nth-child(4) {
+  transition-delay: 0.3s;
+}
+
+.feature-card[data-scroll]:nth-child(5) {
+  transition-delay: 0.4s;
+}
+
+.feature-card[data-scroll]:nth-child(6) {
+  transition-delay: 0.5s;
+}
+
 /* Team Section */
 .team-section {
   max-width: 1200px;
@@ -945,8 +1103,17 @@ export default {
 .team-avatar {
   font-size: 64px;
   margin-bottom: 16px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 0.3s ease;
+  color: #4a90e2;
+  min-height: 64px;
+  min-width: 64px;
+}
+
+.dark-mode .team-avatar {
+  color: #66b3ff;
 }
 
 .team-card:hover .team-avatar {
@@ -1109,8 +1276,17 @@ export default {
 .contact-icon {
   font-size: 40px;
   margin-bottom: 16px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: transform 0.3s ease;
+  color: #4a90e2;
+  min-height: 40px;
+  min-width: 40px;
+}
+
+.dark-mode .contact-icon {
+  color: #66b3ff;
 }
 
 .contact-card:hover .contact-icon {

@@ -1,5 +1,5 @@
 import { createApp } from 'vue'
 import App from './App.vue'
+import router from './router'
 
-// mount with explicit initialView for the home page
-createApp(App, { initialView: 'home' }).mount('#app')
+createApp(App).use(router).mount('#app')
