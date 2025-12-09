@@ -42,8 +42,8 @@
               <SvgIcons v-if="!darkMode" icon="moon" />
               <SvgIcons v-else icon="sun" />
             </button>
-            <a href="/index.html" class="btn-primary">{{ t.header.getStarted }}</a>
-          </div>
+            <router-link to="/app" class="btn-primary">{{ t.header.getStarted }}</router-link>
+          </div>                                  
         </nav>
       </div>
     </header>
@@ -57,7 +57,7 @@
           </h2>
           <p class="hero-subtitle">{{ t.hero.subtitle }}</p>
           <div class="hero-buttons">
-            <a href="/index.html" class="btn-large btn-primary">{{ t.hero.launchApp }}</a>
+            <router-link to="/app" class="btn-large btn-primary">{{ t.hero.launchApp }}</router-link>
             <a href="#product" class="btn-large btn-secondary">{{ t.hero.learnMore }}</a>
           </div>
           <div class="hero-stats">

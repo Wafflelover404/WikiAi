@@ -1,5 +1,5 @@
 <template>
-  <div class="svg-icons" :class="{ 'dark-mode': isDarkMode }">
+  <div class="svg-icon" :class="`icon-${icon}`">
     <img 
       :src="getIconPath()" 
       :alt="icon"
@@ -21,6 +21,7 @@ export default {
   data() {
     return {
       isDarkMode: false,
+      observer: null,
       iconMap: {
         'sparkles': 'sparkle-circle.svg',     // sparkle circle for logo
         'books': 'book-bookmark.svg',         // book with bookmark for knowledge
@@ -38,57 +39,84 @@ export default {
         'github': 'github.svg',               // github logo
         'arrowUp': 'arrow-to-top-left.svg',   // arrow up for back to top
         'moon': 'moon-sleep.svg',             // moon for dark mode
-        'sun': 'sun-2.svg'                    // sun for light mode
+        'sun': 'sun-2.svg',                   // sun for light mode
+        'home': 'home-2.svg',                 // home icon
+        'eye': 'eye-scan.svg',                // eye for show password
+        'eye-closed': 'eye-closed.svg',       // closed eye for hide password
+        'russia': 'translation-2.svg',        // translation icon for Russian
+        'uk': 'translation.svg'               // translation icon for English
       }
     }
   },
   computed: {
     iconStyle() {
+      if (this.isDarkMode) {
+        return {
+          filter: 'invert(1) brightness(1.8) saturate(0.9)',
+          opacity: '0.95'
+        }
+      }
       return {
-        filter: this.isDarkMode 
-          ? 'brightness(200%) saturate(100%)' 
-          : 'brightness(0) saturate(100%)',
-        opacity: this.isDarkMode ? '0.95' : '0.9'
+        filter: 'invert(0) brightness(1) saturate(1)',
+        opacity: '0.9'
       }
     }
   },
-  mounted() {
-    this.checkDarkMode()
-    window.addEventListener('darkModeChange', this.checkDarkMode)
-  },
-  beforeUnmount() {
-    window.removeEventListener('darkModeChange', this.checkDarkMode)
-  },
   methods: {
     getIconPath() {
-      return `/solar-linear-icons/${this.iconMap[this.icon] || 'bell.svg'}`
+      return `/solar-linear-icons/${this.iconMap[this.icon] || 'sparkle-circle.svg'}`
     },
-    checkDarkMode() {
+    updateDarkMode() {
       this.isDarkMode = document.documentElement.classList.contains('dark-mode')
+    }
+  },
+  mounted() {
+    this.updateDarkMode()
+    // Listen for theme changes
+    this.observer = new MutationObserver(this.updateDarkMode)
+    this.observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+  },
+  beforeUnmount() {
+    if (this.observer) {
+      this.observer.disconnect()
     }
   }
 }
 </script>
 
 <style scoped>
-.svg-icons {
+.svg-icon {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  width: 1em;
+  height: 1em;
+  line-height: 1;
+  background-color: transparent;
 }
 
 .icon {
-  width: 1em;
-  height: 1em;
-  display: inline-block;
-  vertical-align: -0.125em;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
   transition: filter 0.3s ease, opacity 0.3s ease;
+  background-color: transparent !important;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
-@media (prefers-color-scheme: dark) {
-  .icon {
-    filter: brightness(200%) saturate(100%);
-    opacity: 0.95;
-  }
+/* Ensure proper rendering in all browsers */
+.icon {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: currentColor;
+}
+
+/* Dark mode overrides */
+.dark-mode .icon {
+  filter: brightness(1.8) saturate(0.9);
+  opacity: 0.95;
 }
 </style>

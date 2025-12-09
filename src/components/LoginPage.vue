@@ -8,23 +8,20 @@
         @click="goToLanding"
         aria-label="Go to home"
       >
-        🏠
+        <SvgIcons icon="home" />
       </button>
       <!-- Top controls: language + theme -->
       <div class="top-controls">
-        <button
-          class="lang-toggle"
-          type="button"
-          @click="handleLanguageToggle"
+        <button 
+          class="lang-toggle" 
+          @click="toggleLanguage" 
           :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`"
           aria-label="Language selector"
         >
-          <span v-if="language === 'en'">🇷🇺</span>
-          <span v-else>🇬🇧</span>
+          {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
         </button>
         <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
-          <span v-if="!isDark">🌙</span>
-          <span v-else>☀️</span>
+          <SvgIcons :icon="isDark ? 'sun' : 'moon'" />
         </button>
       </div>
       <div class="login-box" v-motion-slide-visible-once-bottom>
@@ -50,8 +47,7 @@
                 @click="togglePasswordVisibility"
                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
               >
-                <span v-if="showPassword">👁️</span>
-                <span v-else>🙈</span>
+                <SvgIcons :icon="showPassword ? 'eye' : 'eye-closed'" />
               </button>
             </div>
           </div>
@@ -143,11 +139,12 @@
 
 <script>
 import AnimatedBackground from './AnimatedBackground.vue';
+import SvgIcons from './SvgIcons.vue';
 import { useI18n } from '../i18n.js';
 
 export default {
   name: 'LoginPage',
-  components: { AnimatedBackground },
+  components: { AnimatedBackground, SvgIcons },
   props: {
     language: {
       type: String,
@@ -155,6 +152,9 @@ export default {
     }
   },
   data() {
+    const language = localStorage.getItem('language') || 'en';
+    document.documentElement.lang = language;
+    
     const defaultServerUrl = import.meta.env.VITE_API_URL?.trim() || import.meta.env.VITE_API_PROXY || '';
     const envOptions = (import.meta.env.VITE_API_URL_OPTIONS || '')
       .split(',')
@@ -183,6 +183,7 @@ export default {
       showPassword: false,
       showProxyWarning: !!import.meta.env.VITE_API_PROXY,
       isDark: true,
+      language: language,
       serverOptions: uniqueServerOptions,
       serverDropdownOpen: false,
       showServerSection: false
@@ -233,10 +234,15 @@ export default {
     },
     toggleTheme() {
       this.isDark = !this.isDark;
-      document.body.classList.toggle('dark-mode', this.isDark);
-      try {
-        localStorage.setItem('theme', this.isDark ? 'dark' : 'light');
-      } catch (e) { /* ignore */ }
+      if (this.isDark) {
+        document.documentElement.classList.add('dark-mode');
+        localStorage.setItem('theme', 'dark');
+      } else {
+        document.documentElement.classList.remove('dark-mode');
+        localStorage.setItem('theme', 'light');
+      }
+      // Dispatch event for other components
+      window.dispatchEvent(new CustomEvent('themeChange', { detail: { isDark: this.isDark } }));
       this.$emit('theme-changed', this.isDark);
     },
     toggleServerDropdown() {
@@ -273,18 +279,12 @@ export default {
         }
       } catch (e) { /* ignore */ }
     },
-    handleLanguageToggle() {
-      const nextLang = this.language === 'en' ? 'ru' : 'en';
-
-      if (this.$root && typeof this.$root.setLanguage === 'function') {
-        this.$root.setLanguage(nextLang);
-      } else {
-        try {
-          localStorage.setItem('language', nextLang);
-          document.documentElement.lang = nextLang;
-        } catch (e) { /* ignore */ }
-        this.$emit('language-changed', nextLang);
-      }
+    toggleLanguage() {
+      this.language = this.language === 'en' ? 'ru' : 'en';
+      localStorage.setItem('language', this.language);
+      document.documentElement.lang = this.language;
+      // Emit event to parent component if needed
+      this.$emit('update:language', this.language);
     },
     togglePasswordVisibility() {
       this.showPassword = !this.showPassword;
@@ -379,6 +379,70 @@ export default {
 </script>
 
 <style scoped>
+/* Icon specific styles */
+.svg-icon {
+  color: var(--icon-color);
+  transition: color 0.3s ease;
+}
+
+.home-button-icon .svg-icon {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.lang-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+}
+
+.lang-toggle:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.theme-toggle .svg-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.toggle-password .svg-icon {
+  width: 1.1rem;
+  height: 1.1rem;
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+/* Ensure all buttons with icons have proper alignment */
+button[class$="-icon"],
+button[class*="-icon "] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0.5rem;
+  cursor: pointer;
+  color: var(--text-color);
+  transition: all 0.3s ease;
+}
+
+button[class$="-icon"]:hover,
+button[class*="-icon "]:hover {
+  opacity: 0.8;
+}
+
 .top-controls {
   position: absolute;
   top: 14px;
