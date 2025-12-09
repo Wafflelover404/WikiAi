@@ -6,7 +6,11 @@
       <p>{{ t.nav.loadingSession }}</p>
     </div>
     <!-- Landing Page (public, no authentication required) -->
-    <LandingPage v-else-if="$route.path === '/' && !token" :language="language" @navigate-to="navigateTo" />
+    <LandingPage
+      v-else-if="$route.path === '/landing'"
+      :language="language"
+      @navigate-to="navigateTo"
+    />
     <!-- Login Screen (only show after token check is complete) -->
     <LoginPage v-else-if="!token" :language="language" @login-success="onLoginSuccess" @theme-changed="applyTheme" />
     <!-- Main App -->
