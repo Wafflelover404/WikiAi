@@ -22,22 +22,23 @@ export default {
     return {
       isDarkMode: false,
       iconMap: {
-        'sparkles': 'bell-bing.svg',          // notification bell
-        'books': 'clipboard-list.svg',         // clipboard with list (document/knowledge)
-        'search': 'code-scan.svg',            // code scan (search/analysis)
-        'robot': 'bomb-minimalistic.svg',     // bomb (unique/special)
-        'chart': 'align-vertical-spacing.svg', // spacing (data visualization)
-        'lock': 'archive-check.svg',           // archive with checkmark (secure)
-        'lightning': 'bottle.svg',             // bottle (unique visual)
-        'code': 'code-scan.svg',               // code scan
-        'user': 'buildings.svg',               // buildings (community/team)
-        'mail': 'clipboard-add.svg',           // clipboard add (communication)
-        'briefcase': 'buildings-2.svg',        // buildings variant (business)
-        'telegram': 'bell-off.svg',            // bell off (messaging)
-        'github': 'corkscrew.svg',             // corkscrew (tools)
-        'arrowUp': 'arrow-to-top-left.svg',   // arrow up-left
-        'moon': 'circle-top-up.svg',           // circle up (dark theme)
-        'sun': 'circle-bottom-down.svg'        // circle down (light theme)
+        'sparkles': 'sparkle-circle.svg',     // sparkle circle for logo
+        'books': 'book-bookmark.svg',         // book with bookmark for knowledge
+        'search': 'magnifer.svg',             // magnifying glass for search
+        'robot': 'cpu.svg',                   // CPU for AI features
+        'chart': 'chart-2.svg',               // chart for analytics
+        'lock': 'lock-keyhole.svg',           // lock for security
+        'lightning': 'bolt.svg',              // bolt for speed
+        'code': 'code-2.svg',                 // code symbol
+        'user': 'user-circle.svg',            // user circle for team
+        'mail': 'letter.svg',                 // letter for email
+        'briefcase': 'briefcase.svg',         // briefcase for business
+        'telegram': 'chat-round.svg',         // chat bubble for messaging
+        'phone': 'phone.svg',                 // phone for contact
+        'github': 'github.svg',               // github logo
+        'arrowUp': 'arrow-to-top-left.svg',   // arrow up for back to top
+        'moon': 'moon-sleep.svg',             // moon for dark mode
+        'sun': 'sun-2.svg'                    // sun for light mode
       }
     }
   },
