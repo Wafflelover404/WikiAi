@@ -230,7 +230,7 @@ export default {
   },
   methods: {
     goToLanding() {
-      window.location.href = '/landing';
+      this.$router.push('/');
     },
     toggleTheme() {
       this.isDark = !this.isDark;

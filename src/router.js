@@ -1,18 +1,37 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import LoginPage from './components/LoginPage.vue'
-import HomePage from './components/HomePage.vue'
-import LandingPage from './components/LandingPage.vue'
+
+const Empty = { template: '<div></div>' }
 
 const routes = [
   {
-    path: '/login',
-    name: 'Login',
-    component: LoginPage
+    path: '/',
+    name: 'LandingPage',
+    component: Empty
   },
   {
-    path: '/',
-    name: 'Home',
-    component: LandingPage
+    path: '/login',
+    name: 'Login',
+    component: Empty
+  },
+  {
+    path: '/app',
+    name: 'AppHome',
+    component: Empty
+  },
+  {
+    path: '/app/files',
+    name: 'AppFiles',
+    component: Empty
+  },
+  {
+    path: '/app/search',
+    name: 'AppSearch',
+    component: Empty
+  },
+  {
+    path: '/app/admin',
+    name: 'AppAdmin',
+    component: Empty
   }
 ]
 

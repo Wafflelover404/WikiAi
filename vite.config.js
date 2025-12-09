@@ -14,16 +14,6 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url))
     },
   },
-  build: {
-    rollupOptions: {
-      input: {
-        landing: resolve(__dirname, 'landing.html'),
-        main: resolve(__dirname, 'index.html'),
-        files: resolve(__dirname, 'files.html'),
-        search: resolve(__dirname, 'search.html')
-      }
-    }
-  },
   server: { 
     allowedHosts: ['wikiai.by']
   }

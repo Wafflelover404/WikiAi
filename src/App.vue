@@ -36,10 +36,10 @@
           <span class="sidebar-title">WikiAi</span>
         </div>
         <ul class="sidebar-tabs">
-          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="/">🏠 {{ t.nav.home }}</a></li>
-          <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="/files.html">📁 {{ t.nav.files }}</a></li>
-          <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="/search.html">🔍 {{ t.nav.search }}</a></li>
-          <li :class="{active: currentView === 'landing' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><a href="/landing.html">ℹ️ {{ t.nav.about }}</a></li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="#" @click.prevent="navigateTo('home')">🏠 {{ t.nav.home }}</a></li>
+          <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="#" @click.prevent="navigateTo('files')">📁 {{ t.nav.files }}</a></li>
+          <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="#" @click.prevent="navigateTo('search')">🔍 {{ t.nav.search }}</a></li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><router-link to="/">ℹ️ {{ t.nav.about }}</router-link></li>
           <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="validateTokenAndShowAdmin" tabindex="0" :aria-label="t.nav.admin"><a href="#" @click.prevent="validateTokenAndShowAdmin">🛠 {{ t.nav.admin }}</a></li>
         </ul>
         <div class="sidebar-bottom">
@@ -435,9 +435,9 @@ export default {
 
     // Setup theme change listener
     const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
-    if (mql) {
-      this._themeMql = mql;
-      this._onThemeChange = (e) => {
+      if (mql) {
+        this._themeMql = mql;
+        this._onThemeChange = (e) => {
         // only react if user hasn't explicitly chosen
         let explicit = null;
         try { explicit = localStorage.getItem('theme'); } catch (_) { explicit = null; }
@@ -446,12 +446,17 @@ export default {
           document.body.classList.toggle('dark-mode', this.darkMode);
         }
       };
-      if (mql.addEventListener) {
-        mql.addEventListener('change', this._onThemeChange);
-      } else if (mql.addListener) {
-        // Safari
-        mql.addListener(this._onThemeChange);
+        if (mql.addEventListener) {
+          mql.addEventListener('change', this._onThemeChange);
+        } else if (mql.addListener) {
+          // Safari
+          mql.addListener(this._onThemeChange);
+        }
       }
+
+    // Sync initial view with current route
+    if (this.$route && this.$route.path) {
+      this.syncViewWithRoute(this.$route.path);
     }
   },
   watch: {
@@ -472,6 +477,15 @@ export default {
             this.fileListInterval = null;
           }
         }
+      },
+      token(newVal) {
+        // If user becomes logged in while on root, go to main app
+        if (newVal && this.$router && this.$route && this.$route.path === '/') {
+          this.$router.push('/app');
+        }
+      },
+      '$route.path'(newPath) {
+        this.syncViewWithRoute(newPath);
       }
   },
   computed: {
@@ -624,6 +638,9 @@ export default {
         console.warn('[Login Success] ❌ Failed to store auth data:', e);
       }
       this.updateFiles();
+      if (this.$router) {
+        this.$router.push('/app');
+      }
     },
 
     async restoreTokenFromStorage() {
@@ -963,6 +980,37 @@ export default {
       if (view !== 'files') {
         this.activeTab = null;
       }
+
+      // Update URL to match selected view
+      if (this.$router) {
+        if (view === 'home') {
+          this.$router.push('/app');
+        } else if (view === 'files') {
+          this.$router.push('/app/files');
+        } else if (view === 'search') {
+          this.$router.push('/app/search');
+        }
+      }
+    },
+
+    syncViewWithRoute(path) {
+      if (!path) return;
+      if (path === '/' || path === '') {
+        // Public landing route; currentView is not used here because main app is not shown
+        this.showAdminDashboard = false;
+      } else if (path === '/app' || path === '/app/') {
+        this.currentView = 'home';
+        this.showAdminDashboard = false;
+      } else if (path.startsWith('/app/files')) {
+        this.currentView = 'files';
+        this.showAdminDashboard = false;
+      } else if (path.startsWith('/app/search')) {
+        this.currentView = 'search';
+        this.showAdminDashboard = false;
+      } else if (path.startsWith('/app/admin')) {
+        this.currentView = 'home';
+        this.showAdminDashboard = true;
+      }
     },
 
     toggleMobileMenu() {
@@ -1049,6 +1097,9 @@ export default {
         if (res && res.status === 'success' && res.response && res.response.is_admin) {
           this.showAdminDashboard = true;
           console.log('[Admin Check] ✅ Admin access granted!');
+          if (this.$router) {
+            this.$router.push('/app/admin');
+          }
         } else {
           console.warn('[Admin Check] ❌ Admin access denied - not an admin user');
         }
@@ -1059,6 +1110,9 @@ export default {
     },
     
     async openFileFromHome(fileOrFilename) {
+      if (this.$router) {
+        this.$router.push('/app/files');
+      }
       this.currentView = 'files';
       await this.handleMobileFileClick(fileOrFilename);
     },
