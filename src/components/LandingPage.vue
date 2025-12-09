@@ -180,7 +180,7 @@
         <div class="contact-grid">
           <div class="contact-card" v-for="(contact, index) in t.contact.items" :key="index" :style="{ '--delay': index * 0.1 + 's' }" data-scroll>
             <div class="contact-icon">
-              <SvgIcons :icon="['mail', 'briefcase', 'telegram', 'code'][index]" />
+              <SvgIcons :icon="['mail', 'phone', 'telegram', 'code'][index]" />
             </div>
             <h3>{{ contact.title }}</h3>
             <a :href="getContactHref(index)" :target="getContactTarget(index)">{{ contact.text }}</a>
