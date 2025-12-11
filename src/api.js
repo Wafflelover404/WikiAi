@@ -25,6 +25,85 @@ export async function checkAdminAccess({ serverUrl, token }) {
   });
 }
 
+// Create organization + admin (POST /organizations/create_with_admin)
+export async function createOrganizationWithAdmin({ serverUrl, organizationName, adminUsername, adminPassword }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/create_with_admin`,
+    method: 'POST',
+    data: {
+      organization_name: organizationName,
+      admin_username: adminUsername,
+      admin_password: adminPassword
+    }
+  });
+}
+
+// List organization memberships for current user
+export async function listMemberships({ serverUrl, token }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/memberships`,
+    method: 'GET',
+    token
+  });
+}
+
+// Switch active organization (returns refreshed token scoped to org)
+export async function switchOrganization({ serverUrl, token, organization_id, organization_slug }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/switch`,
+    method: 'POST',
+    token,
+    data: { organization_id, organization_slug }
+  });
+}
+
+// List members for admin/owner view
+export async function listMembers({ serverUrl, token }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/members`,
+    method: 'GET',
+    token
+  });
+}
+
+// Create an invite
+export async function createInvite({ serverUrl, token, email, role = 'member' }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/invites`,
+    method: 'POST',
+    token,
+    data: { email, role }
+  });
+}
+
+// Accept invite via token
+export async function acceptInvite({ serverUrl, inviteToken, password, name }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/invites/accept`,
+    method: 'POST',
+    data: { token: inviteToken, password, name }
+  });
+}
+
+// Update a member's role
+export async function updateMemberRole({ serverUrl, token, user_id, role }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/members/role`,
+    method: 'POST',
+    token,
+    data: { user_id, role }
+  });
+}
+
+// Revoke / delete invite
+export async function revokeInvite({ serverUrl, token, invite_id }) {
+  return await apiRequest({
+    url: `${serverUrl}/organizations/invites/${encodeURIComponent(invite_id)}`,
+    method: 'DELETE',
+    token
+  });
+}
+
 // Query knowledge base using WebSocket (streaming support)
 export async function queryKnowledgeBase({ serverUrl, token, question, session_id = null, model = null, humanize = true, onMessage = null, useWebSocket = true }) {
   // Use WebSocket if supported and requested
@@ -387,6 +466,7 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
       fullUrl.includes('/upload') ||
       fullUrl.includes('/files/delete_') ||
       fullUrl.includes('/files/edit') ||
+      fullUrl.includes('/organizations/') ||
       fullUrl.includes('/token/validate') ||
       fullUrl.includes('/admin/access') ||
       method === 'PUT' || method === 'DELETE') {

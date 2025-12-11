@@ -37,8 +37,37 @@
       <div class="sidebar-nav" :class="{ 'mobile-open': isMobileMenuOpen }" role="navigation" aria-label="Main Navigation">
         <div class="sidebar-header">
           <img src="/favicon.ico" alt="WikiAi Logo" class="sidebar-logo" /> 
-          <span class="sidebar-title">WikiAi</span>
+          <div class="sidebar-title-group">
+            <span class="sidebar-title">WikiAi</span>
+          <button
+            v-if="memberships.length"
+            class="sidebar-org-switcher"
+            type="button"
+            @click="orgSwitcherOpen = !orgSwitcherOpen"
+            :aria-expanded="orgSwitcherOpen"
+          >
+            <span class="sidebar-org-label">{{ organizationName || 'Select organization' }}</span>
+            <span class="chevron">▾</span>
+          </button>
+          <span class="sidebar-org" v-else-if="organizationName">{{ organizationName }}</span>
+          </div>
         </div>
+      <div v-if="orgSwitcherOpen && memberships.length" class="org-switcher-menu">
+        <button
+          v-for="membership in memberships"
+          :key="membership.organization_id || membership.organization_slug || membership.slug || membership.organization_name"
+          class="org-switcher-item"
+          :class="{ active: membership.organization_id === organizationId }"
+          type="button"
+          @click="switchOrganization(membership)"
+        >
+          <span class="org-name">{{ membership.organization_name || membership.name }}</span>
+          <span class="org-role">{{ membership.role || membership.membership_role }}</span>
+        </button>
+        <button class="org-switcher-item refresh" type="button" @click.stop="refreshMemberships()">
+          ⟳ Refresh
+        </button>
+      </div>
         <ul class="sidebar-tabs">
           <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="#" @click.prevent="navigateTo('home')">🏠 {{ t.nav.home }}</a></li>
           <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="#" @click.prevent="navigateTo('files')">📁 {{ t.nav.files }}</a></li>
@@ -148,6 +177,8 @@
                   <div class="file-status">
                     <span class="status-text">{{ loading ? t.files.loading : `${filteredFiles.length} ${t.files.filesCount}` }}</span>
                     <span v-if="!loading" class="last-update">{{ t.files.lastUpdated }} {{ getLastUpdateTime() }}</span>
+                  <span v-if="uploadingFiles" class="upload-status">Uploading…</span>
+                  <span v-else-if="uploadError" class="upload-status error">{{ uploadError }}</span>
                   </div>
                 </div>
                 <!-- Mobile Search and Filters Panel -->
@@ -383,6 +414,11 @@ export default {
       username: '',
       password: '',
       user: null,
+      organizationName: '',
+      organizationId: '',
+      organizationSlug: '',
+      memberships: [],
+      orgSwitcherOpen: false,
       showAdminDashboard: false,
       showToken: false,
       darkMode: true,
@@ -398,7 +434,9 @@ export default {
       quizVisible: false,
       quizFilename: '',
       isCheckingToken: true,  // Flag to track if we're checking token on mount
-      langDropdownOpen: false  // Language dropdown state
+      langDropdownOpen: false,  // Language dropdown state
+      uploadingFiles: false,
+      uploadError: ''
     };
   },
   mounted() {
@@ -616,7 +654,7 @@ export default {
     copyToken() {
       navigator.clipboard.writeText(this.token).then(() => alert('Token copied!'));
     },
-    onLoginSuccess({ username, password, role, token, serverUrl }) {
+    async onLoginSuccess({ username, password, role, token, serverUrl, organizationName, organizationId, organizationSlug, memberships = [] }) {
       console.log('[Login Success] Storing credentials...', { username, role, hasToken: !!token, hasUrl: !!serverUrl });
       
       this.username = username;
@@ -624,6 +662,12 @@ export default {
       this.user = { username, role };
       this.token = token || this.$root.token;
       this.serverUrl = serverUrl;
+      this.setOrganizationContext({
+        name: organizationName || this.organizationName || 'My organization',
+        id: organizationId,
+        slug: organizationSlug,
+        memberships
+      });
       
       // Store token and serverUrl in localStorage for persistence
       try {
@@ -631,6 +675,10 @@ export default {
         localStorage.setItem('serverUrl', this.serverUrl);
         localStorage.setItem('username', username);
         localStorage.setItem('userRole', role);
+        localStorage.setItem('organizationName', this.organizationName);
+        localStorage.setItem('organizationId', this.organizationId || '');
+        localStorage.setItem('organizationSlug', this.organizationSlug || '');
+        localStorage.setItem('memberships', JSON.stringify(this.memberships || []));
         console.log('[Login Success] ✅ Credentials stored to localStorage');
         console.log('[Login Success] Stored:', {
           authToken: localStorage.getItem('authToken')?.substring(0, 10) + '...',
@@ -641,6 +689,7 @@ export default {
       } catch (e) {
         console.warn('[Login Success] ❌ Failed to store auth data:', e);
       }
+      await this.fetchMemberships();
       this.updateFiles();
       if (this.$router) {
         this.$router.push('/app');
@@ -653,6 +702,15 @@ export default {
         const storedServerUrl = localStorage.getItem('serverUrl');
         const storedUsername = localStorage.getItem('username');
         const storedRole = localStorage.getItem('userRole') || 'user';
+        const storedOrgName = localStorage.getItem('organizationName') || '';
+        const storedOrgId = localStorage.getItem('organizationId') || '';
+        const storedOrgSlug = localStorage.getItem('organizationSlug') || '';
+        let storedMemberships = [];
+        try {
+          storedMemberships = JSON.parse(localStorage.getItem('memberships') || '[]');
+        } catch (_) {
+          storedMemberships = [];
+        }
 
         console.log('[Token Restore] Checking localStorage...', {
           hasToken: !!storedToken,
@@ -686,7 +744,14 @@ export default {
                 username: res.response?.username || storedUsername || 'unknown',
                 role: res.response?.role || storedRole
               };
+              this.setOrganizationContext({
+                name: storedOrgName || res.response?.organization_name || 'My organization',
+                id: res.response?.organization_id || storedOrgId,
+                slug: res.response?.organization_slug || storedOrgSlug,
+                memberships: storedMemberships
+              });
               console.log('[Token Restore] ✅ Token valid! Session restored.', this.user);
+              await this.fetchMemberships();
               this.updateFiles();
               this.isCheckingToken = false; // Mark token check as complete
               return; // Successfully restored
@@ -719,6 +784,10 @@ export default {
         localStorage.removeItem('serverUrl');
         localStorage.removeItem('username');
         localStorage.removeItem('userRole');
+        localStorage.removeItem('organizationName');
+        localStorage.removeItem('organizationId');
+        localStorage.removeItem('organizationSlug');
+        localStorage.removeItem('memberships');
       } catch (e) {
         console.warn('Failed to clear auth storage:', e);
       }
@@ -726,12 +795,91 @@ export default {
       this.serverUrl = '';
       this.username = '';
       this.user = null;
+      this.organizationName = '';
+      this.organizationId = '';
+      this.organizationSlug = '';
+      this.memberships = [];
+      this.orgSwitcherOpen = false;
+    },
+
+    setOrganizationContext({ name, id, slug, memberships } = {}) {
+      if (name) this.organizationName = name;
+      if (id !== undefined) this.organizationId = id || '';
+      if (slug !== undefined) this.organizationSlug = slug || '';
+      if (Array.isArray(memberships)) this.memberships = memberships;
+      try {
+        localStorage.setItem('organizationName', this.organizationName || '');
+        localStorage.setItem('organizationId', this.organizationId || '');
+        localStorage.setItem('organizationSlug', this.organizationSlug || '');
+        localStorage.setItem('memberships', JSON.stringify(this.memberships || []));
+      } catch (e) {
+        console.warn('Failed to persist organization context:', e);
+      }
+    },
+
+    async refreshMemberships() {
+      await this.fetchMemberships();
+    },
+
+    async fetchMemberships() {
+      if (!this.token || !this.serverUrl) return;
+      try {
+        const { listMemberships } = await import('./api.js');
+        const res = await listMemberships({ serverUrl: this.serverUrl, token: this.token });
+        const memberships = res?.response?.memberships || res?.memberships || [];
+        if (Array.isArray(memberships) && memberships.length) {
+          const active = memberships.find(m => m.status === 'active') || memberships[0];
+          this.setOrganizationContext({
+            name: this.organizationName || active.organization_name || active.name,
+            id: this.organizationId || active.organization_id,
+            slug: this.organizationSlug || active.organization_slug || active.slug,
+            memberships
+          });
+        }
+      } catch (e) {
+        console.warn('Unable to load memberships', e);
+      }
+    },
+
+    async switchOrganization(membership) {
+      if (!membership || !this.token || !this.serverUrl) return;
+      try {
+        const { switchOrganization } = await import('./api.js');
+        const res = await switchOrganization({
+          serverUrl: this.serverUrl,
+          token: this.token,
+          organization_id: membership.organization_id,
+          organization_slug: membership.organization_slug || membership.slug
+        });
+        const newToken = res?.token || res?.response?.token;
+        if (newToken) {
+          this.token = newToken;
+          try {
+            localStorage.setItem('authToken', newToken);
+          } catch (_) { /* ignore */ }
+        }
+        this.setOrganizationContext({
+          name: membership.organization_name || membership.name || this.organizationName,
+          id: membership.organization_id || this.organizationId,
+          slug: membership.organization_slug || membership.slug || this.organizationSlug,
+          memberships: this.memberships
+        });
+        this.orgSwitcherOpen = false;
+        await this.updateFiles();
+      } catch (e) {
+        console.error('Organization switch failed', e);
+        this.$toast?.error?.('Unable to switch organization');
+      }
     },
 
     handleLogout() {
       this.token = '';
       this.username = '';
       this.password = '';
+      this.organizationName = '';
+      this.organizationId = '';
+      this.organizationSlug = '';
+      this.memberships = [];
       this.files = [];
       this.openedFiles = [];
       this.fileContents = {};
@@ -1121,11 +1269,38 @@ export default {
       await this.handleMobileFileClick(fileOrFilename);
     },
     
-    handleFileUpload(files) {
-      // Handle file upload - you can implement this based on your API
-      console.log('Files to upload:', files);
-      // For now, just show an alert
-      alert(`Selected ${files.length} file(s) for upload. Upload functionality needs to be implemented.`);
+    async handleFileUpload(files) {
+      if (!this.token || !this.serverUrl) {
+        alert('Connect to a GraphTalk server before uploading files.');
+        return;
+      }
+      if (this.user?.role !== 'admin') {
+        alert('Only organization admins can upload documents.');
+        return;
+      }
+      const uploadQueue = Array.from(files || []);
+      if (!uploadQueue.length) return;
+
+      this.uploadingFiles = true;
+      this.uploadError = '';
+      try {
+        const { uploadFile } = await import('./api.js');
+        for (const file of uploadQueue) {
+          await uploadFile({
+            serverUrl: this.serverUrl,
+            token: this.token,
+            file
+          });
+        }
+        await this.updateFiles();
+        this.$toast?.success?.('Files uploaded and indexed');
+      } catch (e) {
+        console.error('Upload error', e);
+        this.uploadError = e.message || 'Upload failed';
+        this.$toast?.error?.(this.uploadError);
+      } finally {
+        this.uploadingFiles = false;
+      }
     },
     
     getFileTypeFromName(filename) {
@@ -1330,6 +1505,11 @@ body {
   padding: 24px 16px 12px 16px;
   gap: 12px;
 }
+.sidebar-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 .sidebar-logo {
   width: 32px;
   height: 32px;
@@ -1339,6 +1519,72 @@ body {
   font-weight: 600;
   color: #007BFF;
   letter-spacing: 1px;
+}
+.sidebar-org {
+  font-size: 13px;
+  color: #6C757D;
+  line-height: 1.2;
+}
+.sidebar-org-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  padding: 6px 10px;
+  background: #f1f5f9;
+  border: 1px solid #dce3ec;
+  border-radius: 10px;
+  color: #0f2238;
+  cursor: pointer;
+  font-size: 13px;
+  width: 100%;
+  justify-content: space-between;
+}
+.sidebar-org-switcher .chevron { font-size: 12px; }
+.dark-mode .sidebar-org-switcher {
+  background: #242628;
+  border-color: #333;
+  color: #e0e0e0;
+}
+.org-switcher-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  margin: 0 12px 8px 12px;
+  background: #f8fafc;
+  border: 1px solid #e0e6ed;
+  border-radius: 12px;
+}
+.dark-mode .org-switcher-menu {
+  background: #1f2122;
+  border-color: #2f3234;
+}
+.org-switcher-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: inherit;
+}
+.org-switcher-item.active {
+  border-color: #007BFF;
+  background: rgba(0, 123, 255, 0.08);
+}
+.org-switcher-item.refresh {
+  justify-content: center;
+  font-weight: 600;
+}
+.dark-mode .org-switcher-item.active {
+  border-color: #66b3ff;
+  background: rgba(102, 179, 255, 0.12);
+}
+.dark-mode .sidebar-org {
+  color: #a8adb2;
 }
 .sidebar-tabs {
   list-style: none;
@@ -1914,6 +2160,23 @@ body {
   flex-direction: column;
   align-items: flex-end;
   gap: 4px;
+}
+
+.upload-status {
+  font-size: 12px;
+  color: #007BFF;
+}
+
+.upload-status.error {
+  color: #DC3545;
+}
+
+.dark-mode .upload-status {
+  color: #66b3ff;
+}
+
+.dark-mode .upload-status.error {
+  color: #ff6b6b;
 }
 
 .status-text {

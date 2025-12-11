@@ -27,7 +27,36 @@
       <div class="login-box" v-motion-slide-visible-once-bottom>
         <h2>{{ t.login.title }}</h2>
         <p class="login-subtitle">{{ t.login.subtitle }}</p>
+        <div class="mode-toggle" role="group" aria-label="Authentication mode">
+          <button
+            type="button"
+            :class="{ active: mode === 'create' }"
+            @click="mode = 'create'"
+          >
+            Create organization
+          </button>
+          <button
+            type="button"
+            :class="{ active: mode === 'login' }"
+            @click="mode = 'login'"
+          >
+            Use existing session
+          </button>
+        </div>
+        <p class="org-hint">
+          GraphTalk sessions are scoped to an organization. Creating an organization issues a session token with org context.
+        </p>
         <form @submit.prevent="handleLogin">
+          <div class="form-group" v-if="mode === 'create'">
+            <label for="organizationName">Organization name</label>
+            <input
+              id="organizationName"
+              v-model="organizationName"
+              type="text"
+              placeholder="e.g. GraphTalk Demo"
+              required
+            />
+          </div>
           <div class="form-group">
             <label for="username">{{ t.login.username }}</label>
             <input id="username" v-model="username" type="text" required />
@@ -174,6 +203,10 @@ export default {
     return {
       defaultServerUrl,
       serverUrl: defaultServerUrl,
+      organizationName: '',
+      organizationId: '',
+      organizationSlug: '',
+      memberships: [],
       username: '',
       password: '',
       rememberMe: false,
@@ -186,7 +219,8 @@ export default {
       language: language,
       serverOptions: uniqueServerOptions,
       serverDropdownOpen: false,
-      showServerSection: false
+      showServerSection: false,
+      mode: 'create'
     };
   },
   computed: {
@@ -210,6 +244,11 @@ export default {
       // Only load username and password, not serverUrl
       this.username = stored.username || '';
       this.password = stored.password || '';
+      this.organizationName = stored.organizationName || '';
+      this.organizationId = stored.organizationId || '';
+      this.organizationSlug = stored.organizationSlug || '';
+      this.memberships = stored.memberships || [];
+      this.mode = stored.mode || 'create';
       this.rememberMe = true;
       // Only auto-login if we have both username and password
       if (this.username && this.password) {
@@ -292,6 +331,33 @@ export default {
     async autoLogin() {
       await this.handleLogin(true);
     },
+    extractOrganizationContext(response, fallbackName = '') {
+      const responsePayload = response?.response || {};
+      const memberships = responsePayload.memberships || response.memberships || [];
+      const firstMembership = memberships.find(m => m.status === 'active') || memberships[0] || {};
+      const orgName =
+        responsePayload.organization_name ||
+        response.organization_name ||
+        firstMembership.organization_name ||
+        fallbackName;
+      const orgId =
+        responsePayload.organization_id ||
+        response.organization_id ||
+        firstMembership.organization_id ||
+        '';
+      const orgSlug =
+        responsePayload.organization_slug ||
+        response.organization_slug ||
+        firstMembership.organization_slug ||
+        firstMembership.slug ||
+        '';
+      return {
+        name: orgName,
+        id: orgId,
+        slug: orgSlug,
+        memberships
+      };
+    },
     async handleLogin(isAuto = false) {
       this.loading = true;
       this.error = '';
@@ -312,31 +378,67 @@ export default {
         this.$root.serverUrl = cleanUrl;
         this.persistServerOption(cleanUrl);
 
-        const { login } = await import('../api.js');
-        const response = await login({
-          serverUrl: cleanUrl,
-          username: this.username.trim(),
-          password: this.password.trim()
-        });
+        // Route the auth request based on the selected mode
+        let response;
+        const trimmedUsername = this.username.trim();
+        const trimmedPassword = this.password.trim();
+
+        if (this.mode === 'create') {
+          if (!this.organizationName.trim()) {
+            this.error = 'Organization name is required for GraphTalk sessions';
+            this.loading = false;
+            return;
+          }
+          const { createOrganizationWithAdmin } = await import('../api.js');
+          response = await createOrganizationWithAdmin({
+            serverUrl: cleanUrl,
+            organizationName: this.organizationName.trim(),
+            adminUsername: trimmedUsername,
+            adminPassword: trimmedPassword
+          });
+        } else {
+          const { login } = await import('../api.js');
+          response = await login({
+            serverUrl: cleanUrl,
+            username: trimmedUsername,
+            password: trimmedPassword
+          });
+        }
 
         // Check for error status in response
         if (response.status === 'error') {
           throw new Error(response.message || 'Login failed');
         }
 
-        // If we get here, login was successful
+        // If we get here, authentication was successful
         const { token, role } = response;
+        const orgContext = this.extractOrganizationContext(
+          response,
+          this.mode === 'create' ? this.organizationName.trim() : ''
+        );
+
+        this.organizationName = orgContext.name || this.organizationName;
+        this.organizationId = orgContext.id || '';
+        this.organizationSlug = orgContext.slug || '';
+        this.memberships = orgContext.memberships || [];
+
         this.$root.token = token;
         this.$emit('login-success', {
           username: this.username,
           password: this.password,
+          organizationName: this.organizationName,
+          organizationId: this.organizationId,
+          organizationSlug: this.organizationSlug,
+          memberships: this.memberships,
           role: role || 'user',
           token: token,
           serverUrl: cleanUrl
         });
 
         // Set success message
-        this.success = response.message || 'Login successful!';
+        this.success = response.message || (this.mode === 'create'
+          ? 'Organization created and session issued.'
+          : 'Login successful!');
         
         // Handle remember me
         if (this.rememberMe) {
@@ -344,7 +446,12 @@ export default {
               'loginData',
               JSON.stringify({
                 username: this.username,
-                password: this.password
+                password: this.password,
+                organizationName: this.organizationName,
+                organizationId: this.organizationId,
+                organizationSlug: this.organizationSlug,
+                memberships: this.memberships || [],
+                mode: this.mode
               })
             );
           } else {
@@ -383,6 +490,36 @@ export default {
 .svg-icon {
   color: var(--icon-color);
   transition: color 0.3s ease;
+}
+
+.mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.mode-toggle button {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.mode-toggle button.active {
+  background: linear-gradient(135deg, #007BFF 0%, #0056b3 100%);
+  color: #fff;
+  border-color: #007BFF;
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.org-hint {
+  margin: 0 0 12px 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .home-button-icon .svg-icon {
