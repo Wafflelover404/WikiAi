@@ -76,29 +76,86 @@
                 <span class="label-icon">🔗</span>
                 <span class="label-text">Server URL</span>
               </label>
-              <div class="input-wrapper">
+              <div class="input-wrapper" ref="serverSelector">
                 <span class="input-icon">🌐</span>
                 <input 
+                  ref="serverInput"
                   v-model="serverUrl" 
                   type="text" 
-                  placeholder="https://api.example.com" 
+                  :placeholder="$t?.login?.apiUrlPlaceholder || 'https://api.example.com'" 
                   class="enhanced-input"
+                  @keyup.enter="saveSettings"
                 />
+                <button
+                  v-if="serverOptions.length"
+                  type="button"
+                  class="server-dropdown-toggle"
+                  @click.stop="toggleServerDropdown"
+                  :aria-expanded="serverDropdownOpen"
+                  aria-haspopup="listbox"
+                  :title="$t?.login?.selectServer || 'Select server'"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
+                
+                <ul 
+                  v-if="serverDropdownOpen && serverOptions.length" 
+                  class="server-options" 
+                  role="listbox"
+                  @click.stop
+                >
+                  <li v-for="option in serverOptions" :key="option">
+                    <button 
+                      type="button" 
+                      @click="selectServerOption(option)"
+                      :class="{ active: serverUrl === option }"
+                    >
+                      {{ option }}
+                    </button>
+                  </li>
+                </ul>
+              </div>
+              
+              <div v-if="serverUrl && (serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1'))" class="proxy-warning">
+                <span class="warning-icon">⚠️</span>
+                <span class="warning-text">
+                  {{ $t?.login?.proxyWarning || 'Using localhost may require CORS proxy in development' }}
+                </span>
               </div>
             </div>
 
-            <button 
-              @click="checkServer" 
-              :disabled="checking" 
-              class="action-btn secondary full-width"
-            >
-              <span class="btn-icon">🔍</span>
-              <span>{{ checking ? 'Checking...' : 'Test Connection' }}</span>
-            </button>
+            <div class="button-group">
+              <button 
+                type="button"
+                @click="checkServer" 
+                :disabled="checking || !serverUrl" 
+                class="action-btn secondary"
+                :class="{ 'half-width': serverUrl }"
+              >
+                <span class="btn-icon">🔍</span>
+                <span>{{ checking ? 'Checking...' : 'Test' }}</span>
+              </button>
+              
+              <button 
+                type="button"
+                @click="saveSettings" 
+                :disabled="isSaving || !serverUrl" 
+                class="action-btn primary"
+                :class="{
+                  'half-width': serverUrl,
+                  'success': saveSuccess
+                }"
+              >
+                <span class="btn-icon">{{ saveSuccess ? '✓' : '💾' }}</span>
+                <span>{{ saveButtonText }}</span>
+              </button>
+            </div>
 
             <div v-if="checkResult" class="status-message" :class="checkResult.includes('Failed') ? 'error' : 'success'">
               <span class="status-icon">{{ checkResult.includes('Failed') ? '❌' : '✅' }}</span>
-              {{ checkResult }}
+              <span class="status-text">{{ checkResult }}</span>
             </div>
           </div>
         </div>
@@ -144,6 +201,10 @@
 <script>
 export default {
   name: 'SettingsModal',
+  model: {
+    prop: 'visible',
+    event: 'update:visible'
+  },
   props: {
     visible: {
       type: Boolean,
@@ -151,19 +212,23 @@ export default {
     },
     initialUsername: {
       type: String,
-      default: ''
+      default: 'Current User'
     },
     initialPassword: {
       type: String,
-      default: ''
+      default: '••••••••'
     },
     initialServerUrl: {
       type: String,
       default: ''
     },
-    accessToken: {
-      type: String,
-      default: ''
+    serverOptions: {
+      type: Array,
+      default: () => []
+    },
+    isDark: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -174,7 +239,14 @@ export default {
       showPassword: false,
       checking: false,
       checkResult: '',
-      logoutAllMsg: ''
+      showLogoutConfirmation: false,
+      showLogoutAllConfirmation: false,
+      isLoggingOut: false,
+      isLoggingOutAll: false,
+      serverDropdownOpen: false,
+      saveButtonText: 'Save Changes',
+      isSaving: false,
+      saveSuccess: false
     };
   },
   watch: {
@@ -185,28 +257,77 @@ export default {
       this.password = val;
     },
     initialServerUrl(val) {
-      this.serverUrl = val;
+      if (val !== this.serverUrl) {
+        this.serverUrl = val;
+        this.checkResult = ''; // Reset check result when URL changes
+      }
+    },
+    serverUrl() {
+      this.checkResult = ''; // Reset check result when URL changes
     }
   },
   methods: {
+    saveSettings() {
+      if (!this.serverUrl) {
+        this.checkResult = 'Please enter a server URL';
+        return;
+      }
+      
+      this.isSaving = true;
+      this.saveButtonText = 'Saving...';
+      
+      // Emit the save event with the new server URL
+      this.$emit('save', this.serverUrl);
+      
+      // Show success message
+      this.saveSuccess = true;
+      this.saveButtonText = 'Saved!';
+      
+      // Reset button state after delay
+      setTimeout(() => {
+        this.isSaving = false;
+        this.saveSuccess = false;
+        this.saveButtonText = 'Save Changes';
+        // Close the modal after a short delay
+        setTimeout(() => {
+          this.$emit('update:visible', false);
+        }, 500);
+      }, 1500);
+    },
+    
+    toggleServerDropdown() {
+      this.serverDropdownOpen = !this.serverDropdownOpen;
+    },
+    
+    selectServerOption(option) {
+      this.serverUrl = option;
+      this.serverDropdownOpen = false;
+    },
     async checkServer() {
+      if (!this.serverUrl) {
+        this.checkResult = 'Please enter a server URL';
+        return;
+      }
+      
       this.checking = true;
       this.checkResult = '';
+      
       try {
-        const { apiRequest } = await import('../api.js');
-        const res = await apiRequest({
-          url: `${this.serverUrl}/`,
-          method: 'GET'
-        });
-        if (typeof res === 'object' && res.status === 'success') {
-          this.checkResult = 'Server is reachable.';
+        // Make a test request to the server
+        const response = await fetch(`${this.serverUrl}/api/health`);
+        if (response.ok) {
+          this.checkResult = 'Successfully connected to the server!';
+          // Auto-save if connection is successful
+          this.saveSettings();
         } else {
-          this.checkResult = 'Server responded.';
+          throw new Error('Server returned an error');
         }
-      } catch (e) {
-        this.checkResult = 'Failed to reach server.';
+      } catch (error) {
+        console.error('Server connection error:', error);
+        this.checkResult = 'Failed to connect to the server. Please check the URL and try again.';
+      } finally {
+        this.checking = false;
       }
-      this.checking = false;
     },
 
     logout() {
@@ -539,10 +660,177 @@ export default {
   border: 2px solid #e2e8f0;
 }
 
-.action-btn.secondary:hover:not(:disabled) {
-  background: #edf2f7;
-  border-color: #cbd5e0;
-  transform: translateY(-2px);
+/* Button groups */
+.button-group {
+  display: flex;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+.action-btn {
+  flex: 1;
+  transition: all 0.2s ease;
+  
+  &.half-width {
+    flex: 0.5;
+  }
+  
+  &.primary {
+    background: #4f46e5;
+    color: white;
+    border: 1px solid #4f46e5;
+    
+    &:hover:not(:disabled) {
+      background: #4338ca;
+      border-color: #4338ca;
+      transform: translateY(-2px);
+    }
+    
+    &.success {
+      background: #10b981;
+      border-color: #10b981;
+      
+      &:hover:not(:disabled) {
+        background: #0d9f6e;
+        border-color: #0d9f6e;
+      }
+    }
+  }
+  
+  &.secondary {
+    background: #f3f4f6;
+    color: #4b5563;
+    border: 1px solid #e5e7eb;
+    
+    &:hover:not(:disabled) {
+      background: #e5e7eb;
+      transform: translateY(-2px);
+    }
+  }
+}
+
+/* Server dropdown */
+.server-dropdown-toggle {
+  background: none;
+  border: none;
+  padding: 0 8px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s;
+  
+  &:hover {
+    color: #4f46e5;
+  }
+  
+  svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+.server-options {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 10;
+  padding: 4px 0;
+  
+  li {
+    list-style: none;
+    
+    button {
+      width: 100%;
+      text-align: left;
+      padding: 8px 16px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #374151;
+      font-size: 14px;
+      transition: all 0.2s;
+      
+      &:hover, &.active {
+        background: #f3f4f6;
+        color: #4f46e5;
+      }
+    }
+  }
+}
+
+/* Warning message */
+.proxy-warning {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 6px 12px;
+  background: #fffbeb;
+  border-radius: 4px;
+  font-size: 13px;
+  color: #92400e;
+  
+  .warning-icon {
+    margin-right: 8px;
+    font-size: 16px;
+  }
+  
+  .warning-text {
+    flex: 1;
+  }
+}
+
+/* Dark mode styles */
+.dark-mode {
+  .action-btn {
+    &.secondary {
+      background: #374151;
+      border-color: #4b5563;
+      color: #e5e7eb;
+      
+      &:hover:not(:disabled) {
+        background: #4b5563;
+      }
+    }
+    
+    &.primary {
+      background: #6366f1;
+      border-color: #6366f1;
+      
+      &:hover:not(:disabled) {
+        background: #4f46e5;
+        border-color: #4f46e5;
+      }
+    }
+  }
+  
+  .server-options {
+    background: #1f2937;
+    border-color: #374151;
+    
+    li button {
+      color: #e5e7eb;
+      
+      &:hover, &.active {
+        background: #374151;
+        color: #818cf8;
+      }
+    }
+  }
+  
+  .proxy-warning {
+    background: #453411;
+    color: #fcd34d;
+  }
 }
 
 .action-btn.warning {
