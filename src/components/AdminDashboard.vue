@@ -646,6 +646,14 @@
           </div>
         </div>
         
+        <div v-else-if="activeTab === 'API Keys'" class="api-keys-tab">
+          <APIKeyManager
+            :token="token"
+            :API_BASE_URL="API_BASE_URL"
+            :language="language"
+          />
+        </div>
+        
         <div v-else-if="activeTab === 'System'" class="system-section">
           <div class="admin-section-header">
             <h2>⚙️ System Administration</h2>
@@ -842,11 +850,12 @@ import UserEditModal from './UserEditModal.vue';
 import ReportTable from './ReportTable.vue';
 import FileEditModal from './FileEditModal.vue';
 import FileModalOpener from './FileModalOpener.vue';
+import APIKeyManager from './APIKeyManager.vue';
 import { translations } from '../i18n.js';
 
 export default {
   name: 'AdminDashboard',
-  components: { UserEditModal, ReportTable, FileEditModal, FileModalOpener },
+  components: { UserEditModal, ReportTable, FileEditModal, FileModalOpener, APIKeyManager },
   props: {
     token: { type: String, required: true },
     API_BASE_URL: { type: String, required: true },
@@ -854,7 +863,7 @@ export default {
   },
   data() {
       return {
-        tabs: ['Users', 'Files', 'Reports', 'System'],
+        tabs: ['Users', 'Files', 'Reports', 'API Keys', 'System'],
         activeTab: 'Users',
         users: [],
         files: [],
@@ -995,6 +1004,7 @@ export default {
         Users: '👥',
         Files: '📁',
         Reports: '📊',
+        'API Keys': '🔑',
         System: '⚙️'
       };
       return icons[tab] || '📄';

@@ -2,27 +2,44 @@
   <div class="login-page" :class="{ 'dark-mode': isDark }">
     <AnimatedBackground class="background" :dark-mode="isDark" />
     <div class="login-container">
-      <button
-        class="home-button-icon"
-        type="button"
-        @click="goToLanding"
-        aria-label="Go to home"
-      >
-        <SvgIcons icon="home" />
-      </button>
-      <!-- Top controls: language + theme -->
-      <div class="top-controls">
-        <button 
-          class="lang-toggle" 
-          @click="toggleLanguage" 
-          :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`"
-          aria-label="Language selector"
+      <div class="top-bar">
+        <button
+          class="home-button-icon"
+          type="button"
+          @click="goToLanding"
+          aria-label="Go to home"
         >
-          {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
+          <SvgIcons icon="home" />
         </button>
-        <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
-          <SvgIcons :icon="isDark ? 'sun' : 'moon'" />
-        </button>
+        <!-- Top controls: language + theme + settings -->
+        <div class="top-controls">
+          <button 
+            class="lang-toggle" 
+            @click="toggleLanguage" 
+            :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`"
+            aria-label="Language selector"
+          >
+            {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
+          </button>
+          <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
+            <SvgIcons :icon="isDark ? 'sun' : 'moon'" />
+          </button>
+          <button 
+            class="server-settings-toggle" 
+            @click="toggleServerSettings" 
+            :class="{ active: showServerSettings }" 
+            :aria-expanded="showServerSettings"
+            :aria-label="$t?.login?.serverSettings || 'Server settings'" 
+            :title="$t?.login?.serverSettings || 'Server settings'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+              <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+              <line x1="6" y1="6" x2="6.01" y2="6"></line>
+              <line x1="6" y1="18" x2="6.01" y2="18"></line>
+            </svg>
+          </button>
+        </div>
       </div>
       <div class="login-box" v-motion-slide-visible-once-bottom>
         <h2>{{ t.login.title }}</h2>
@@ -98,70 +115,14 @@
           </div>
         </form>
       </div>
-      <div class="server-panel">
-        <div class="server-panel-header">
-          <div class="server-panel-text">
-            <span class="server-panel-title">{{ t.login.serverPanelTitle }}</span>
-            <span class="server-panel-subtitle">{{ t.login.serverPanelSubtitle }}</span>
-          </div>
-          <button 
-            type="button" 
-            class="server-panel-toggle"
-            @click="toggleServerSection"
-            :aria-expanded="showServerSection"
-          >
-            <span>{{ showServerSection ? t.login.hideServerAddress : t.login.viewServerAddress }}</span>
-            <span :class="['arrow', { open: showServerSection }]">▾</span>
-          </button>
-        </div>
-        <transition name="server-slide">
-          <div class="server-panel-content" v-show="showServerSection">
-            <div class="form-group">
-              <label for="serverUrl">{{ t.login.apiUrl }}</label>
-              <div class="server-input-wrapper" ref="serverSelector">
-                <input 
-                  id="serverUrl" 
-                  v-model="serverUrl" 
-                  type="text" 
-                  :placeholder="t.login.apiUrlPlaceholder" 
-                  required 
-                />
-                <button
-                  type="button"
-                  class="server-dropdown-toggle"
-                  @click.stop="toggleServerDropdown"
-                  :aria-expanded="serverDropdownOpen"
-                  aria-haspopup="listbox"
-                  :disabled="!serverOptions.length"
-                  :title="serverOptions.length ? t.login.selectServer : t.login.noSavedServers"
-                >
-                  <span v-if="serverDropdownOpen">▴</span>
-                  <span v-else>▾</span>
-                </button>
-                <ul 
-                  v-if="serverDropdownOpen && serverOptions.length" 
-                  class="server-options" 
-                  role="listbox"
-                  @click.stop
-                >
-                  <li v-for="option in serverOptions" :key="option">
-                    <button 
-                      type="button" 
-                      @click="selectServerOption(option)"
-                      :class="{ active: serverUrl === option }"
-                    >
-                      {{ option }}
-                    </button>
-                  </li>
-                </ul>
-              </div>
-              <small v-if="showProxyWarning" class="proxy-warning">
-                {{ t.login.proxyWarning }}
-              </small>
-            </div>
-          </div>
-        </transition>
-      </div>
+      <!-- Server Settings Modal -->
+      <SettingsModal
+        v-if="showServerSettings"
+        :visible.sync="showServerSettings"
+        :initial-server-url="serverUrl"
+        :is-dark="isDark"
+        @close="closeServerSettings"
+      />
     </div>
   </div>
 </template>
@@ -169,11 +130,16 @@
 <script>
 import AnimatedBackground from './AnimatedBackground.vue';
 import SvgIcons from './SvgIcons.vue';
+import SettingsModal from './SettingsModal.vue';
 import { useI18n } from '../i18n.js';
 
 export default {
   name: 'LoginPage',
-  components: { AnimatedBackground, SvgIcons },
+  components: {
+    AnimatedBackground,
+    SvgIcons,
+    SettingsModal
+  },
   props: {
     language: {
       type: String,
@@ -218,8 +184,7 @@ export default {
       isDark: true,
       language: language,
       serverOptions: uniqueServerOptions,
-      serverDropdownOpen: false,
-      showServerSection: false,
+      showServerSettings: false,
       mode: 'create'
     };
   },
@@ -284,39 +249,47 @@ export default {
       window.dispatchEvent(new CustomEvent('themeChange', { detail: { isDark: this.isDark } }));
       this.$emit('theme-changed', this.isDark);
     },
-    toggleServerDropdown() {
-      if (!this.serverOptions.length) return;
-      this.serverDropdownOpen = !this.serverDropdownOpen;
-    },
-    toggleServerSection() {
-      this.showServerSection = !this.showServerSection;
-      if (!this.showServerSection) {
-        this.serverDropdownOpen = false;
+    toggleServerSettings() {
+      this.showServerSettings = !this.showServerSettings;
+      
+      // Close other open dropdowns when opening settings
+      if (this.showServerSettings) {
+        document.dispatchEvent(new CustomEvent('close-dropdowns'));
+        // Focus the server URL input when modal opens
+        this.$nextTick(() => {
+          const input = this.$el.querySelector('.settings-modal input[type="text"]');
+          if (input) input.focus();
+        });
       }
     },
-    selectServerOption(option) {
-      this.serverUrl = option;
-      this.serverDropdownOpen = false;
+    
+    closeServerSettings() {
+      this.showServerSettings = false;
     },
-    handleGlobalClick(event) {
-      if (!this.serverDropdownOpen) {
-        return;
-      }
-      const selector = this.$refs.serverSelector;
-      if (selector && !selector.contains(event.target)) {
-        this.serverDropdownOpen = false;
+    onServerSettingsSave(serverUrl) {
+      if (serverUrl && serverUrl !== this.serverUrl) {
+        this.serverUrl = serverUrl;
+        this.persistServerOption(serverUrl);
+        // Optionally show a success message or update UI
       }
     },
     persistServerOption(url) {
-      if (!url) return;
-      if (!this.serverOptions.includes(url)) {
-        this.serverOptions.push(url);
-      }
       try {
+        // Add to the beginning of the array if not already present
+        const updatedOptions = [
+          url,
+          ...this.serverOptions.filter(option => option !== url)
+        ].slice(0, 5); // Keep only the 5 most recent
+
+        this.serverOptions = updatedOptions;
         if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('serverUrlOptions', JSON.stringify(this.serverOptions));
+          localStorage.setItem('serverUrlOptions', JSON.stringify(updatedOptions));
         }
-      } catch (e) { /* ignore */ }
+        return updatedOptions;
+      } catch (e) {
+        console.error('Failed to persist server URL option', e);
+        return [];
+      }
     },
     toggleLanguage() {
       this.language = this.language === 'en' ? 'ru' : 'en';
@@ -590,41 +563,86 @@ button[class*="-icon "]:hover {
   z-index: 2;
 }
 
+/* Theme toggle and server settings button base styles */
 .theme-toggle,
-.lang-toggle {
+.server-settings-toggle {
   background: none;
-  border: 1px solid rgba(0,0,0,0.1);
-  border-radius: 50%;
-  width: 34px;
-  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 16px;
-  padding: 0;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: all 0.2s;
+  color: rgba(255, 255, 255, 0.8);
+  margin-left: 8px;
 }
 
-.lang-toggle span {
-  font-size: 15px;
-  line-height: 1;
+/* Light mode styles */
+:not(.dark-mode) .theme-toggle,
+:not(.dark-mode) .server-settings-toggle {
+  border-color: rgba(0, 0, 0, 0.1);
+  color: rgba(0, 0, 0, 0.7);
 }
 
+:not(.dark-mode) .theme-toggle:hover,
+:not(.dark-mode) .server-settings-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: #000;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+/* Dark mode styles */
+.dark-mode .theme-toggle,
+.dark-mode .server-settings-toggle {
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.dark-mode .theme-toggle:hover,
+.dark-mode .server-settings-toggle:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Hover and active states */
 .theme-toggle:hover,
-.lang-toggle:hover {
-  background: rgba(0,0,0,0.05);
+.theme-toggle:focus,
+.server-settings-toggle:hover,
+.server-settings-toggle:focus,
+.server-settings-toggle.active {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-::deep(.dark-mode) .theme-toggle,
-::deep(.dark-mode) .lang-toggle {
-  border-color: rgba(255,255,255,0.2);
-  color: #e0e0e0;
+.theme-toggle:active,
+.server-settings-toggle:active {
+  transform: translateY(0);
+  box-shadow: none;
 }
 
-::deep(.dark-mode) .theme-toggle:hover,
-::deep(.dark-mode) .lang-toggle:hover {
-  background: rgba(255,255,255,0.08);
+/* Icons */
+.theme-toggle svg,
+.server-settings-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s;
+}
+
+/* Active state for server settings button when modal is open */
+.server-settings-toggle.active {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.dark-mode .server-settings-toggle.active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
 }
 
 .home-button-icon {
@@ -875,10 +893,6 @@ h2 {
   position: relative;
   display: flex;
   align-items: center;
-}
-
-.server-input-wrapper input {
-  padding-right: 44px;
 }
 
 .server-dropdown-toggle {

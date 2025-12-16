@@ -5,6 +5,26 @@
       <div class="file-list-header">
         <h3>📁 Files</h3>
         <div class="file-count">{{ fileList.length }} files</div>
+        <button 
+          v-if="!indexing"
+          class="index-button"
+          @click="indexAllFiles"
+          title="Index all files to vector database"
+          aria-label="Index files"
+        >
+          ⚡ Index Files
+        </button>
+        <button 
+          v-else
+          class="index-button loading"
+          disabled
+          aria-label="Indexing in progress"
+        >
+          <span class="spinner"></span> Indexing...
+        </button>
+        <div v-if="indexMessage" :class="['index-message', indexMessage.type]">
+          {{ indexMessage.text }}
+        </div>
       </div>
       <div class="file-list-cards">
         <div v-for="file in fileList" :key="file.name" class="file-card" @click="openFile(file.name)">
@@ -121,11 +141,15 @@ export default {
     files: {
       type: Array,
       default: () => []
-    }
+    },
+    token: String,
+    serverUrl: String
   },
   data() {
     return {
-      loading: false
+      loading: false,
+      indexing: false,
+      indexMessage: null
     };
   },
   computed: {
@@ -343,6 +367,58 @@ export default {
       } catch (err) {
         console.error('Failed to copy code:', err);
       }
+    },
+    
+    async indexAllFiles() {
+      if (!this.token || !this.serverUrl) {
+        this.indexMessage = {
+          type: 'error',
+          text: '❌ Not connected to server'
+        };
+        setTimeout(() => { this.indexMessage = null; }, 5000);
+        return;
+      }
+      
+      this.indexing = true;
+      this.indexMessage = null;
+      
+      try {
+        const { indexFiles } = await import('../api.js');
+        const result = await indexFiles({
+          serverUrl: this.serverUrl,
+          token: this.token
+        });
+        
+        if (result.status === 'success') {
+          const indexed = result.response?.indexed_count || 0;
+          const replaced = result.response?.replaced_count || 0;
+          const failed = result.response?.failed_count || 0;
+          
+          let message = `✅ Indexation complete: ${indexed} indexed`;
+          if (replaced > 0) message += `, ${replaced} replaced`;
+          if (failed > 0) message += `, ${failed} failed`;
+          
+          this.indexMessage = {
+            type: 'success',
+            text: message
+          };
+        } else {
+          this.indexMessage = {
+            type: 'error',
+            text: `❌ ${result.message}`
+          };
+        }
+      } catch (error) {
+        console.error('Indexation error:', error);
+        this.indexMessage = {
+          type: 'error',
+          text: `❌ Indexation failed: ${error.message}`
+        };
+      } finally {
+        this.indexing = false;
+        // Auto-hide message after 7 seconds
+        setTimeout(() => { this.indexMessage = null; }, 7000);
+      }
     }
   }
 }
@@ -395,6 +471,97 @@ export default {
 .dark-mode .file-count {
   color: #a0a6ac;
   background: rgba(255,255,255,0.08);
+}
+
+.index-button {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #007BFF 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.index-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3 0%, #003d82 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.index-button:disabled,
+.index-button.loading {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.index-message {
+  position: absolute;
+  left: 24px;
+  top: 100%;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  animation: slideDown 0.3s ease;
+  z-index: 10;
+}
+
+.index-message.success {
+  background: #d4edda;
+  color: #155724;
+  border: 1px solid #c3e6cb;
+}
+
+.index-message.error {
+  background: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+}
+
+.dark-mode .index-message.success {
+  background: rgba(72, 187, 120, 0.2);
+  color: #48bb78;
+  border-color: rgba(72, 187, 120, 0.5);
+}
+
+.dark-mode .index-message.error {
+  background: rgba(245, 101, 101, 0.2);
+  color: #f56565;
+  border-color: rgba(245, 101, 101, 0.5);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .file-list-cards {
