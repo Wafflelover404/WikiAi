@@ -72,6 +72,7 @@
           <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="#" @click.prevent="navigateTo('home')">🏠 {{ t.nav.home }}</a></li>
           <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="#" @click.prevent="navigateTo('files')">📁 {{ t.nav.files }}</a></li>
           <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="#" @click.prevent="navigateTo('search')">🔍 {{ t.nav.search }}</a></li>
+          <li :class="{active: currentView === 'plugins' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.plugins"><a href="#" @click.prevent="navigateTo('plugins')">🔌 {{ t.nav.plugins || 'Plugins' }}</a></li>
           <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><router-link to="/">ℹ️ {{ t.nav.about }}</router-link></li>
           <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="validateTokenAndShowAdmin" tabindex="0" :aria-label="t.nav.admin"><a href="#" @click.prevent="validateTokenAndShowAdmin">🛠 {{ t.nav.admin }}</a></li>
         </ul>
@@ -219,6 +220,8 @@
                 :openedFiles="openedFiles"
                 :fileContents="fileContents"
                 :activeTab="activeTab"
+                :token="token"
+                :serverUrl="serverUrl"
                 @close-file="closeFile"
                 @switch-tab="switchTab"
                 @download-file="downloadFile"
@@ -332,6 +335,14 @@
             :language="language"
             @search-performed="pendingSearch = ''"
           />
+          <!-- Plugins View -->
+          <OpenCartPluginsPage
+            v-else-if="currentView === 'plugins'"
+            :token="token"
+            :serverUrl="serverUrl"
+            :language="language"
+            @open-catalog="(catalogId) => { this.navigateTo('files'); /* optional: could open specific catalog */ }"
+          />
           <!-- Settings Modal -->
           <SettingsModal
             :visible="settingsVisible"
@@ -369,6 +380,7 @@ import AdminDashboard from './components/AdminDashboard.vue';
 import HomePage from './components/HomePage.vue';
 import SearchPage from './components/SearchPage.vue';
 import QuizModal from './components/QuizModal.vue';
+import OpenCartPluginsPage from './components/OpenCartPluginsPage.vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
@@ -390,6 +402,7 @@ export default {
     LandingPage,
     AdminDashboard,
     HomePage,
+    OpenCartPluginsPage,
     SearchPage,
     QuizModal
   },
@@ -1141,6 +1154,8 @@ export default {
           this.$router.push('/app/files');
         } else if (view === 'search') {
           this.$router.push('/app/search');
+        } else if (view === 'plugins') {
+          this.$router.push('/app/plugins');
         }
       }
     },

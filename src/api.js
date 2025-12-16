@@ -415,6 +415,16 @@ export async function editFileContent({ serverUrl, token, filename, newContent }
   });
 }
 
+// Index files (POST /files/index)
+export async function indexFiles({ serverUrl, token }) {
+  return await apiRequest({
+    url: `${serverUrl}/files/index`,
+    method: 'POST',
+    token,
+    data: {}
+  });
+}
+
 // API utility for WikiAi endpoints
 export async function apiRequest({ url, method = 'GET', token = '', data = null, params = {} }) {
   let fullUrl = url;
@@ -459,6 +469,7 @@ export async function apiRequest({ url, method = 'GET', token = '', data = null,
   if (fullUrl.endsWith('/login') || 
       fullUrl.endsWith('/query') || 
       fullUrl.includes('/files/list') ||
+      fullUrl.includes('/files/index') ||
       fullUrl.includes('/reports/') ||
       fullUrl.includes('/accounts') ||
       fullUrl.includes('/register') ||
