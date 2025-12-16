@@ -37,6 +37,16 @@ const routes = [
     path: '/app/admin',
     name: 'AppAdmin',
     component: Empty
+  },
+  {
+    path: '/app/plugins',
+    name: 'OpenCartPlugins',
+    component: Empty
+  },
+  {
+    path: '/app/catalog-dashboard',
+    name: 'CatalogDashboard',
+    component: Empty
   }
 ]
 
