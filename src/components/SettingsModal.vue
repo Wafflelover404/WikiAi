@@ -980,85 +980,85 @@ export default {
 }
 
 /* Dark Mode */
-body.dark-mode .modal-content {
+.dark-mode .modal-content {
   background: #1a202c;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
 }
 
-body.dark-mode .modal-header {
+.dark-mode .modal-header {
   border-bottom-color: #2d3748;
 }
 
-body.dark-mode .modal-header h2,
-body.dark-mode .section-header h3,
-body.dark-mode .label-text {
+.dark-mode .modal-header h2,
+.dark-mode .section-header h3,
+.dark-mode .label-text {
   color: #e2e8f0;
 }
 
-body.dark-mode .header-subtitle {
+.dark-mode .header-subtitle {
   color: #a0aec0;
 }
 
-body.dark-mode .section-header {
+.dark-mode .section-header {
   border-bottom-color: #2d3748;
 }
 
-body.dark-mode .enhanced-input {
+.dark-mode .enhanced-input {
   background: #2d3748;
   border-color: #4a5568;
   color: #e2e8f0;
 }
 
-body.dark-mode .enhanced-input:disabled {
+.dark-mode .enhanced-input:disabled {
   background: #1a202c;
   color: #718096;
 }
 
-body.dark-mode .enhanced-input:hover:not(:disabled) {
+.dark-mode .enhanced-input:hover:not(:disabled) {
   border-color: #718096;
   background: #374151;
 }
 
-body.dark-mode .enhanced-input:focus {
+.dark-mode .enhanced-input:focus {
   border-color: #4299e1;
   background: #2d3748;
   box-shadow: 0 0 0 4px rgba(66, 153, 225, 0.2), 0 2px 8px rgba(66, 153, 225, 0.25);
 }
 
-body.dark-mode .input-icon {
+.dark-mode .input-icon {
   color: #a0aec0;
 }
 
-body.dark-mode .input-wrapper:focus-within .input-icon {
+.dark-mode .input-wrapper:focus-within .input-icon {
   color: #4299e1;
 }
 
-body.dark-mode .modal-close-btn {
+.dark-mode .modal-close-btn {
   background: #2d3748;
   color: #a0aec0;
 }
 
-body.dark-mode .modal-close-btn:hover {
+.dark-mode .modal-close-btn:hover {
   background: #e53935;
   color: #ffffff;
 }
 
-body.dark-mode .action-btn.secondary {
+.dark-mode .action-btn.secondary {
   background: #2d3748;
   color: #e2e8f0;
   border-color: #4a5568;
 }
 
-body.dark-mode .action-btn.secondary:hover:not(:disabled) {
+.dark-mode .action-btn.secondary:hover:not(:disabled) {
   background: #374151;
   border-color: #718096;
 }
 
-body.dark-mode .danger-zone {
+.dark-mode .danger-zone {
   background: linear-gradient(135deg, #2d1f1f 0%, #3d2020 100%);
 }
 
-body.dark-mode .modal-actions {
+.dark-mode .modal-actions {
   border-bottom-color: #2d3748;
 }
 

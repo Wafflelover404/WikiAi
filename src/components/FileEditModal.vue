@@ -113,9 +113,9 @@ export default {
   outline: none;
 }
 .dark-mode .modal-content {
-  background: #1f2122;
-  color: #e0e0e0;
-  box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--color-shadow-dark);
 }
 .file-info {
   margin-bottom: 8px;
@@ -127,8 +127,8 @@ export default {
   gap: 16px;
 }
 .save-btn {
-  background: #1976d2;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 8px 18px;
@@ -136,8 +136,8 @@ export default {
   font-weight: 500;
 }
 .cancel-btn {
-  background: #e53935;
-  color: #fff;
+  background: var(--color-error);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 8px 18px;
@@ -145,10 +145,10 @@ export default {
   font-weight: 500;
 }
 .save-btn:hover {
-  background: #1565c0;
+  background: var(--color-primary-dark);
 }
 .cancel-btn:hover {
-  background: #b71c1c;
+  background: var(--color-error-dark);
 }
 .msg {
   margin-top: 12px;
@@ -156,9 +156,9 @@ export default {
   font-size: 15px;
 }
 .dark-mode textarea {
-  background: #232628;
-  border: 1px solid #3a3d3f;
-  color: #e0e0e0;
+  background: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border-primary);
+  color: var(--color-text-primary);
 }
-.dark-mode .msg { color: #66b3ff; }
+.dark-mode .msg { color: var(--color-primary); }
 </style>

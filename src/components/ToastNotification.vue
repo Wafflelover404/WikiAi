@@ -140,19 +140,39 @@ export default {
 
 /* Dark mode support */
 .dark-mode .toast-content {
-  background: #2d3748;
-  color: #e2e8f0;
+  background: var(--color-surface-variant);
+  color: var(--color-text-primary);
+}
+
+.dark-mode .toast-notification.success .toast-content {
+  border-left-color: var(--color-success);
+  background: var(--color-success-light);
+}
+
+.dark-mode .toast-notification.error .toast-content {
+  border-left-color: var(--color-error);
+  background: var(--color-error-light);
+}
+
+.dark-mode .toast-notification.warning .toast-content {
+  border-left-color: var(--color-warning);
+  background: var(--color-warning-light);
+}
+
+.dark-mode .toast-notification.info .toast-content {
+  border-left-color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .dark-mode .toast-message {
-  color: #e2e8f0;
+  color: var(--color-text-primary);
 }
 
 .dark-mode .toast-close {
-  color: #a0aec0;
+  color: var(--color-text-tertiary);
 }
 
 .dark-mode .toast-close:hover {
-  color: #e2e8f0;
+  color: var(--color-text-primary);
 }
 </style>

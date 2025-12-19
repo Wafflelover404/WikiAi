@@ -110,10 +110,10 @@ export default {
   animation: fadeIn 0.2s;
 }
 .modal-content {
-  background: #fff;
+  background: var(--color-surface);
   padding: 40px 32px 32px 32px;
   border-radius: 16px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.22);
+  box-shadow: var(--color-shadow-dark);
   min-width: 340px;
   max-width: 600px;
   width: 100%;
@@ -124,9 +124,9 @@ export default {
   animation: modalPop 0.22s cubic-bezier(.4,2,.6,1);
 }
 .dark-mode .modal-content {
-  background: #1f2122;
-  color: #e0e0e0;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.6);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--color-shadow-dark);
 }
 .modal-close-btn {
   position: absolute;
@@ -135,22 +135,22 @@ export default {
   background: none;
   border: none;
   font-size: 2rem;
-  color: #888;
+  color: var(--color-text-tertiary);
   cursor: pointer;
   z-index: 2;
   transition: color 0.2s;
 }
 .modal-close-btn:hover {
-  color: #e53935;
+  color: var(--color-error);
 }
 .dark-mode .modal-close-btn {
-  color: #a0a6ac;
+  color: var(--color-text-tertiary);
 }
 .modal-title {
   font-size: 1.3rem;
   font-weight: 600;
   margin-bottom: 18px;
-  color: #1976d2;
+  color: var(--color-primary);
 }
 .loading-state {
   display: flex;
@@ -158,14 +158,14 @@ export default {
   align-items: center;
   justify-content: center;
   height: 120px;
-  color: #6C757D;
+  color: var(--color-text-secondary);
   text-align: center;
 }
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #1976d2;
+  border: 3px solid var(--color-bg-secondary);
+  border-top: 3px solid var(--color-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -176,43 +176,43 @@ export default {
 }
 .content-body {
   line-height: 1.6;
-  color: #333;
+  color: var(--color-text-primary);
   font-size: 16px;
 }
-.dark-mode .content-body { color: #e0e0e0; }
+.dark-mode .content-body { color: var(--color-text-primary); }
 .code-content {
-  background: #fff;
-  border: 1px solid #e9ecef;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-primary);
   border-radius: 8px;
   overflow: hidden;
 }
 .dark-mode .code-content {
-  background: #1f2122;
-  border-color: #33393d;
+  background: var(--color-surface);
+  border-color: var(--color-border-primary);
 }
 .code-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
 }
 .dark-mode .code-header {
-  background: #181a1b;
-  border-bottom-color: #333;
+  background: var(--color-bg-tertiary);
+  border-bottom-color: var(--color-border-primary);
 }
 .code-language {
   font-size: 14px;
   font-weight: 600;
-  color: #495057;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.dark-mode .code-language { color: #c0c4c8; }
+.dark-mode .code-language { color: var(--color-text-secondary); }
 .copy-code-btn {
-  background: #1976d2;
-  color: white;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
@@ -222,14 +222,14 @@ export default {
   transition: all 0.2s ease;
 }
 .copy-code-btn:hover {
-  background: #1565c0;
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
 }
 .code-block {
   margin: 0;
   padding: 20px;
-  background: #2d3748;
-  color: #e2e8f0;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 14px;
   line-height: 1.6;
@@ -237,38 +237,38 @@ export default {
   white-space: pre;
 }
 .plain-text-content {
-  background: #fff;
-  border: 1px solid #e9ecef;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-primary);
   border-radius: 8px;
   overflow: hidden;
 }
 .dark-mode .plain-text-content {
-  background: #1f2122;
-  border-color: #33393d;
+  background: var(--color-surface);
+  border-color: var(--color-border-primary);
 }
 .text-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e9ecef;
+  background: var(--color-bg-secondary);
+  border-bottom: 1px solid var(--color-border-primary);
 }
 .dark-mode .text-header {
-  background: #181a1b;
-  border-bottom-color: #333;
+  background: var(--color-bg-tertiary);
+  border-bottom-color: var(--color-border-primary);
 }
 .text-type {
   font-size: 14px;
   font-weight: 600;
-  color: #495057;
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
-.dark-mode .text-type { color: #c0c4c8; }
+.dark-mode .text-type { color: var(--color-text-secondary); }
 .copy-text-btn {
-  background: #28a745;
-  color: white;
+  background: var(--color-success);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 6px;
   padding: 6px 12px;
@@ -278,14 +278,14 @@ export default {
   transition: all 0.2s ease;
 }
 .copy-text-btn:hover {
-  background: #218838;
+  background: var(--color-success-dark);
   transform: translateY(-1px);
 }
 .text-block {
   margin: 0;
   padding: 20px;
-  background: #f8f9fa;
-  color: #495057;
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 14px;
   line-height: 1.6;
@@ -294,7 +294,7 @@ export default {
   word-break: break-word;
 }
 .dark-mode .text-block {
-  background: #2a2d2f;
-  color: #e0e0e0;
+  background: var(--color-bg-tertiary);
+  color: var(--color-text-primary);
 }
 </style>

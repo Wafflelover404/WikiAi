@@ -213,18 +213,18 @@ export default {
   }
   .search-sidebar {
     width: 320px;
-    background: #f9f9f9;
+    background: var(--color-bg-secondary);
     height: 95%;
     min-height: 0;
-    border-left: 1px solid #ddd;
+    border-left: 1px solid var(--color-border-primary);
     padding: 16px;
     position: relative;
     overflow-y: auto;
   }
   .dark-mode .search-sidebar {
-    background: #1b1d1f;
-    border-left-color: #333;
-    color: #e0e0e0;
+    background: var(--color-bg-secondary);
+    border-left-color: var(--color-border-primary);
+    color: var(--color-text-primary);
   }
   .search-bar {
     display: flex;
@@ -235,18 +235,18 @@ export default {
   .search-input {
     flex: 1;
     padding: 8px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--color-border-primary);
     border-radius: 4px;
     font-size: 15px;
   }
   .dark-mode .search-input {
-    background: #232628;
-    border-color: #3a3d3f;
-    color: #e0e0e0;
+    background: var(--color-bg-tertiary);
+    border-color: var(--color-border-primary);
+    color: var(--color-text-primary);
   }
   .search-btn {
-    background: #0078d4;
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
     border: none;
     border-radius: 4px;
     padding: 8px 12px;
@@ -254,40 +254,40 @@ export default {
     font-size: 16px;
   }
   .search-results {
-    color: #333;
+    color: var(--color-text-primary);
     margin-top: 8px;
   }
   .dark-mode .search-results {
-    color: #e0e0e0;
+    color: var(--color-text-primary);
   }
   .search-result {
-    background: #fff;
+    background: var(--color-surface);
     border-radius: 4px;
     margin-bottom: 8px;
     padding: 8px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow: var(--color-shadow-light);
   }
   .dark-mode .search-result {
-    background: #232628;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+    background: var(--color-surface);
+    box-shadow: var(--color-shadow-dark);
   }
   .ai-overview {
-    background: #eaf6ff;
+    background: var(--color-primary-light);
     border-radius: 4px;
     margin-bottom: 8px;
     padding: 8px;
-    color: #0078d4;
+    color: var(--color-primary);
     font-size: 15px;
-    box-shadow: 0 1px 2px rgba(0,120,212,0.04);
+    box-shadow: var(--color-shadow-light);
   }
   .dark-mode .ai-overview {
-    background: #14202b;
-    color: #66b3ff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    background: var(--color-primary-dark);
+    color: var(--color-primary-light);
+    box-shadow: var(--color-shadow-dark);
   }
 
   .loading-ai-overview {
-    color: #0078d4;
+    color: var(--color-primary);
     font-style: italic bold;
     opacity: 1;
     animation: blinker 3s linear infinite;
@@ -302,8 +302,8 @@ export default {
 
 <style>
   .open-file-btn {
-    background: #0078d4;
-    color: #fff;
+    background: var(--color-primary);
+    color: var(--color-text-inverse);
     border: none;
     border-radius: 4px;
     padding: 6px 12px;
@@ -314,17 +314,17 @@ export default {
   .file-modal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.2);
+    background: rgba(0,0,0,0.5);
     z-index: 9999;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .file-modal-content {
-    background: #fff;
+    background: var(--color-surface);
     padding: 32px 24px;
     border-radius: 8px;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+    box-shadow: var(--color-shadow-dark);
     min-width: 320px;
     max-width: 600px;
     max-height: 80vh;
@@ -332,9 +332,9 @@ export default {
     position: relative;
   }
   .dark-mode .file-modal-content {
-    background: #1f2122;
-    color: #e0e0e0;
-    box-shadow: 0 2px 16px rgba(0,0,0,0.5);
+    background: var(--color-surface);
+    color: var(--color-text-primary);
+    box-shadow: var(--color-shadow-dark);
   }
   .close-file-modal {
     position: absolute;
@@ -343,10 +343,10 @@ export default {
     background: none;
     border: none;
     font-size: 20px;
-    color: #888;
+    color: var(--color-text-tertiary);
     cursor: pointer;
   }
   .dark-mode .close-file-modal {
-    color: #a0a6ac;
+    color: var(--color-text-tertiary);
   }
 </style>

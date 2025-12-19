@@ -1533,11 +1533,89 @@ export default {
 
 
 <style>
+/* CSS Variables for consistent theming */
+:root {
+  /* Light theme colors */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f8f9fa;
+  --color-bg-tertiary: #f1f3f4;
+  --color-bg-hover: #f8f9fa;
+  --color-bg-active: #e8f0fe;
+  
+  --color-text-primary: #202124;
+  --color-text-secondary: #5f6368;
+  --color-text-tertiary: #9aa0a6;
+  --color-text-inverse: #ffffff;
+  
+  --color-border-primary: #dadce0;
+  --color-border-secondary: #e0e0e0;
+  --color-border-tertiary: #e8eaed;
+  
+  --color-primary: #4285f4;
+  --color-primary-light: #66b3ff;
+  --color-primary-dark: #1a73e8;
+  --color-primary-rgb: 66, 133, 244;
+  
+  --color-success: #34a853;
+  --color-success-light: #dcfce7;
+  --color-warning: #fbbc04;
+  --color-warning-light: #fef3c7;
+  --color-error: #ea4335;
+  --color-error-light: #fee2e2;
+  
+  --color-surface: #ffffff;
+  --color-surface-variant: #f8f9fa;
+  --color-shadow: rgba(0, 0, 0, 0.1);
+  --color-shadow-light: rgba(0, 0, 0, 0.05);
+  --color-shadow-medium: rgba(0, 0, 0, 0.15);
+  --color-shadow-dark: rgba(0, 0, 0, 0.3);
+}
+
+/* Dark theme colors */
+.dark-mode {
+  --color-bg-primary: #1f2122;
+  --color-bg-secondary: #181a1b;
+  --color-bg-tertiary: #2a2d2f;
+  --color-bg-hover: #242628;
+  --color-bg-active: #33393d;
+  
+  --color-text-primary: #e0e0e0;
+  --color-text-secondary: #a0a6ac;
+  --color-text-tertiary: #8a8f94;
+  --color-text-inverse: #202124;
+  
+  --color-border-primary: #3a3d3f;
+  --color-border-secondary: #33393d;
+  --color-border-tertiary: #2f3234;
+  
+  --color-primary: #66b3ff;
+  --color-primary-light: #8ab4f8;
+  --color-primary-dark: #4285f4;
+  --color-primary-rgb: 102, 179, 255;
+  
+  --color-success: #48bb78;
+  --color-success-light: rgba(72, 187, 120, 0.2);
+  --color-warning: #f6ad55;
+  --color-warning-light: rgba(246, 173, 85, 0.2);
+  --color-error: #f56565;
+  --color-error-light: rgba(245, 101, 101, 0.2);
+  
+  --color-surface: #1f2122;
+  --color-surface-variant: #242628;
+  --color-shadow: rgba(0, 0, 0, 0.4);
+  --color-shadow-light: rgba(0, 0, 0, 0.2);
+  --color-shadow-medium: rgba(0, 0, 0, 0.5);
+  --color-shadow-dark: rgba(0, 0, 0, 0.6);
+}
+
 .kb-app {
   width: 100%;
   max-width: 100vw;
   min-height: 100vh;
   overflow-x: hidden;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* Full-page login UI */

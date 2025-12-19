@@ -1105,56 +1105,56 @@ export default {
 }
 
 /* Dark mode for permissions panel */
-body.dark-mode .current-permissions-panel {
+.dark-mode .current-permissions-panel {
   background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
   border-color: #4a5568;
 }
 
-body.dark-mode .panel-header {
+.dark-mode .panel-header {
   background: linear-gradient(135deg, #374151 0%, #2d3748 100%);
   border-bottom-color: #4a5568;
   color: #e2e8f0;
 }
 
-body.dark-mode .access-title {
+.dark-mode .access-title {
   color: #e2e8f0;
 }
 
-body.dark-mode .access-description {
+.dark-mode .access-description {
   color: #a0aec0;
 }
 
-body.dark-mode .access-file-item {
+.dark-mode .access-file-item {
   background: #2d3748;
   border-color: #4a5568;
 }
 
-body.dark-mode .access-file-item:hover {
+.dark-mode .access-file-item:hover {
   background: #374151;
   border-color: #718096;
 }
 
-body.dark-mode .file-name-small {
+.dark-mode .file-name-small {
   color: #e2e8f0;
 }
 
-body.dark-mode .more-files {
+.dark-mode .more-files {
   background: #374151;
   border-color: #4a5568;
   color: #a0aec0;
 }
 
-body.dark-mode .access-info.full-access {
+.dark-mode .access-info.full-access {
   background: linear-gradient(135deg, #1e4620 0%, #2d5a2f 100%);
   border-color: #4caf50;
 }
 
-body.dark-mode .access-info.partial-access {
+.dark-mode .access-info.partial-access {
   background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%);
   border-color: #2196f3;
 }
 
-body.dark-mode .access-info.no-access {
+.dark-mode .access-info.no-access {
   background: linear-gradient(135deg, #4a1f1f 0%, #5a2d2d 100%);
   border-color: #f44336;
 }
@@ -1232,27 +1232,132 @@ body.dark-mode .access-info.no-access {
 }
 
 /* Dark mode for status messages */
-body.dark-mode .status-message.success {
+.dark-mode .status-message.success {
   background: linear-gradient(135deg, #1e4620 0%, #2d5a2f 100%);
   color: #81c784;
   border-color: #4caf50;
 }
 
-body.dark-mode .status-message.error {
+.dark-mode .status-message.error {
   background: linear-gradient(135deg, #4a1f1f 0%, #5a2d2d 100%);
   color: #e57373;
   border-color: #f44336;
 }
 
-body.dark-mode .status-message.warning {
+.dark-mode .status-message.warning {
   background: linear-gradient(135deg, #4a3520 0%, #5a4530 100%);
   color: #ffb74d;
   border-color: #ff9800;
 }
 
-body.dark-mode .status-message.info {
+.dark-mode .status-message.info {
   background: linear-gradient(135deg, #1e3a5f 0%, #2d4a6f 100%);
   color: #64b5f6;
   border-color: #2196f3;
+}
+
+/* Additional dark theme styles for modal components */
+.dark-mode .modal-overlay.fullscreen {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.dark-mode .fullscreen-modal {
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+.dark-mode .modal-close-btn {
+  color: var(--color-text-tertiary);
+}
+
+.dark-mode .modal-close-btn:hover {
+  color: var(--color-error);
+}
+
+.dark-mode .modal-save-btn {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+/* Update existing dark mode styles to use CSS variables */
+.dark-mode .current-permissions-panel {
+  background: var(--color-surface-variant);
+  border-color: var(--color-border-primary);
+}
+
+.dark-mode .panel-header {
+  background: var(--color-bg-tertiary);
+  border-bottom-color: var(--color-border-primary);
+  color: var(--color-text-primary);
+}
+
+.dark-mode .access-title {
+  color: var(--color-text-primary);
+}
+
+.dark-mode .access-description {
+  color: var(--color-text-secondary);
+}
+
+.dark-mode .access-file-item {
+  background: var(--color-surface);
+  border-color: var(--color-border-primary);
+}
+
+.dark-mode .access-file-item:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-secondary);
+}
+
+.dark-mode .file-name-small {
+  color: var(--color-text-primary);
+}
+
+.dark-mode .more-files {
+  background: var(--color-bg-hover);
+  border-color: var(--color-border-primary);
+  color: var(--color-text-secondary);
+}
+
+.dark-mode .access-info.full-access {
+  background: var(--color-success-light);
+  border-color: var(--color-success);
+  color: var(--color-success);
+}
+
+.dark-mode .access-info.partial-access {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.dark-mode .access-info.no-access {
+  background: var(--color-error-light);
+  border-color: var(--color-error);
+  color: var(--color-error);
+}
+
+.dark-mode .status-message.success {
+  background: var(--color-success-light);
+  color: var(--color-success);
+  border-color: var(--color-success);
+}
+
+.dark-mode .status-message.error {
+  background: var(--color-error-light);
+  color: var(--color-error);
+  border-color: var(--color-error);
+}
+
+.dark-mode .status-message.warning {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+  border-color: var(--color-warning);
+}
+
+.dark-mode .status-message.info {
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
 }
 </style>

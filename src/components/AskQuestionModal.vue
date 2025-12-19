@@ -106,9 +106,9 @@ export default {
   box-sizing: border-box; /* Prevent overflow from padding */
 }
 .dark-mode .modal-content {
-  background: #1f2122;
-  color: #e0e0e0;
-  box-shadow: 0 10px 36px rgba(0,0,0,0.6);
+  background: var(--color-surface);
+  color: var(--color-text-primary);
+  box-shadow: var(--color-shadow-dark);
 }
 .modal-content h3 {
   margin: 0 0 6px 0;
@@ -118,7 +118,7 @@ export default {
   color: #5f6368;
   font-size: 14px;
 }
-.dark-mode .subtitle { color: #a0a6ac; }
+.dark-mode .subtitle { color: var(--color-text-secondary); }
 .question-input {
   width: 100%;
   border: 1px solid #dfe1e5;
@@ -131,24 +131,24 @@ export default {
   overflow-wrap: anywhere; /* Avoid horizontal overflow on long text */
 }
 .dark-mode .question-input {
-  background: #232628;
-  border-color: #3a3d3f;
-  color: #e0e0e0;
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-primary);
+  color: var(--color-text-primary);
 }
 .helper {
   font-size: 12px;
   color: #6b7280;
   margin-top: 6px;
 }
-.dark-mode .helper { color: #9aa0a6; }
+.dark-mode .helper { color: var(--color-text-tertiary); }
 .modal-actions {
   display: flex;
   gap: 10px;
   margin-top: 14px;
 }
 button.primary {
-  background: #4285f4;
-  color: #fff;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   border-radius: 8px;
   padding: 8px 14px;
@@ -165,8 +165,8 @@ button.secondary {
   cursor: pointer;
 }
 .dark-mode button.secondary {
-  background: #2a2d2f;
-  color: #e0e0e0;
+  background: var(--color-surface-variant);
+  color: var(--color-text-primary);
 }
 .status {
   margin-top: 10px;
@@ -174,8 +174,8 @@ button.secondary {
 }
 .status.success { color: #1e8e3e; }
 .status.error { color: #d93025; }
-.dark-mode .status.success { color: #81c784; }
-.dark-mode .status.error { color: #ef9a9a; }
+.dark-mode .status.success { color: var(--color-success); }
+.dark-mode .status.error { color: var(--color-error); }
 @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
 
 /* Mobile adjustments */

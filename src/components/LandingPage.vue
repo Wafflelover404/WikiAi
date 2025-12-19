@@ -354,15 +354,15 @@ export default {
   top: 0;
   left: 0;
   height: 3px;
-  background: linear-gradient(90deg, #4a90e2, #66b3ff, #4a90e2);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-primary-light), var(--color-primary));
   z-index: 2000;
   transition: width 0.1s ease-out;
-  box-shadow: 0 0 8px rgba(74, 144, 226, 0.5);
+  box-shadow: 0 0 8px var(--color-primary-light);
 }
 
 .landing-page {
-  background: linear-gradient(135deg, #ffffff 0%, #f5f7fa 100%);
-  color: #1a1a2e;
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  color: var(--color-text-primary);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   overflow-x: hidden;
   position: relative;
@@ -375,8 +375,8 @@ export default {
 }
 
 .dark-mode .landing-page {
-  background: linear-gradient(135deg, #0f1113 0%, #1a1e22 100%);
-  color: #e0e0e0;
+  background: linear-gradient(135deg, var(--color-bg-primary) 0%, var(--color-bg-secondary) 100%);
+  color: var(--color-text-primary);
 }
 
 /* Animated Background */

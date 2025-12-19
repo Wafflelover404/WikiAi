@@ -63,24 +63,24 @@ export default {
 <style scoped>
 .product-card {
   display: flex;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border-primary);
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 20px;
-  background: white;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background: var(--color-surface);
+  box-shadow: var(--color-shadow-light);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .product-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  box-shadow: var(--color-shadow-medium);
 }
 
 .product-image {
   width: 300px;
   min-width: 300px;
-  background: #f8f9fa;
+  background: var(--color-bg-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -107,12 +107,12 @@ export default {
 }
 
 .product-title a {
-  color: #2c3e50;
+  color: var(--color-text-primary);
   text-decoration: none;
 }
 
 .product-title a:hover {
-  color: #3498db;
+  color: var(--color-primary);
   text-decoration: underline;
 }
 
@@ -123,13 +123,13 @@ export default {
 .current-price {
   font-size: 1.5rem;
   font-weight: bold;
-  color: #e74c3c;
+  color: var(--color-primary);
   margin-right: 10px;
 }
 
 .original-price {
   text-decoration: line-through;
-  color: #7f8c8d;
+  color: var(--color-text-secondary);
   font-size: 1.1rem;
 }
 
@@ -143,18 +143,18 @@ export default {
 }
 
 .in-stock {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: var(--color-success-light);
+  color: var(--color-success-dark);
 }
 
 .out-of-stock {
-  background-color: #ffebee;
-  color: #c62828;
+  background-color: var(--color-error-light);
+  color: var(--color-error-dark);
 }
 
 .product-description {
   flex: 1;
-  color: #555;
+  color: var(--color-text-primary);
   line-height: 1.5;
   margin-bottom: 15px;
   max-height: 150px;
@@ -162,7 +162,9 @@ export default {
   text-overflow: ellipsis;
   display: -webkit-box;
   -webkit-line-clamp: 6;
+  line-clamp: 6;
   -webkit-box-orient: vertical;
+  box-orient: vertical;
 }
 
 .product-actions {
@@ -172,8 +174,8 @@ export default {
 }
 
 .view-button {
-  background-color: #3498db;
-  color: white;
+  background-color: var(--color-primary);
+  color: var(--color-text-inverse);
   border: none;
   padding: 8px 16px;
   border-radius: 4px;
@@ -184,7 +186,7 @@ export default {
 }
 
 .view-button:hover {
-  background-color: #2980b9;
+  background-color: var(--color-primary-dark);
 }
 
 /* Responsive styles */
@@ -204,6 +206,7 @@ export default {
   
   .product-description {
     -webkit-line-clamp: 4;
+    line-clamp: 4;
   }
 }
 </style>

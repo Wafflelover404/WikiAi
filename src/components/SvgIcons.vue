@@ -23,7 +23,7 @@ export default {
       isDarkMode: false,
       observer: null,
       iconMap: {
-        'sparkles': 'sparkle-circle.svg',     // sparkle circle for logo
+        'sparkles': 'star.svg',                 // star for logo
         'books': 'book-bookmark.svg',         // book with bookmark for knowledge
         'search': 'magnifer.svg',             // magnifying glass for search
         'robot': 'cpu.svg',                   // CPU for AI features
@@ -33,10 +33,10 @@ export default {
         'code': 'code-2.svg',                 // code symbol
         'user': 'user-circle.svg',            // user circle for team
         'mail': 'letter.svg',                 // letter for email
-        'briefcase': 'briefcase.svg',         // briefcase for business
+        'briefcase': 'suitcase.svg',         // suitcase for business
         'telegram': 'chat-round.svg',         // chat bubble for messaging
         'phone': 'phone.svg',                 // phone for contact
-        'github': 'github.svg',               // github logo
+        'github': 'star.svg',                 // star for github (no github icon available)
         'arrowUp': 'arrow-to-top-left.svg',   // arrow up for back to top
         'moon': 'moon-sleep.svg',             // moon for dark mode
         'sun': 'sun-2.svg',                   // sun for light mode
@@ -46,15 +46,15 @@ export default {
         'russia': 'translation-2.svg',        // translation icon for Russian
         'uk': 'translation.svg',              // translation icon for English
         'folder': 'folder.svg',               // folder for file list
-        'brain': 'bulb-minimalistic.svg',     // brain/idea for quiz
+        'brain': 'lightbulb-minimalistic.svg', // lightbulb for quiz/brain
         'clipboard': 'clipboard.svg',         // clipboard for copy
         'printer': 'printer.svg',             // printer for print
         'download': 'download.svg',           // download arrow
         'inbox': 'inbox.svg',                 // inbox for empty state
         'danger': 'danger-circle.svg',        // danger/warning icon
-        'world': 'globe.svg',                 // globe for all/world
+        'world': 'earth.svg',                  // globe for all/world
         'document': 'document.svg',           // document file
-        'notebook': 'notebook-2.svg',         // notebook
+        'notebook': 'notebook.svg',           // notebook
         'book': 'book-2.svg',                 // book
         'palette': 'palette.svg',             // palette for CSS
         'chat': 'chat-round.svg',             // chat/messenger
@@ -74,7 +74,7 @@ export default {
         'tools': 'tuning.svg',                // tools/wrench
         'clock': 'history.svg',               // clock/history
         'edit': 'pen.svg',                    // edit/pencil
-        'trash': 'trash-bin.svg',             // trash/delete
+        'trash': 'trash-bin-2.svg',           // trash bin for delete
         'target': 'target.svg',               // target/aim
         'lightbulb': 'lightbulb.svg',         // lightbulb/idea
         'gift': 'gift.svg',                   // gift
@@ -105,7 +105,7 @@ export default {
   },
   methods: {
     getIconPath() {
-      return `/solar-linear-icons/${this.iconMap[this.icon] || 'sparkle-circle.svg'}`;
+      return `/solar-linear-icons/${this.iconMap[this.icon] || 'star.svg'}`;
     },
     updateDarkMode() {
       this.isDarkMode = document.documentElement.classList.contains('dark-mode')
@@ -155,9 +155,5 @@ export default {
   color: currentColor;
 }
 
-/* Dark mode overrides */
-.dark-mode .icon {
-  filter: brightness(1.8) saturate(0.9);
-  opacity: 0.95;
-}
+/* Dark mode is handled via JavaScript iconStyle computed property */
 </style>
