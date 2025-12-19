@@ -1,52 +1,50 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
-const Empty = { template: '<div></div>' }
-
 const routes = [
   {
     path: '/',
     name: 'LandingPage',
-    component: Empty
+    component: () => import('./components/LandingPage.vue')
   },
   {
     path: '/landing',
-    name: 'LandingPage',
-    component: Empty
+    name: 'LandingPageAlt',
+    component: () => import('./components/LandingPage.vue')
   },
   {
     path: '/login',
     name: 'Login',
-    component: Empty
+    component: () => import('./components/LoginPage.vue')
   },
   {
     path: '/app',
     name: 'AppHome',
-    component: Empty
+    component: () => import('./components/HomePage.vue')
   },
   {
     path: '/app/files',
     name: 'AppFiles',
-    component: Empty
+    component: () => import('./components/FileTabs.vue')
   },
   {
     path: '/app/search',
     name: 'AppSearch',
-    component: Empty
+    component: () => import('./components/SearchPage.vue')
   },
   {
     path: '/app/admin',
     name: 'AppAdmin',
-    component: Empty
+    component: () => import('./components/AdminDashboard.vue')
   },
   {
     path: '/app/plugins',
     name: 'OpenCartPlugins',
-    component: Empty
+    component: () => import('./components/OpenCartPluginsPage.vue')
   },
   {
     path: '/app/catalog-dashboard',
     name: 'CatalogDashboard',
-    component: Empty
+    component: () => import('./components/CatalogDashboard.vue')
   }
 ]
 

@@ -3,7 +3,7 @@
     <!-- File List View -->
     <div v-if="!activeTab" class="file-list-view">
       <div class="file-list-header">
-        <h3>📁 Files</h3>
+        <h3><SvgIcons icon="folder" /> Files</h3>
         <div class="file-count">{{ fileList.length }} files</div>
         <button 
           v-if="!indexing"
@@ -12,7 +12,7 @@
           title="Index all files to vector database"
           aria-label="Index files"
         >
-          ⚡ Index Files
+          <SvgIcons icon="lightning" /> Index Files
         </button>
         <button 
           v-else
@@ -28,7 +28,7 @@
       </div>
       <div class="file-list-cards">
         <div v-for="file in fileList" :key="file.name" class="file-card" @click="openFile(file.name)">
-          <div class="file-icon">{{ getFileIcon(file.name) }}</div>
+          <div class="file-icon"><SvgIcons :icon="getFileIcon(file.name)" /></div>
           <div class="file-info">
             <div class="file-name" :title="file.name">{{ file.name }}</div>
             <div v-if="file.description" class="file-description" :title="file.description">
@@ -42,15 +42,15 @@
           </div>
           <div class="file-actions">
             <button class="action-btn" @click.stop="downloadFile(file.name)" title="Download">
-              ⬇️
+              <SvgIcons icon="download" />
             </button>
             <button class="action-btn" @click.stop="openFile(file.name)" title="Open">
-              👁️
+              <SvgIcons icon="eye" />
             </button>
           </div>
         </div>
         <div v-if="fileList.length === 0" class="empty-state">
-          <div class="empty-icon">📭</div>
+          <div class="empty-icon"><SvgIcons icon="inbox" /></div>
           <div class="empty-text">No files available</div>
           <div class="empty-subtext">Files you have access to will appear here</div>
         </div>
@@ -67,16 +67,16 @@
           <h4 class="file-content-title">{{ activeTab }}</h4>
           <div class="content-actions">
             <button class="action-btn" @click="$emit('open-quiz', activeTab)" title="Open Quiz" aria-label="Open Quiz">
-              🧠
+              <SvgIcons icon="brain" />
             </button>
             <button class="action-btn" @click="copyContent" title="Copy content">
-              📋
+              <SvgIcons icon="clipboard" />
             </button>
             <button class="action-btn" @click="printContent" title="Print">
-              🖨️
+              <SvgIcons icon="printer" />
             </button>
             <button class="action-btn" @click="downloadFile(activeTab)" title="Download">
-              ⬇️
+              <SvgIcons icon="download" />
             </button>
           </div>
         </div>
@@ -93,7 +93,7 @@
               <div class="code-header">
                 <span class="code-language">{{ getCodeLanguage() }}</span>
                 <button class="copy-code-btn" @click="copyCode" title="Copy code">
-                  📋 Copy
+                  <SvgIcons icon="clipboard" /> Copy
                 </button>
               </div>
               <pre class="code-block"><code>{{ currentContent }}</code></pre>
@@ -102,14 +102,14 @@
               <div class="text-header">
                 <span class="text-type">Plain Text</span>
                 <button class="copy-text-btn" @click="copyContent" title="Copy text">
-                  📋 Copy
+                  <SvgIcons icon="clipboard" /> Copy
                 </button>
               </div>
               <pre class="text-block">{{ currentContent }}</pre>
             </div>
           </div>
           <div v-else class="error-state">
-            <div class="error-icon">⚠️</div>
+            <div class="error-icon"><SvgIcons icon="danger" /></div>
             <div>Failed to load file content</div>
           </div>
         </div>
@@ -122,14 +122,14 @@
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
+import SvgIcons from './SvgIcons.vue';
 
 export default {
   name: 'FileTabs',
+  components: {
+    SvgIcons
+  },
   props: {
-    openedFiles: {
-      type: Array,
-      default: () => []
-    },
     fileContents: {
       type: Object,
       default: () => ({})
@@ -154,18 +154,24 @@ export default {
   },
   computed: {
     fileList() {
-      // Use real file metadata from the backend
+      // Use the transformed file data from the parent
       return this.files.map(file => ({
-        name: file.filename || file.original_filename,
+        name: file.name || file.filename || file.original_filename,
         size: file.size || 0,
-        modified: file.upload_date || file.created_at || new Date(),
-        type: file.file_type || this.getFileType(file.filename || file.original_filename),
+        modified: file.modified || file.upload_date || file.created_at || new Date().toISOString(),
+        type: file.type || file.file_type || this.getFileType(file.name || file.filename || file.original_filename) || 'document',
         description: file.description || '',
-        file_id: file.file_id
+        file_id: file.file_id || file._original?.file_id,
+        // Preserve the original data
+        _original: file._original || file
       }));
     },
     currentContent() {
-      return this.activeTab ? this.fileContents[this.activeTab] : null;
+      console.log('[FileTabs] Getting content for activeTab:', this.activeTab);
+      console.log('[FileTabs] Available fileContents:', this.fileContents);
+      const content = this.activeTab ? this.fileContents[this.activeTab] : null;
+      console.log('[FileTabs] Content for activeTab:', content);
+      return content;
     },
     markedContent() {
       if (!this.currentContent) return '';
@@ -200,6 +206,12 @@ export default {
       return codeExtensions.some(ext => filename.endsWith(ext));
     }
   },
+  watch: {
+    activeTab(newVal, oldVal) {
+      console.log('[FileTabs] activeTab changed from', oldVal, 'to', newVal);
+      console.log('[FileTabs] fileContents:', this.fileContents);
+    }
+  },
   methods: {
     getMarkedContent(text) {
       if (!text) return '';
@@ -220,6 +232,7 @@ export default {
       return marked(text);
     },
     openFile(fileName) {
+      console.log('[FileTabs] openFile called with:', fileName);
       this.$emit('switch-tab', fileName);
     },
     closeFile() {
@@ -228,31 +241,31 @@ export default {
     getFileIcon(fileName) {
       const extension = fileName.split('.').pop().toLowerCase();
       const iconMap = {
-        'md': '📝',
-        'txt': '📄',
-        'pdf': '📕',
-        'doc': '📘',
-        'docx': '📘',
-        'json': '📋',
-        'js': '📜',
-        'ts': '📜',
-        'html': '🌐',
-        'css': '🎨',
-        'py': '🐍',
-        'java': '☕',
-        'cpp': '⚙️',
-        'c': '⚙️',
-        'go': '🔷',
-        'rust': '🦀',
-        'php': '🐘',
-        'rb': '💎',
-        'swift': '🕊️',
-        'kt': '🟣',
-        'xml': '📰',
-        'yml': '⚙️',
-        'yaml': '⚙️'
+        'md': 'notebook',
+        'txt': 'document',
+        'pdf': 'document',
+        'doc': 'document',
+        'docx': 'document',
+        'json': 'listing',
+        'js': 'code',
+        'ts': 'code',
+        'html': 'world',
+        'css': 'palette',
+        'py': 'code',
+        'java': 'code',
+        'cpp': 'code',
+        'c': 'code',
+        'go': 'code',
+        'rs': 'code',
+        'php': 'code',
+        'rb': 'code',
+        'swift': 'code',
+        'kt': 'code',
+        'xml': 'code',
+        'yml': 'code',
+        'yaml': 'code'
       };
-      return iconMap[extension] || '📄';
+      return iconMap[extension] || 'document';
     },
     getFileType(fileName) {
       const extension = fileName.split('.').pop().toLowerCase();

@@ -73,7 +73,7 @@
           <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="#" @click.prevent="navigateTo('files')"><SvgIcons icon="folder" /> {{ t.nav.files }}</a></li>
           <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="#" @click.prevent="navigateTo('search')"><SvgIcons icon="search" /> {{ t.nav.search }}</a></li>
           <li :class="{active: currentView === 'plugins' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.plugins"><a href="#" @click.prevent="navigateTo('plugins')"><SvgIcons icon="plug" /> {{ t.nav.plugins || 'Plugins' }}</a></li>
-          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><router-link to="/"><SvgIcons icon="info" /> {{ t.nav.about }}</router-link></li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><router-link to="/landing"><SvgIcons icon="info" /> {{ t.nav.about }}</router-link></li>
           <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="validateTokenAndShowAdmin" tabindex="0" :aria-label="t.nav.admin"><a href="#" @click.prevent="validateTokenAndShowAdmin"><SvgIcons icon="tools" /> {{ t.nav.admin }}</a></li>
         </ul>
         <div class="sidebar-bottom">
@@ -449,7 +449,9 @@ export default {
       isCheckingToken: true,  // Flag to track if we're checking token on mount
       langDropdownOpen: false,  // Language dropdown state
       uploadingFiles: false,
-      uploadError: ''
+      uploadError: '',
+      openedFiles: [],  // Track opened files for tabs
+      fileContents: {}  // Store file contents by filename
     };
   },
   mounted() {
