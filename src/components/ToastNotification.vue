@@ -9,8 +9,13 @@
 </template>
 
 <script>
+import SvgIcons from './SvgIcons.vue';
+
 export default {
   name: 'ToastNotification',
+  components: {
+    SvgIcons
+  },
   props: {
     message: {
       type: String,
@@ -40,10 +45,10 @@ export default {
   methods: {
     getIcon() {
       const icons = {
-        success: '✅',
-        error: '❌',
+        success: 'checkmark',
+        error: 'close',
         warning: '⚠️',
-        info: 'ℹ️'
+        info: 'info'
       };
       return icons[this.type] || icons.info;
     },

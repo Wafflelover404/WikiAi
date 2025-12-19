@@ -3,9 +3,9 @@
     <div v-if="visible" class="quiz-modal-overlay" @click.self="onClose" role="dialog" aria-modal="true">
       <div class="quiz-modal" role="document">
       <div class="quiz-header">
-        <h3 class="quiz-title" :title="filename">📘 Quiz: {{ filename }}</h3>
+        <h3 class="quiz-title" :title="filename"><SvgIcons icon="notebook" /> Quiz: {{ filename }}</h3>
         <div class="quiz-actions">
-          <button class="regen-btn" @click="regenerate" :disabled="loading">🔄 Regenerate</button>
+          <button class="regen-btn" @click="regenerate" :disabled="loading"><SvgIcons icon="refresh" /> Regenerate</button>
           <button class="close-btn" @click="onClose">✕</button>
         </div>
       </div>
@@ -28,8 +28,8 @@
               </label>
             </div>
             <div v-if="submitted" class="answer-feedback" :class="{correct: isCorrect(idx), wrong: !isCorrect(idx)}">
-              <span v-if="isCorrect(idx)">✅ Correct</span>
-              <span v-else>❌ Wrong</span>
+              <span v-if="isCorrect(idx)"><SvgIcons icon="checkmark" /> Correct</span>
+              <span v-else><SvgIcons icon="close" /> Wrong</span>
             </div>
           </div>
         </div>
@@ -45,8 +45,13 @@
 </template>
 
 <script>
+import SvgIcons from './SvgIcons.vue';
+
 export default {
   name: 'QuizModal',
+  components: {
+    SvgIcons
+  },
   props: {
     visible: { type: Boolean, default: false },
     filename: { type: String, required: true },

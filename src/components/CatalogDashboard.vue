@@ -2,11 +2,11 @@
   <div class="catalog-dashboard-container">
     <div class="dashboard-header">
       <div>
-        <h1>📊 Catalog Analytics Dashboard</h1>
+        <h1><SvgIcons icon="chart" /> Catalog Analytics Dashboard</h1>
         <p class="subtitle">Monitor your OpenCart catalog performance and indexing status</p>
       </div>
       <button @click="refreshDashboard" class="btn btn-primary refresh-btn">
-        🔄 Refresh
+        <SvgIcons icon="refresh" /> Refresh
       </button>
     </div>
 
@@ -21,7 +21,7 @@
       </div>
 
       <div class="metric-card">
-        <div class="metric-icon">📄</div>
+        <div class="metric-icon"><SvgIcons icon="document" /></div>
         <div class="metric-content">
           <p class="metric-label">Total Products</p>
           <p class="metric-value">{{ totalProducts }}</p>
@@ -71,7 +71,7 @@
             </div>
             <div class="card-actions">
               <button @click="showCatalogDetails(catalog.catalog_id)" class="btn-icon" title="View details">
-                ℹ️
+<SvgIcons icon="info" />
               </button>
               <button @click="downloadCatalogReport(catalog.catalog_id)" class="btn-icon" title="Download report">
                 ⬇️

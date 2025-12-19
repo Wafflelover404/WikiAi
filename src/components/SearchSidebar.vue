@@ -3,7 +3,7 @@
     <h3>Search</h3>
     <div class="search-bar">
       <input v-model="searchText" type="text" placeholder="Search knowledge base..." class="search-input" @keyup.enter="runSearch" />
-      <button class="search-btn" @click="runSearch">🔍</button>
+      <button class="search-btn" @click="runSearch"><SvgIcons icon="search" /></button>
     </div>
     <div class="ai-overview" v-if="aiOverviewLoading || aiOverview">
       <strong>AI Overview:</strong>

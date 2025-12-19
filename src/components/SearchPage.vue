@@ -12,7 +12,7 @@
         <div class="search-box-container">
           <div class="search-box" :class="{ 'focused': searchFocused, 'has-results': searchResults.length > 0 }">
             <div class="search-input-wrapper">
-              <span class="search-icon">🔍</span>
+              <span class="search-icon"><SvgIcons icon="search" /></span>
               <input 
                 v-model="searchText" 
                 type="text" 
@@ -35,7 +35,7 @@
                 class="suggestion-item"
                 @click="selectSuggestion(suggestion)"
               >
-                <span class="suggestion-icon">🔍</span>
+                <span class="suggestion-icon"><SvgIcons icon="search" /></span>
                 <span class="suggestion-text">{{ suggestion }}</span>
               </div>
             </div>
@@ -43,7 +43,7 @@
           
           <div class="search-buttons">
             <button class="settings-btn" @click="settingsModalVisible = true" title="Search settings">
-              ⚙️
+              <SvgIcons icon="lightning" />
             </button>
             <button class="search-btn primary" @click="runSearch" :disabled="!searchText.trim()">
               {{ t.search.search }}
@@ -243,7 +243,7 @@
 
         <!-- No Results -->
         <div v-if="hasSearched && searchResults.length === 0 && !aiOverviewLoading" class="no-results">
-          <div class="no-results-icon">🔍</div>
+          <div class="no-results-icon"><SvgIcons icon="search" /></div>
           <h3>No results found for "{{ searchText }}"</h3>
           <div v-if="searchType === 'opencart' || searchType === 'all'" class="debug-hint">
             <p>Debug info: Check browser console for API response details</p>
@@ -271,7 +271,7 @@
             class="recent-item"
             @click="selectRecentSearch(search)"
           >
-            <span class="recent-icon">🕒</span>
+            <span class="recent-icon"><SvgIcons icon="clock" /></span>
             <span>{{ search }}</span>
           </div>
         </div>
@@ -313,7 +313,7 @@
                     :disabled="!enabledPlugins.documents || !enabledPlugins.opencart"
                     @change="saveSettings"
                   />
-                  <span>🌐 All (Documents & Products)</span>
+                  <span><SvgIcons icon="world" /> All (Documents & Products)</span>
                 </label>
                 <p class="option-description">Search both knowledge base documents and OpenCart products</p>
               </div>
@@ -327,11 +327,11 @@
                     :disabled="!enabledPlugins.documents"
                     @change="saveSettings"
                   />
-                  <span>📄 Documents Only</span>
+                  <span><SvgIcons icon="document" /> Documents Only</span>
                 </label>
                 <p class="option-description">Search only knowledge base documents</p>
                 <p v-if="!enabledPlugins.documents" class="plugin-disabled-notice">
-                  ⚠️ Documents plugin is not enabled
+                  <SvgIcons icon="danger" /> Documents plugin is not enabled
                 </p>
               </div>
               
@@ -344,11 +344,11 @@
                     :disabled="!enabledPlugins.opencart"
                     @change="saveSettings"
                   />
-                  <span>🛍️ Products Only</span>
+                  <span><SvgIcons icon="shopping" /> Products Only</span>
                 </label>
                 <p class="option-description">Search only OpenCart products</p>
                 <p v-if="!enabledPlugins.opencart" class="plugin-disabled-notice">
-                  ⚠️ OpenCart plugin is not enabled
+                  <SvgIcons icon="danger" /> OpenCart plugin is not enabled
                 </p>
               </div>
               
@@ -407,11 +407,13 @@
 import { marked } from 'marked';
 import { translations } from '../i18n.js';
 import FileModalOpener from './FileModalOpener.vue';
+import SvgIcons from './SvgIcons.vue';
 
 export default {
   name: 'SearchPage',
   components: {
-    FileModalOpener
+    FileModalOpener,
+    SvgIcons
   },
   props: {
     token: {
@@ -1349,25 +1351,25 @@ export default {
     },
     
     getFileIcon(filename) {
-      if (!filename) return '📄';
+      if (!filename) return 'document';
       const extension = filename.split('.').pop().toLowerCase();
       const iconMap = {
-        'md': '📝',
-        'txt': '📄',
-        'pdf': '📕',
-        'doc': '📘',
-        'docx': '📘',
-        'json': '📋',
-        'js': '📜',
-        'ts': '📜',
-        'html': '🌐',
-        'css': '🎨',
-        'py': '🐍',
-        'java': '☕',
-        'cpp': '⚙️',
-        'c': '⚙️'
+        'md': 'notebook',
+        'txt': 'document',
+        'pdf': 'document',
+        'doc': 'document-text',
+        'docx': 'document-text',
+        'json': 'listing',
+        'js': 'code',
+        'ts': 'code',
+        'html': 'world',
+        'css': 'palette',
+        'py': 'code',
+        'java': 'code',
+        'cpp': 'code',
+        'c': 'code'
       };
-      return iconMap[extension] || '📄';
+      return iconMap[extension] || 'document';
     },
     
     getResultTitle(result) {
@@ -1455,7 +1457,7 @@ export default {
                   <span class="price">$${product.price}</span>
                   ${product.special_price ? `<span class="special-price">$${product.special_price}</span>` : ''}
                 </div>
-                <div class="product-rating">⭐ Rating: ${product.rating}/5</div>
+                <div class="product-rating"><SvgIcons icon="search" /> Rating: ${product.rating}/5</div>
                 <div class="product-stock">
                   Stock: <strong>${product.quantity > 0 ? product.quantity + ' available' : 'Out of stock'}</strong>
                 </div>

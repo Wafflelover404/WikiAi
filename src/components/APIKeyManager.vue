@@ -1,7 +1,7 @@
 <template>
   <div class="api-keys-section">
     <div class="admin-section-header">
-      <h2>🔑 API Keys Management</h2>
+      <h2><SvgIcons icon="key" /> API Keys Management</h2>
       <p class="subtitle">Create and manage API keys for programmatic access to the API</p>
     </div>
 
@@ -156,14 +156,14 @@
                   class="btn-small btn-revoke"
                   title="Revoke this key"
                 >
-                  🚫
+                  <SvgIcons icon="blocked" />
                 </button>
                 <button
                   @click="deleteKey(key.id)"
                   class="btn-small btn-delete"
                   title="Delete this key"
                 >
-                  🗑️
+                  <SvgIcons icon="trash" />
                 </button>
               </td>
             </tr>
@@ -329,14 +329,14 @@ export default {
     },
     formatPermission(perm) {
       const labels = {
-        'search': '🔍 Search',
-        'upload': '📤 Upload',
+        'search': 'search Search',
+        'upload': 'download Upload',
         'download': '📥 Download',
-        'delete_documents': '🗑️ Delete Documents',
+        'delete_documents': 'trash Delete Documents',
         'parse_users': '👥 Parse Users',
         'edit_users': '✏️ Edit Users',
-        'view_reports': '📊 View Reports',
-        'manage_api_keys': '🔑 Manage API Keys'
+        'view_reports': 'chart View Reports',
+        'manage_api_keys': 'key Manage API Keys'
       };
       return labels[perm] || perm;
     },

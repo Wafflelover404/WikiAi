@@ -6,7 +6,7 @@
         <button class="modal-close-btn" @click="$emit('close')" aria-label="Close">×</button>
         
         <div class="modal-header">
-          <div class="header-icon">⚙️</div>
+          <div class="header-icon"><SvgIcons icon="settings" /></div>
           <h2>Settings</h2>
           <p class="header-subtitle">Manage your account and preferences</p>
         </div>
@@ -15,13 +15,13 @@
           <!-- Account Information Section -->
           <div class="settings-section">
             <div class="section-header">
-              <span class="section-icon">👤</span>
+              <span class="section-icon"><SvgIcons icon="person" /></span>
               <h3>Account Information</h3>
             </div>
             
             <div class="form-group">
               <label class="form-label">
-                <span class="label-icon">👤</span>
+                <span class="label-icon"><SvgIcons icon="person" /></span>
                 <span class="label-text">Username</span>
                 <span class="label-badge readonly">Read-only</span>
               </label>
@@ -39,12 +39,12 @@
 
             <div class="form-group">
               <label class="form-label">
-                <span class="label-icon">🔒</span>
+                <span class="label-icon"><SvgIcons icon="lock" /></span>
                 <span class="label-text">Password</span>
                 <span class="label-badge readonly">Read-only</span>
               </label>
               <div class="input-wrapper password-wrapper">
-                <span class="input-icon">🔑</span>
+                <span class="input-icon"><SvgIcons icon="key" /></span>
                 <input 
                   :type="showPassword ? 'text' : 'password'" 
                   v-model="password" 
@@ -58,7 +58,8 @@
                   class="password-toggle-btn"
                   :aria-label="showPassword ? 'Hide password' : 'Show password'"
                 >
-                  {{ showPassword ? '🙈' : '👁️' }}
+                  <SvgIcons v-if="showPassword" icon="eye-closed" />
+                  <SvgIcons v-else icon="eye" />
                 </button>
               </div>
             </div>
@@ -67,17 +68,17 @@
           <!-- Server Configuration Section -->
           <div class="settings-section">
             <div class="section-header">
-              <span class="section-icon">🌐</span>
+              <span class="section-icon"><SvgIcons icon="world" /></span>
               <h3>Server Configuration</h3>
             </div>
             
             <div class="form-group">
               <label class="form-label">
-                <span class="label-icon">🔗</span>
+                <span class="label-icon"><SvgIcons icon="plug" /></span>
                 <span class="label-text">Server URL</span>
               </label>
               <div class="input-wrapper" ref="serverSelector">
-                <span class="input-icon">🌐</span>
+                <span class="input-icon"><SvgIcons icon="world" /></span>
                 <input 
                   ref="serverInput"
                   v-model="serverUrl" 
@@ -119,7 +120,7 @@
               </div>
               
               <div v-if="serverUrl && (serverUrl.includes('localhost') || serverUrl.includes('127.0.0.1'))" class="proxy-warning">
-                <span class="warning-icon">⚠️</span>
+                <span class="warning-icon"><SvgIcons icon="warning" /></span>
                 <span class="warning-text">
                   {{ $t?.login?.proxyWarning || 'Using localhost may require CORS proxy in development' }}
                 </span>
@@ -134,7 +135,7 @@
                 class="action-btn secondary"
                 :class="{ 'half-width': serverUrl }"
               >
-                <span class="btn-icon">🔍</span>
+                <span class="btn-icon"><SvgIcons icon="search" /></span>
                 <span>{{ checking ? 'Checking...' : 'Test' }}</span>
               </button>
               
@@ -148,13 +149,19 @@
                   'success': saveSuccess
                 }"
               >
-                <span class="btn-icon">{{ saveSuccess ? '✓' : '💾' }}</span>
+                <span class="btn-icon">
+                  <SvgIcons v-if="saveSuccess" icon="checkmark" />
+                  <SvgIcons v-else icon="trash" />
+                </span>
                 <span>{{ saveButtonText }}</span>
               </button>
             </div>
 
             <div v-if="checkResult" class="status-message" :class="checkResult.includes('Failed') ? 'error' : 'success'">
-              <span class="status-icon">{{ checkResult.includes('Failed') ? '❌' : '✅' }}</span>
+              <span class="status-icon">
+                <SvgIcons v-if="checkResult.includes('Failed')" icon="close" />
+                <SvgIcons v-else icon="checkmark" />
+              </span>
               <span class="status-text">{{ checkResult }}</span>
             </div>
           </div>
@@ -163,11 +170,11 @@
         <!-- Action Buttons -->
         <div class="modal-actions">
           <button @click="$emit('save', { serverUrl })" class="action-btn primary">
-            <span class="btn-icon">💾</span>
+            <span class="btn-icon"><SvgIcons icon="trash" /></span>
             <span>Save Changes</span>
           </button>
           <button @click="$emit('close')" class="action-btn secondary">
-            <span class="btn-icon">❌</span>
+            <span class="btn-icon"><SvgIcons icon="close" /></span>
             <span>Cancel</span>
           </button>
         </div>
@@ -175,21 +182,21 @@
         <!-- Danger Zone -->
         <div class="danger-zone">
           <div class="danger-header">
-            <span class="danger-icon">⚠️</span>
+            <span class="danger-icon"><SvgIcons icon="warning" /></span>
             <h3>Danger Zone</h3>
           </div>
           <div class="danger-actions">
             <button @click="logoutAllSessions" class="action-btn warning">
-              <span class="btn-icon">🚪</span>
+              <span class="btn-icon"><SvgIcons icon="logout" /></span>
               <span>Logout All Sessions</span>
             </button>
             <button @click="logout" class="action-btn danger">
-              <span class="btn-icon">🚫</span>
+              <span class="btn-icon"><SvgIcons icon="blocked" /></span>
               <span>Logout</span>
             </button>
           </div>
           <div v-if="logoutAllMsg" class="status-message warning">
-            <span class="status-icon">⚠️</span>
+            <span class="status-icon"><SvgIcons icon="warning" /></span>
             {{ logoutAllMsg }}
           </div>
         </div>
@@ -199,8 +206,13 @@
 </template>
 
 <script>
+import SvgIcons from './SvgIcons.vue';
+
 export default {
   name: 'SettingsModal',
+  components: {
+    SvgIcons
+  },
   model: {
     prop: 'visible',
     event: 'update:visible'

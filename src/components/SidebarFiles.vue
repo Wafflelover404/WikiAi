@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     .file-placeholder::before {
-      content: "📄";
+      content: "�";
       margin-right: 10px;
       font-size: 14px;
     }

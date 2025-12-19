@@ -69,12 +69,12 @@
         </button>
       </div>
         <ul class="sidebar-tabs">
-          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="#" @click.prevent="navigateTo('home')">🏠 {{ t.nav.home }}</a></li>
-          <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="#" @click.prevent="navigateTo('files')">📁 {{ t.nav.files }}</a></li>
-          <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="#" @click.prevent="navigateTo('search')">🔍 {{ t.nav.search }}</a></li>
-          <li :class="{active: currentView === 'plugins' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.plugins"><a href="#" @click.prevent="navigateTo('plugins')">🔌 {{ t.nav.plugins || 'Plugins' }}</a></li>
-          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><router-link to="/">ℹ️ {{ t.nav.about }}</router-link></li>
-          <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="validateTokenAndShowAdmin" tabindex="0" :aria-label="t.nav.admin"><a href="#" @click.prevent="validateTokenAndShowAdmin">🛠 {{ t.nav.admin }}</a></li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.home"><a href="#" @click.prevent="navigateTo('home')"><SvgIcons icon="home" /> {{ t.nav.home }}</a></li>
+          <li :class="{active: currentView === 'files' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.files"><a href="#" @click.prevent="navigateTo('files')"><SvgIcons icon="folder" /> {{ t.nav.files }}</a></li>
+          <li :class="{active: currentView === 'search' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.search"><a href="#" @click.prevent="navigateTo('search')"><SvgIcons icon="search" /> {{ t.nav.search }}</a></li>
+          <li :class="{active: currentView === 'plugins' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.plugins"><a href="#" @click.prevent="navigateTo('plugins')"><SvgIcons icon="plug" /> {{ t.nav.plugins || 'Plugins' }}</a></li>
+          <li :class="{active: currentView === 'home' && !showAdminDashboard}" tabindex="0" :aria-label="t.nav.about"><router-link to="/"><SvgIcons icon="info" /> {{ t.nav.about }}</router-link></li>
+          <li v-if="isAdmin" :class="{active: showAdminDashboard}" @click="validateTokenAndShowAdmin" tabindex="0" :aria-label="t.nav.admin"><a href="#" @click.prevent="validateTokenAndShowAdmin"><SvgIcons icon="tools" /> {{ t.nav.admin }}</a></li>
         </ul>
         <div class="sidebar-bottom">
           <div class="lang-dropdown-wrapper">
@@ -103,11 +103,11 @@
             </div>
           </div>
           <button class="darkmode-toggle" @click="toggleDarkMode" :aria-pressed="darkMode" aria-label="Toggle dark mode">
-            <span v-if="!darkMode">🌙</span>
-            <span v-else>☀️</span>
+            <SvgIcons v-if="!darkMode" icon="moon" />
+            <SvgIcons v-else icon="sun" />
           </button>
           <button class="settings-icon-btn" @click="settingsVisible = true" aria-label="Settings">
-            ⚙️
+            <SvgIcons icon="settings" />
           </button>
         </div>
       </div>
@@ -140,14 +140,14 @@
               <div class="view-header">
                 <!-- Mobile Header -->
                 <div class="mobile-view-header">
-                  <h1>📁 {{ t.files.title }}</h1>
+                  <h1><SvgIcons icon="folder" /> {{ t.files.title }}</h1>
                   <p class="view-subtitle">{{ t.files.subtitle }}</p>
                 </div>
                 <!-- Desktop Header -->
                 <div class="desktop-view-header">
                   <div class="header-content">
                     <div class="header-left">
-                      <h1>📁 {{ t.files.title }}</h1>
+                      <h1><SvgIcons icon="folder" /> {{ t.files.title }}</h1>
                       <p class="view-subtitle">{{ t.files.subtitle }}</p>
                     </div>
                   </div>
@@ -229,19 +229,19 @@
                 class="desktop-file-tabs"
               />
               <!-- Mobile File List View -->
-              <div class="mobile-file-list" v-show="isMobileView && mobileActiveContent === null">
+              <div class="mobile-file-list" v-show="isMobileView && currentView === 'files' && mobileActiveContent === null">
                 <div 
                   v-for="file in filteredFiles" 
                   :key="file.file_id"
                   class="mobile-file-item"
                 >
                   <div class="mobile-file-container" @click="handleMobileFileClick(file)">
-                    <div class="mobile-file-icon">{{ getFileEmoji(file.file_type) }}</div>
+                    <div class="mobile-file-icon"><SvgIcons :icon="getFileIcon(file.name || file.filename)" /></div>
                     <div class="mobile-file-info">
-                      <div class="mobile-file-name">{{ file.filename }}</div>
+                      <div class="mobile-file-name">{{ file.name || file.filename }}</div>
                       <div class="mobile-file-meta">
-                        <span class="mobile-file-type">{{ getFileTypeLabel(file.file_type) }}</span>
-                        <span class="mobile-file-date">{{ formatDate(file.upload_date) }}</span>
+                        <span class="mobile-file-type">{{ getFileTypeLabel(file.type || file.file_type) }}</span>
+                        <span class="mobile-file-date">{{ formatDate(file.modified || file.upload_date) }}</span>
                       </div>
                     </div>
                   </div>
@@ -275,7 +275,7 @@
                 </div>
               </div>
               <!-- Mobile Content Display -->
-              <div v-if="isMobileView && mobileActiveContent !== null" class="mobile-content-view">
+              <div v-if="isMobileView && currentView === 'files' && mobileActiveContent !== null" class="mobile-content-view">
                 <div class="mobile-content-header">
                   <button @click="closeMobileContent" class="back-btn">← {{ t.common.back }}</button>
                   <h3 class="mobile-content-title">{{ mobileActiveFilename }}</h3>
@@ -314,7 +314,7 @@
                 </div>
               </div>
               <!-- Optional: Show message if no file is selected on mobile and content view is not active -->
-              <div v-if="isMobileView && mobileActiveContent === null" class="mobile-placeholder">
+              <div v-if="isMobileView && currentView === 'files' && mobileActiveContent === null" class="mobile-placeholder">
                 <div v-if="filteredFiles.length === 0 && !loading" class="empty-state">
                   <span class="empty-icon">📂</span>
                   <p>No files found</p>
@@ -381,6 +381,7 @@ import HomePage from './components/HomePage.vue';
 import SearchPage from './components/SearchPage.vue';
 import QuizModal from './components/QuizModal.vue';
 import OpenCartPluginsPage from './components/OpenCartPluginsPage.vue';
+import SvgIcons from './components/SvgIcons.vue';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github.css';
@@ -404,13 +405,14 @@ export default {
     HomePage,
     OpenCartPluginsPage,
     SearchPage,
-    QuizModal
+    QuizModal,
+    SvgIcons
   },
   data() {
     return {
       files: [],
-      openedFiles: [],
-      fileContents: {},
+      isMobileView: window.innerWidth <= 768,
+      token: '',
       searchVisible: false,
       settingsVisible: false,
       isMobileMenuOpen: false,
@@ -419,8 +421,6 @@ export default {
       selectedFile: null,
       fileTypeFilter: '',
       dateSortOrder: 'newest',
-      isMobileView: window.innerWidth <= 768,
-      token: '',
       serverUrl: '',
       activeTab: null,
       activeTabAdmin: 'users',
@@ -610,13 +610,72 @@ export default {
         if (!this.globalSearch) return this.files;
         const search = this.globalSearch.toLowerCase();
         return this.files.filter(file => {
-          const name = (file.filename || file.original_filename || '').toLowerCase();
+          const name = (file.name || file.filename || file.original_filename || '').toLowerCase();
           const description = (file.description || '').toLowerCase();
           return name.includes(search) || description.includes(search);
         });
       }
     },
     methods: {
+    getFileIcon(fileName) {
+      if (!fileName) return 'document';
+      const extension = fileName.split('.').pop().toLowerCase();
+      const iconMap = {
+        'md': 'notebook',
+        'txt': 'document',
+        'pdf': 'document',
+        'doc': 'document',
+        'docx': 'document',
+        'json': 'listing',
+        'js': 'code',
+        'ts': 'code',
+        'html': 'world',
+        'css': 'palette',
+        'py': 'code',
+        'java': 'code',
+        'cpp': 'code',
+        'c': 'code',
+        'go': 'code',
+        'rs': 'code',
+        'php': 'code',
+        'rb': 'code',
+        'swift': 'code',
+        'kt': 'code',
+        'scala': 'code',
+        'r': 'code',
+        'sql': 'database',
+        'csv': 'table',
+        'xlsx': 'table',
+        'xls': 'table',
+        'png': 'image',
+        'jpg': 'image',
+        'jpeg': 'image',
+        'gif': 'image',
+        'svg': 'image',
+        'bmp': 'image',
+        'webp': 'image',
+        'mp4': 'video',
+        'avi': 'video',
+        'mov': 'video',
+        'wmv': 'video',
+        'flv': 'video',
+        'mkv': 'video',
+        'webm': 'video',
+        'mp3': 'audio',
+        'wav': 'audio',
+        'flac': 'audio',
+        'aac': 'audio',
+        'ogg': 'audio',
+        'wma': 'audio',
+        'zip': 'package',
+        'rar': 'package',
+        '7z': 'package',
+        'tar': 'package',
+        'gz': 'package',
+        'bz2': 'package'
+      };
+      return iconMap[extension] || 'document';
+    },
     applyTheme(isDark) {
       this.darkMode = !!isDark;
       document.body.classList.toggle('dark-mode', this.darkMode);
@@ -975,15 +1034,15 @@ export default {
           const { apiRequest } = await import('./api.js');
           const res = await apiRequest({ url: `${this.serverUrl}/files/list`, method: 'GET', token: this.token });
           if (res && res.response && Array.isArray(res.response.documents)) {
-            // Store full file objects with metadata instead of just filenames
+            // Transform files data to match the format expected by FileTabs
             this.files = res.response.documents.map(doc => ({
-              filename: doc.filename || doc.original_filename,
-              original_filename: doc.original_filename,
-              file_id: doc.file_id,
+              name: doc.filename || doc.original_filename,
               size: doc.size || 0,
-              upload_date: doc.upload_date || doc.created_at,
-              file_type: doc.file_type || this.getFileTypeFromName(doc.filename || doc.original_filename),
-              description: doc.description || ''
+              modified: doc.upload_date || doc.created_at || new Date().toISOString(),
+              type: doc.file_type || this.getFileTypeFromName(doc.filename || doc.original_filename) || 'document',
+              description: doc.description || '',
+              // Keep the original data for internal use
+              _original: doc
             }));
             console.log('Files loaded:', this.files);
           } else {
@@ -1002,77 +1061,14 @@ export default {
       if (!this.token || !this.serverUrl) return;
       
       // Handle both file objects and filenames
-      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : fileOrFilename.filename;
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : (fileOrFilename.name || fileOrFilename.filename);
       
       // Set the mobile active filename immediately for UI feedback
       this.mobileActiveFilename = filename;
       
-      // If content is already loaded, show it
-      if (this.fileContents[filename]) {
-        this.mobileActiveContent = this.fileContents[filename];
-        return;
-      }
-      
-      try {
-        this.loading = true;
-        
-        // Use the centralized API function
-        const { getFileContent } = await import('./api.js');
-        const res = await getFileContent({
-          serverUrl: this.serverUrl,
-          token: this.token,
-          filename: filename
-        });
-        
-        if (!res.ok) {
-          if (res.status === 404) {
-            this.fileContents[filename] = 'File not found.';
-            this.mobileActiveContent = 'File not found.';
-            console.warn(`File not found: ${filename}`);
-          } else if (res.status === 403) {
-            this.fileContents[filename] = 'Access denied.';
-            this.mobileActiveContent = 'Access denied.';
-            console.warn(`Access denied for file: ${filename}`);
-          } else {
-            throw new Error(`HTTP error! status: ${res.status}`);
-          }
-          return;
-        }
-        
-        // Try to parse response based on content type
-        const contentType = res.headers.get('content-type');
-        let content;
-        
-        if (contentType && contentType.includes('application/json')) {
-          const data = await res.json();
-          // Handle different JSON response formats
-          if (data.status === 'success' && data.response) {
-            content = data.response.content || data.response;
-          } else if (data.content) {
-            content = data.content;
-          } else if (typeof data === 'string') {
-            content = data;
-          } else {
-            content = JSON.stringify(data, null, 2);
-          }
-        } else {
-          // For non-JSON responses, get the raw text
-          content = await res.text();
-        }
-        
-        // Store and display the content
-        this.fileContents[filename] = content;
-        this.mobileActiveContent = content;
-        console.log(`File content loaded for: ${filename}`);
-        
-      } catch (e) {
-        console.error(`Error loading file ${filename}:`, e);
-        const errorMsg = 'Error loading file: ' + e.message;
-        this.fileContents[filename] = errorMsg;
-        this.mobileActiveContent = errorMsg;
-      } finally {
-        this.loading = false;
-      }
+      // Load file content using the centralized method
+      const content = await this.loadFileContent(fileOrFilename);
+      this.mobileActiveContent = content;
     },
     closeFile(filename) {
       this.openedFiles = this.openedFiles.filter(f => f !== filename);
@@ -1080,19 +1076,100 @@ export default {
         this.activeTab = this.openedFiles[0] || null;
       }
     },
+    async loadFileContent(fileOrFilename) {
+      if (!this.token || !this.serverUrl) {
+        console.log('[loadFileContent] No token or server URL');
+        return;
+      }
+      
+      // Handle both file objects and filenames
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : (fileOrFilename.name || fileOrFilename.filename);
+      
+      console.log('[loadFileContent] Loading file:', filename);
+      console.log('[loadFileContent] Server URL:', this.serverUrl);
+      console.log('[loadFileContent] Has token:', !!this.token);
+      
+      // If content is already loaded, return it
+      if (this.fileContents[filename]) {
+        console.log('[loadFileContent] Content already loaded');
+        return this.fileContents[filename];
+      }
+      
+      try {
+        this.loading = true;
+        
+        // Use the centralized API function
+        const { getFileContent } = await import('./api.js');
+        console.log('[loadFileContent] Making API call to:', `${this.serverUrl}/files/content/${filename}`);
+        const res = await getFileContent({
+          serverUrl: this.serverUrl,
+          token: this.token,
+          filename: filename
+        });
+        
+        console.log('[loadFileContent] API response:', res);
+        
+        if (!res.ok) {
+          let errorMsg;
+          if (res.status === 404) {
+            errorMsg = 'File not found.';
+            console.warn(`File not found: ${filename}`);
+          } else if (res.status === 403) {
+            errorMsg = 'Access denied.';
+            console.warn(`Access denied for file: ${filename}`);
+          } else {
+            errorMsg = `Error loading file: ${res.statusText}`;
+            throw new Error(`HTTP error! status: ${res.status}`);
+          }
+          this.fileContents[filename] = errorMsg;
+          return errorMsg;
+        }
+        
+        // Try to parse response based on content type
+        const contentType = res.headers.get('content-type');
+        let content;
+        
+        if (contentType && contentType.includes('application/json')) {
+          const jsonData = await res.json();
+          content = jsonData.content || JSON.stringify(jsonData, null, 2);
+        } else if (contentType && contentType.includes('text')) {
+          content = await res.text();
+        } else {
+          content = await res.text();
+        }
+        
+        // Store the content
+        this.fileContents[filename] = content;
+        return content;
+        
+      } catch (e) {
+        console.error(`Error loading file ${filename}:`, e);
+        const errorMsg = `Error loading file: ${e.message}`;
+        this.fileContents[filename] = errorMsg;
+        return errorMsg;
+      } finally {
+        this.loading = false;
+      }
+    },
     async switchTab(fileOrFilename) {
       // Handle both file objects and filenames
-      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : fileOrFilename.filename;
+      const filename = typeof fileOrFilename === 'string' ? fileOrFilename : (fileOrFilename.name || fileOrFilename.filename);
+      
+      console.log('[switchTab] Opening file:', filename);
+      console.log('[switchTab] Current fileContents:', this.fileContents);
       
       // Load file content if not already loaded
       if (!this.fileContents[filename]) {
-        await this.handleMobileFileClick(fileOrFilename);
+        console.log('[switchTab] Loading file content...');
+        await this.loadFileContent(fileOrFilename);
       }
       
       this.activeTab = filename;
       if (!this.openedFiles.includes(filename)) {
         this.openedFiles.unshift(filename);
       }
+      
+      console.log('[switchTab] File opened. activeTab:', this.activeTab, 'fileContents[filename]:', this.fileContents[filename]);
     },
     async downloadFile(fileOrFilename) {
       if (!this.token || !this.serverUrl) return;
@@ -1134,8 +1211,6 @@ export default {
       this.quizFilename = filename;
       this.quizVisible = true;
     },
-    
-    // Navigation methods
     navigateTo(view) {
       this.currentView = view;
       this.showAdminDashboard = false;
@@ -1171,6 +1246,8 @@ export default {
       } else if (path.startsWith('/app/files')) {
         this.currentView = 'files';
         this.showAdminDashboard = false;
+        // Ensure files are loaded when navigating to files view
+        this.updateFiles();
       } else if (path.startsWith('/app/search')) {
         this.currentView = 'search';
         this.showAdminDashboard = false;
@@ -1382,15 +1459,15 @@ export default {
     },
 
     getFileEmoji(fileType) {
-      const emojiMap = {
-        'document': '📄',
-        'image': '🖼️',
-        'pdf': '📑',
-        'markdown': '📝',
-        'code': '💻',
-        'unknown': '📁'
+      const iconMap = {
+        'document': 'document',
+        'image': 'inbox',
+        'pdf': 'document',
+        'markdown': 'notebook',
+        'code': 'code',
+        'unknown': 'folder'
       };
-      return emojiMap[fileType] || emojiMap.unknown;
+      return iconMap[fileType] || iconMap.unknown;
     },
 
     getFileTypeLabel(fileType) {

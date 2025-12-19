@@ -44,7 +44,48 @@ export default {
         'eye': 'eye-scan.svg',                // eye for show password
         'eye-closed': 'eye-closed.svg',       // closed eye for hide password
         'russia': 'translation-2.svg',        // translation icon for Russian
-        'uk': 'translation.svg'               // translation icon for English
+        'uk': 'translation.svg',              // translation icon for English
+        'folder': 'folder.svg',               // folder for file list
+        'brain': 'bulb-minimalistic.svg',     // brain/idea for quiz
+        'clipboard': 'clipboard.svg',         // clipboard for copy
+        'printer': 'printer.svg',             // printer for print
+        'download': 'download.svg',           // download arrow
+        'inbox': 'inbox.svg',                 // inbox for empty state
+        'danger': 'danger-circle.svg',        // danger/warning icon
+        'world': 'globe.svg',                 // globe for all/world
+        'document': 'document.svg',           // document file
+        'notebook': 'notebook-2.svg',         // notebook
+        'book': 'book-2.svg',                 // book
+        'palette': 'palette.svg',             // palette for CSS
+        'chat': 'chat-round.svg',             // chat/messenger
+        'key': 'key.svg',                     // key for password
+        'person': 'user.svg',                 // person/user
+        'role': 'user-rounded.svg',           // role/user
+        'package': 'box.svg',                 // package/box
+        'refresh': 'refresh.svg',             // refresh/reload
+        'checkmark': 'check-circle.svg',      // checkmark/success
+        'close': 'close-circle.svg',          // close/error
+        'blocked': 'forbidden-circle.svg',    // blocked/no access
+        'listing': 'list-check.svg',          // list for listings
+        'shopping': 'shop-2.svg',             // shopping/store for products
+        'settings': 'settings.svg',           // settings/gear
+        'plug': 'power.svg',                  // plug/power
+        'info': 'info-circle.svg',            // info icon
+        'tools': 'tuning.svg',                // tools/wrench
+        'clock': 'history.svg',               // clock/history
+        'edit': 'pen.svg',                    // edit/pencil
+        'trash': 'trash-bin.svg',             // trash/delete
+        'target': 'target.svg',               // target/aim
+        'lightbulb': 'lightbulb.svg',         // lightbulb/idea
+        'gift': 'gift.svg',                   // gift
+        'arrow-right': 'arrow-right.svg',     // arrow right
+        'flag-ru': 'translation-2.svg',       // russia flag
+        'flag-gb': 'translation.svg',         // GB flag
+        'green-circle': 'check-circle.svg',   // green circle/success
+        'trending-up': 'circle-top-up.svg',   // trending up
+        'trending-down': 'circle-top-down.svg', // trending down
+        'pause': 'alarm-pause.svg',           // pause icon
+        'play': 'alarm-play.svg'              // play icon
       }
     }
   },
@@ -54,17 +95,17 @@ export default {
         return {
           filter: 'invert(1) brightness(1.8) saturate(0.9)',
           opacity: '0.95'
-        }
+        };
       }
       return {
         filter: 'invert(0) brightness(1) saturate(1)',
         opacity: '0.9'
-      }
+      };
     }
   },
   methods: {
     getIconPath() {
-      return `/solar-linear-icons/${this.iconMap[this.icon] || 'sparkle-circle.svg'}`
+      return `/solar-linear-icons/${this.iconMap[this.icon] || 'sparkle-circle.svg'}`;
     },
     updateDarkMode() {
       this.isDarkMode = document.documentElement.classList.contains('dark-mode')

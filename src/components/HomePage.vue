@@ -11,7 +11,7 @@
         <!-- Quick Search Bar -->
         <div class="quick-search">
           <div class="search-input-wrapper">
-            <span class="search-icon">🔍</span>
+            <span class="search-icon"><SvgIcons icon="search" /></span>
             <input 
               v-model="quickSearchText" 
               type="text" 
@@ -33,10 +33,10 @@
       <div class="dashboard-grid">
         <!-- Statistics Cards -->
         <div class="stats-section">
-          <h2 class="section-title">📊 {{ t.home.overviewTitle }}</h2>
+          <h2 class="section-title"><SvgIcons icon="chart" /> {{ t.home.overviewTitle }}</h2>
           <div class="stats-grid">
             <div class="stat-card">
-              <div class="stat-icon">📄</div>
+              <div class="stat-icon"><SvgIcons icon="document" /></div>
               <div class="stat-info">
                 <div class="stat-number">{{ files.length }}</div>
                 <div class="stat-label">{{ t.home.totalDocuments }}</div>
@@ -45,7 +45,7 @@
             </div>
             
             <div class="stat-card">
-              <div class="stat-icon">🔍</div>
+              <div class="stat-icon"><SvgIcons icon="search" /></div>
               <div class="stat-info">
                 <div class="stat-number">{{ dashboardMetrics.total_queries_24h }}</div>
                 <div class="stat-label">{{ t.home.searchesToday }}</div>
@@ -54,7 +54,7 @@
             </div>
             
             <div class="stat-card">
-              <div class="stat-icon">⚡</div>
+              <div class="stat-icon"><SvgIcons icon="lightning" /></div>
               <div class="stat-info">
                 <div class="stat-number">{{ Math.round(dashboardMetrics.avg_response_time_ms) }}ms</div>
                 <div class="stat-label">{{ t.home.avgResponseTime }}</div>
@@ -63,7 +63,7 @@
             </div>
             
             <div class="stat-card">
-              <div class="stat-icon">👤</div>
+              <div class="stat-icon"><SvgIcons icon="person" /></div>
               <div class="stat-info">
                 <div class="stat-number">{{ userRole === 'admin' ? dashboardMetrics.active_users_24h : dashboardMetrics.active_sessions }}</div>
                 <div class="stat-label">{{ userRole === 'admin' ? t.home.activeUsersToday : t.home.activeSessions }}</div>
@@ -75,40 +75,40 @@
 
         <!-- Quick Actions -->
         <div class="actions-section">
-          <h2 class="section-title">⚡ {{ t.home.quickActionsTitle }}</h2>
+          <h2 class="section-title"><SvgIcons icon="lightning" /> {{ t.home.quickActionsTitle }}</h2>
           <div class="actions-grid">
             <div class="action-card" @click="$emit('navigate-to', 'search')">
-              <div class="action-icon">🔍</div>
+              <div class="action-icon"><SvgIcons icon="search" /></div>
               <div class="action-title">{{ t.home.actionAdvancedSearchTitle }}</div>
               <div class="action-description">{{ t.home.actionAdvancedSearchDesc }}</div>
             </div>
             
             <div class="action-card" @click="$emit('navigate-to', 'files')">
-              <div class="action-icon">📁</div>
+              <div class="action-icon"><SvgIcons icon="folder" /></div>
               <div class="action-title">{{ t.home.actionBrowseFilesTitle }}</div>
               <div class="action-description">{{ t.home.actionBrowseFilesDesc }}</div>
             </div>
             
             <div v-if="userRole === 'admin'" class="action-card" @click="$emit('navigate-to', 'admin')">
-              <div class="action-icon">⚙️</div>
+              <div class="action-icon"><SvgIcons icon="settings" /></div>
               <div class="action-title">{{ t.home.actionAdminPanelTitle }}</div>
               <div class="action-description">{{ t.home.actionAdminPanelDesc }}</div>
             </div>
             
             <div v-if="userRole === 'admin'" class="action-card" @click="viewAnalytics">
-              <div class="action-icon">📊</div>
+              <div class="action-icon"><SvgIcons icon="chart" /></div>
               <div class="action-title">{{ t.home.actionAnalyticsTitle }}</div>
               <div class="action-description">{{ t.home.actionAnalyticsDesc }}</div>
             </div>
 
             <div v-if="userRole === 'user'" class="action-card" @click="viewStats">
-              <div class="action-icon">📊</div>
+              <div class="action-icon"><SvgIcons icon="chart" /></div>
               <div class="action-title">{{ t.home.actionStatisticsTitle }}</div>
               <div class="action-description">{{ t.home.actionStatisticsDesc }}</div>
             </div>
 
             <div v-if="userRole === 'user'" class="action-card" @click="openAskModal">
-              <div class="action-icon">💬</div>
+              <div class="action-icon"><SvgIcons icon="chat" /></div>
               <div class="action-title">{{ t.home.actionAskTitle }}</div>
               <div class="action-description">{{ t.home.actionAskDesc }}</div>
             </div>
@@ -138,7 +138,7 @@
 
         <!-- Popular Searches (admin only) -->
         <div v-if="userRole === 'admin'" class="popular-section">
-          <h2 class="section-title">🔥 {{ t.home.popularFilesTitle }}</h2>
+          <h2 class="section-title"><SvgIcons icon="chart" /> {{ t.home.popularFilesTitle }}</h2>
           <div class="popular-searches">
             <div 
               v-for="(file, idx) in popularFiles" 
@@ -152,7 +152,9 @@
                 <div class="search-count">{{ file.count }} {{ t.home.popularRefs }}</div>
               </div>
               <div class="search-trend" :class="file.trend">
-                {{ file.trend === 'up' ? '📈' : file.trend === 'down' ? '📉' : '➡️' }}
+                <SvgIcons v-if="file.trend === 'up'" icon="trending-up" />
+                <SvgIcons v-else-if="file.trend === 'down'" icon="trending-down" />
+                <SvgIcons v-else icon="arrow-right" />
               </div>
             </div>
             <div v-if="loading.metrics && !popularFiles.length" class="loading-state">
@@ -166,7 +168,7 @@
 
         <!-- System Status -->
         <div v-if="userRole === 'admin'" class="status-section">
-          <h2 class="section-title">🟢 {{ t.home.systemStatusTitle }}</h2>
+          <h2 class="section-title"><SvgIcons icon="green-circle" /> {{ t.home.systemStatusTitle }}</h2>
           <div class="status-grid">
             <div class="status-item">
               <div class="status-indicator healthy"></div>
@@ -196,10 +198,10 @@
 
         <!-- Tips & Tricks -->
         <div class="tips-section">
-          <h2 class="section-title">💡 {{ t.home.tipsTitle }}</h2>
+          <h2 class="section-title"><SvgIcons icon="lightbulb" /> {{ t.home.tipsTitle }}</h2>
           <div class="tips-carousel">
             <div class="tip-item active">
-              <div class="tip-icon">🎯</div>
+              <div class="tip-icon"><SvgIcons icon="target" /></div>
               <div class="tip-content">
                 <div class="tip-title">{{ t.home.tipsUseSpecificKeywordsTitle }}</div>
                 <div class="tip-description">{{ t.home.tipsUseSpecificKeywordsDesc }}</div>
@@ -223,19 +225,22 @@
 <script>
 import AskQuestionModal from './AskQuestionModal.vue';
 import { translations } from '../i18n.js';
+import SvgIcons from './SvgIcons.vue';
+
 export default {
   name: 'HomePage',
   components: {
-    AskQuestionModal
+    AskQuestionModal,
+    SvgIcons
   },
   methods: {
     getActivityIcon(type) {
       const icons = {
-        search: '🔍',
-        upload: '📤',
+        search: 'search',
+        upload: 'download',
         download: '📥',
-        edit: '✏️',
-        delete: '🗑️',
+        edit: 'edit',
+        delete: 'trash',
         default: '📋'
       };
       return icons[type] || icons.default;
@@ -477,9 +482,9 @@ export default {
     
     getActivityIcon(activity) {
       if (activity.activity_type === 'query') {
-        return activity.success ? '🔍' : '❌';
+        return activity.success ? 'search' : 'close';
       } else {
-        return activity.action === 'view' ? '📄' : '🔄';
+        return activity.action === 'view' ? 'document' : 'refresh';
       }
     },
     

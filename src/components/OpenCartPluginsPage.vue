@@ -44,7 +44,7 @@
         <!-- OpenCart Plugin Card -->
         <div class="plugin-card">
           <div class="plugin-header">
-            <h3>🛒 OpenCart</h3>
+            <h3><SvgIcons icon="shopping" /> OpenCart</h3>
             <span :class="['plugin-status', pluginStatus.isEnabled ? 'enabled' : 'disabled']">
               {{ pluginStatus.isEnabled ? 'Enabled' : 'Disabled' }}
             </span>
@@ -139,19 +139,19 @@
 
         <!-- More Plugins Coming Soon -->
         <div class="plugin-card coming-soon">
-          <h3>📦 WooCommerce</h3>
+          <h3><SvgIcons icon="package" /> WooCommerce</h3>
           <span class="badge">Coming Soon</span>
           <p>Sync WordPress WooCommerce stores</p>
         </div>
 
         <div class="plugin-card coming-soon">
-          <h3>🎁 Shopify</h3>
+          <h3><SvgIcons icon="gift" /> Shopify</h3>
           <span class="badge">Coming Soon</span>
           <p>Connect your Shopify store</p>
         </div>
 
         <div class="plugin-card coming-soon">
-          <h3>💼 Magento</h3>
+          <h3><SvgIcons icon="briefcase" /> Magento</h3>
           <span class="badge">Coming Soon</span>
           <p>Integrate with Magento stores</p>
         </div>
@@ -307,7 +307,7 @@
                   <img :src="product.image" :alt="product.name" />
                 </div>
                 <div v-else class="product-image-placeholder">
-                  📦
+                  <SvgIcons icon="package" />
                 </div>
 
                 <div class="product-info">
@@ -328,10 +328,10 @@
                       {{ product.status === 1 ? 'Active' : 'Inactive' }}
                     </span>
                     <span :class="['badge', product.indexed ? 'indexed' : 'pending']">
-                      {{ product.indexed ? '✓ Indexed' : 'Pending Index' }}
+                      {{ product.indexed ? '<SvgIcons icon="checkmark" /> Indexed' : 'Pending Index' }}
                     </span>
                     <span v-if="product.rating" class="badge rating">
-                      ⭐ {{ product.rating }}
+                      <SvgIcons icon="search" /> {{ product.rating }}
                     </span>
                   </div>
 
@@ -470,9 +470,13 @@
 
 <script>
 import { ref, reactive, computed, onMounted, watch } from 'vue'
+import SvgIcons from './SvgIcons.vue'
 
 export default {
   name: 'OpenCartPluginsPage',
+  components: {
+    SvgIcons
+  },
   props: {
     token: String,
     serverUrl: String,

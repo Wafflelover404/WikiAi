@@ -4,7 +4,7 @@
     <div class="admin-header">
       <div class="admin-header-content">
         <div class="admin-title-section">
-          <h1 class="admin-title">🛠️ {{ t.admin.title }}</h1>
+          <h1 class="admin-title"><SvgIcons icon="tools" /> {{ t.admin.title }}</h1>
           <p class="admin-subtitle">{{ t.admin.manageUsers }}, {{ t.files.title }}, {{ t.admin.systemSettings }}</p>
         </div>
         <div class="admin-header-actions">
@@ -23,10 +23,10 @@
             </div>
           </div>
           <!-- <button @click="testAPIConnection" class="debug-btn" title="Test API Connection">
-            🔧 Test API
+            <SvgIcons icon="tools" /> Test API
           </button>
           <button @click="toggleAutoRefresh" class="auto-refresh-toggle" :class="{ active: isAutoRefreshEnabled }" :title="isAutoRefreshEnabled ? 'Disable Auto-refresh' : 'Enable Auto-refresh'">
-            <span class="toggle-icon">{{ isAutoRefreshEnabled ? '⏸️' : '▶️' }}</span>
+            <span class="toggle-icon"><SvgIcons v-if="isAutoRefreshEnabled" icon="pause" /><SvgIcons v-else icon="play" /></span>
             <span class="toggle-text">{{ isAutoRefreshEnabled ? 'Pause' : 'Resume' }}</span>
           </button> -->
         </div>
@@ -46,7 +46,7 @@
           @keydown.enter.space.prevent="switchTab(tab)"
           :title="tab"
         >
-          <span class="tab-icon">{{ getTabIcon(tab) }}</span>
+          <span class="tab-icon"><SvgIcons :icon="getTabIcon(tab)" /></span>
           <span class="tab-text">{{ tab }}</span>
         </button>
         <div class="tab-underline" :style="tabUnderline"></div>
@@ -124,21 +124,21 @@
                       </button>
                       <div v-if="expandedPermissions === user.username" class="permissions-dropdown">
                         <div class="permissions-header">
-                          <span class="header-icon">📁</span>
+                          <span class="header-icon"><SvgIcons icon="folder" /></span>
                           <strong>File Access Details</strong>
                         </div>
                         <div v-if="user.allowed_files && user.allowed_files.includes('all')" class="permission-all">
-                          <span class="all-icon">🌐</span>
+                          <span class="all-icon"><SvgIcons icon="world" /></span>
                           <span>Full access to all files (including future uploads)</span>
                         </div>
                         <div v-else-if="user.allowed_files && user.allowed_files.length > 0" class="permissions-list">
                           <div v-for="filename in user.allowed_files" :key="filename" class="permission-item">
-                            <span class="file-icon">{{ getFileIconByName(filename) }}</span>
+                            <span class="file-icon"><SvgIcons :icon="getFileIconByName(filename)" /></span>
                             <span class="file-name">{{ getOriginalFilename(filename) }}</span>
                           </div>
                         </div>
                         <div v-else class="permission-none">
-                          <span class="none-icon">🚫</span>
+                          <span class="none-icon"><SvgIcons icon="blocked" /></span>
                           <span>No file access granted</span>
                         </div>
                       </div>
@@ -155,7 +155,7 @@
                         :disabled="loadingUsers || user.username === 'admin'"
                         :title="user.username === 'admin' ? t.admin.cannotDeleteAdmin : t.admin.deleteBtn"
                       >
-                        🗑️ {{ t.admin.deleteBtn }}
+                        <SvgIcons icon="trash" /> {{ t.admin.deleteBtn }}
                       </button>
                     </div>
                   </td>
@@ -175,7 +175,7 @@
             <form @submit.prevent="createUser" class="user-form">
               <div class="form-group">
                 <label class="form-label">
-                  <span class="label-icon">👤</span>
+                  <span class="label-icon"><SvgIcons icon="person" /></span>
                   <span class="label-text">{{ t.admin.username }}</span>
                 </label>
                 <div class="input-wrapper">
@@ -191,11 +191,11 @@
               
               <div class="form-group">
                 <label class="form-label">
-                  <span class="label-icon">🔒</span>
+                  <span class="label-icon"><SvgIcons icon="lock" /></span>
                   <span class="label-text">{{ t.admin.password }}</span>
                 </label>
                 <div class="input-wrapper password-wrapper">
-                  <span class="input-icon">🔑</span>
+                  <span class="input-icon"><SvgIcons icon="key" /></span>
                   <input
                     v-model="newUser.password"
                     :type="showPassword ? 'text' : 'password'"
@@ -217,7 +217,7 @@
               
               <div class="form-group">
                 <label class="form-label">
-                  <span class="label-icon">⚡</span>
+                  <span class="label-icon"><SvgIcons icon="lightning" /></span>
                   <span class="label-text">{{ t.admin.role }}</span>
                 </label>
                 <div class="select-wrapper">
@@ -232,7 +232,7 @@
               
               <div class="form-group">
                 <label class="form-label">
-                  <span class="label-icon">🔐</span>
+                  <span class="label-icon"><SvgIcons icon="lock" /></span>
                   <span class="label-text">{{ t.admin.filePermissions }}</span>
                 </label>
               </div>
@@ -240,7 +240,7 @@
               <!-- Permission Summary for Create User -->
               <div class="permission-summary-create">
                 <div class="summary-item">
-                  <span class="summary-icon">📁</span>
+                  <span class="summary-icon"><SvgIcons icon="folder" /></span>
                   <span class="summary-text">
                     <strong>{{ getNewUserFilesCount() }}</strong> {{ t.admin.of }} <strong>{{ files.length }}</strong> {{ t.admin.filesAccessible }}
                   </span>
@@ -255,7 +255,7 @@
                   :class="{ active: allowedFilesMode === 'all' }"
                   @click="allowedFilesMode = 'all'"
                 >
-                  <span class="mode-icon">🌐</span>
+                  <span class="mode-icon"><SvgIcons icon="world" /></span>
                   <span class="mode-text">{{ t.admin.allFiles }}</span>
                   <span class="mode-hint">{{ t.admin.fullAccess }}</span>
                 </button>
@@ -265,7 +265,7 @@
                   :class="{ active: allowedFilesMode === 'select' }"
                   @click="allowedFilesMode = 'select'"
                 >
-                  <span class="mode-icon">🎯</span>
+                  <span class="mode-icon"><SvgIcons icon="target" /></span>
                   <span class="mode-text">{{ t.admin.selectFiles }}</span>
                   <span class="mode-hint">{{ t.admin.customAccess }}</span>
                 </button>
@@ -276,7 +276,7 @@
                 <!-- Search and Bulk Actions -->
                 <div class="file-selection-controls-create">
                   <div class="search-box-create">
-                    <span class="search-icon">🔍</span>
+                    <span class="search-icon"><SvgIcons icon="search" /></span>
                     <input 
                       v-model="createUserFileSearch" 
                       type="text"
@@ -310,7 +310,7 @@
                   >
                     <input type="checkbox" :value="file.filename" v-model="newUser.allowed_files" />
                     <span class="file-info-create">
-                      <span class="file-icon">{{ getFileIcon(file) }}</span>
+                      <span class="file-icon"><SvgIcons :icon="getFileIcon(file)" /></span>
                       <span class="file-name">{{ file.original_filename || file.filename }}</span>
                       <span v-if="file.size" class="file-size">{{ formatFileSize(file.size) }}</span>
                     </span>
@@ -326,7 +326,7 @@
         <div v-else-if="activeTab === 'Files'" class="files-section">
           <div class="admin-section-header">
             <div class="files-section-top-header">
-              <h2>📁 {{ t.admin.fileManagement }}</h2>
+              <h2><SvgIcons icon="folder" /> {{ t.admin.fileManagement }}</h2>
               <div class="auto-refresh-status">
                 <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
                 <span class="status-text">{{ isAutoRefreshEnabled ? t.admin.autoRefreshOn : t.admin.autoRefreshOff }}</span>
@@ -362,7 +362,7 @@
                 @drop.prevent="handleFileDrop"
               >
                 <div class="upload-content">
-                  <div class="upload-icon">📤</div>
+                  <div class="upload-icon"><SvgIcons icon="download" /></div>
                   <h3 class="drag-and-drop-sign">{{ t.admin.dragDropFiles }}</h3>
                   <p>{{ t.common.or }} <button class="upload-link" @click="$refs.fileInput.click()">{{ t.admin.browseFiles }}</button></p>
                   <input type="file" ref="fileInput" @change="handleFileSelect" multiple style="display: none;" />
@@ -376,7 +376,7 @@
                   <span class="label-text">{{ t.admin.filename }}</span>
                 </label>
                 <div class="input-wrapper">
-                  <span class="input-icon">📄</span>
+                  <span class="input-icon"><SvgIcons icon="document" /></span>
                   <input 
                     v-model="manualFilename" 
                     :placeholder="t.admin.filename" 
@@ -386,7 +386,7 @@
               </div>
               <div class="form-group">
                 <label class="form-label">
-                  <span class="label-icon">✍️</span>
+                  <span class="label-icon"><SvgIcons icon="edit" /></span>
                   <span class="label-text">{{ t.admin.fileContent }}</span>
                 </label>
                 <textarea 
@@ -421,7 +421,7 @@
                 <tr v-for="file in filteredFiles" :key="file.file_id || file.filename" class="file-row">
                   <td class="file-name-cell">
                     <div class="file-name-info">
-                      <span class="file-icon-small">{{ getFileIcon(file) }}</span>
+                      <span class="file-icon-small"><SvgIcons :icon="getFileIcon(file)" /></span>
                       <span class="file-name">{{ file.original_filename || file.filename }}</span>
                     </div>
                   </td>
@@ -443,7 +443,7 @@
                         ✏️ {{ t.admin.edit }}
                       </button>
                       <button class="btn-delete" @click="deleteFile(file)" :title="t.admin.deleteBtn">
-                        🗑️ {{ t.admin.deleteBtn }}
+                        <SvgIcons icon="trash" /> {{ t.admin.deleteBtn }}
                       </button>
                     </div>
                   </td>
@@ -487,7 +487,7 @@
                       ✏️ {{ t.admin.edit }}
                     </button>
                     <button class="btn-delete" @click="deleteFile(file)">
-                      🗑️ {{ t.admin.deleteBtn }}
+                      <SvgIcons icon="trash" /> {{ t.admin.deleteBtn }}
                     </button>
                   </div>
                 </div>
@@ -496,7 +496,7 @@
           </div>
 
           <div v-else class="empty-state">
-            <div class="empty-icon">📁</div>
+            <div class="empty-icon"><SvgIcons icon="folder" /></div>
             <h3>{{ t.admin.noFilesFound }}</h3>
             <p>{{ t.admin.tryAdjustingSearch }}</p>
           </div>
@@ -508,7 +508,7 @@
           <div class="admin-section-header">
             <div class="header-top">
               <div class="title-row">
-                <h2>📊 Reports & Analytics</h2>
+                <h2><SvgIcons icon="chart" /> Reports & Analytics</h2>
                 <div class="auto-refresh-status">
                   <span class="status-indicator" :class="{ active: isAutoRefreshEnabled }"></span>
                   <span class="status-text">{{ isAutoRefreshEnabled ? t.admin.autoRefreshOn : t.admin.autoRefreshOff }}</span>
@@ -518,21 +518,21 @@
             </div>
             <div class="reports-overview">
               <div class="overview-card total">
-                <div class="overview-icon">📊</div>
+                <div class="overview-icon"><SvgIcons icon="chart" /></div>
                 <div class="overview-content">
                   <div class="overview-number">{{ totalReports }}</div>
                   <div class="overview-label">Total Reports</div>
                 </div>
               </div>
               <div class="overview-card auto">
-                <div class="overview-icon">🤖</div>
+                <div class="overview-icon"><SvgIcons icon="robot" /></div>
                 <div class="overview-content">
                   <div class="overview-number">{{ autoReports.length }}</div>
                   <div class="overview-label">Auto Reports</div>
                 </div>
               </div>
               <div class="overview-card manual">
-                <div class="overview-icon">✍️</div>
+                <div class="overview-icon"><SvgIcons icon="edit" /></div>
                 <div class="overview-content">
                   <div class="overview-number">{{ manualReports.length }}</div>
                   <div class="overview-label">Manual Reports</div>
@@ -542,7 +542,7 @@
           </div>
           
           <div v-if="reportsMsg" class="message-banner" :class="reportsMsg.includes('error') ? 'error' : 'success'">
-            <span class="message-icon">{{ reportsMsg.includes('error') ? '⚠️' : '✅' }}</span>
+            <span class="message-icon"><SvgIcons v-if="!reportsMsg.includes('error')" icon="checkmark" /><SvgIcons v-else icon="danger" /></span>
             {{ reportsMsg }}
           </div>
           
@@ -552,7 +552,7 @@
                 :class="['report-tab', {active: reportTab === 'auto'}]" 
                 @click="reportTab = 'auto'"
               >
-                <span class="tab-icon">🤖</span>
+                <span class="tab-icon"><SvgIcons icon="robot" /></span>
                 <span class="tab-text">Automatic</span>
                 <span class="tab-count">{{ autoReports.length }}</span>
               </button>
@@ -560,7 +560,7 @@
                 :class="['report-tab', {active: reportTab === 'manual'}]" 
                 @click="reportTab = 'manual'"
               >
-                <span class="tab-icon">✍️</span>
+                <span class="tab-icon"><SvgIcons icon="edit" /></span>
                 <span class="tab-text">Manual</span>
                 <span class="tab-count">{{ manualReports.length }}</span>
               </button>
@@ -570,14 +570,14 @@
           <div class="reports-content">
             <div v-if="reportTab === 'auto'" class="report-category">
               <div class="category-header">
-                <h3>🤖 Automatic System Reports</h3>
+                <h3><SvgIcons icon="robot" /> Automatic System Reports</h3>
                 <p class="category-description">Reports generated automatically by the system for security, access control, and system health monitoring.</p>
               </div>
               
               <div v-if="autoReports.length" class="reports-grid">
                 <div v-for="(report, index) in autoReports" :key="index" class="report-card auto">
                   <div class="report-header">
-                    <div class="report-type">🤖 Auto</div>
+                    <div class="report-type"><SvgIcons icon="robot" /> Auto</div>
                     <div class="report-priority" :class="getReportPriority(report)">{{ getReportPriority(report) }}</div>
                   </div>
                   <div class="report-content">
@@ -585,11 +585,11 @@
                     <p class="report-description">{{ report.description || 'Automated system report' }}</p>
                     <div class="report-meta">
                       <span class="meta-item">
-                        <span class="meta-icon">👤</span>
+                        <span class="meta-icon"><SvgIcons icon="person" /></span>
                         {{ report.user || 'System' }}
                       </span>
                       <span class="meta-item">
-                        <span class="meta-icon">📅</span>
+                        <span class="meta-icon"><SvgIcons icon="clock" /></span>
                         {{ formatReportDate(report.timestamp || report.created_at) }}
                       </span>
                     </div>
@@ -598,7 +598,7 @@
               </div>
               
               <div v-else class="empty-reports">
-                <div class="empty-icon">🤖</div>
+                <div class="empty-icon"><SvgIcons icon="robot" /></div>
                 <h3>No Automatic Reports</h3>
                 <p>The system is running smoothly with no automatic reports to display.</p>
               </div>
@@ -606,14 +606,14 @@
             
             <div v-else class="report-category">
               <div class="category-header">
-                <h3>✍️ User-Submitted Reports</h3>
+                <h3><SvgIcons icon="edit" /> User-Submitted Reports</h3>
                 <p class="category-description">Reports submitted by users for issues, feature requests, or general feedback.</p>
               </div>
               
               <div v-if="manualReports.length" class="reports-grid">
                 <div v-for="(report, index) in manualReports" :key="index" class="report-card manual">
                   <div class="report-header">
-                    <div class="report-type">✍️ Manual</div>
+                    <div class="report-type"><SvgIcons icon="edit" /> Manual</div>
                     <div class="report-priority" :class="getReportPriority(report)">{{ getReportPriority(report) }}</div>
                   </div>
                   <div class="report-content">
@@ -621,15 +621,15 @@
                     <p class="report-description">{{ report.description || 'User-submitted report' }}</p>
                     <div class="report-meta">
                       <span class="meta-item">
-                        <span class="meta-icon">👤</span>
+                        <span class="meta-icon"><SvgIcons icon="person" /></span>
                         {{ report.user || 'Unknown User' }}
                       </span>
                       <span class="meta-item">
-                        <span class="meta-icon">📅</span>
+                        <span class="meta-icon"><SvgIcons icon="clock" /></span>
                         {{ formatReportDate(report.timestamp || report.created_at) }}
                       </span>
                       <span v-if="report.permitted_files && report.permitted_files.length" class="meta-item">
-                        <span class="meta-icon">📁</span>
+                        <span class="meta-icon"><SvgIcons icon="folder" /></span>
                         {{ report.permitted_files.length }} files
                       </span>
                     </div>
@@ -638,7 +638,7 @@
               </div>
               
               <div v-else class="empty-reports">
-                <div class="empty-icon">✍️</div>
+                <div class="empty-icon"><SvgIcons icon="edit" /></div>
                 <h3>No Manual Reports</h3>
                 <p>Users haven't submitted any reports yet.</p>
               </div>
@@ -656,7 +656,7 @@
         
         <div v-else-if="activeTab === 'System'" class="system-section">
           <div class="admin-section-header">
-            <h2>⚙️ System Administration</h2>
+            <h2><SvgIcons icon="settings" /> System Administration</h2>
             <div class="header-actions">
               <div class="system-status">
                 <span class="status-indicator online"></span>
@@ -669,28 +669,29 @@
             <!-- System Actions Card -->
             <div class="system-card">
               <div class="card-header">
-                <h3>🔄 System Operations</h3>
+                <h3><SvgIcons icon="refresh" /> System Operations</h3>
                 <p>Manage system data and refresh information</p>
               </div>
               <div class="card-content">
                 <div class="action-grid">
                   <div class="system-action-btn auto-refresh-control">
-                    <span class="action-icon">⏰</span>
+                    <span class="action-icon"><SvgIcons icon="clock" /></span>
                     <span class="action-text">Auto-refresh</span>
                     <span class="action-status" :class="{ active: isAutoRefreshEnabled }">
                       {{ isAutoRefreshEnabled ? 'ON' : 'OFF' }}
                     </span>
                     <button @click="toggleAutoRefresh" class="mini-toggle" :title="isAutoRefreshEnabled ? 'Disable' : 'Enable'">
-                      {{ isAutoRefreshEnabled ? '⏸️' : '▶️' }}
+                      <SvgIcons v-if="isAutoRefreshEnabled" icon="pause" />
+                      <SvgIcons v-else icon="play" />
                     </button>
                   </div>
                   <div class="system-action-btn refresh-frequency">
-                    <span class="action-icon">⚡</span>
+                    <span class="action-icon"><SvgIcons icon="lightning" /></span>
                     <span class="action-text">Update Every</span>
                     <span class="action-status">{{ updateFrequency / 1000 }}s</span>
                   </div>
                   <div class="system-action-btn last-updates">
-                    <span class="action-icon">📅</span>
+                    <span class="action-icon"><SvgIcons icon="clock" /></span>
                     <span class="action-text">Last Updates</span>
                     <div class="update-times">
                       <span class="update-time">Users: {{ getLastUpdateTime('users') }}</span>
@@ -699,7 +700,7 @@
                     </div>
                   </div>
                   <button @click="testAPIConnection" class="system-action-btn">
-                    <span class="action-icon">🔧</span>
+                    <span class="action-icon"><SvgIcons icon="tools" /></span>
                     <span class="action-text">Test API</span>
                     <span class="action-status">Test</span>
                   </button>
@@ -710,7 +711,7 @@
             <!-- API Documentation Card -->
             <div class="system-card">
               <div class="card-header">
-                <h3>📚 API Documentation</h3>
+                <h3><SvgIcons icon="book" /> API Documentation</h3>
                 <p>Available endpoints and their usage</p>
               </div>
               <div class="card-content">
@@ -742,7 +743,7 @@
                   </div>
                   
                   <div class="endpoint-group">
-                    <h4>📁 File Management</h4>
+                    <h4><SvgIcons icon="folder" /> File Management</h4>
                     <div class="endpoint-list">
                       <div class="endpoint-item">
                         <span class="method post">POST</span>
@@ -768,7 +769,7 @@
                   </div>
                   
                   <div class="endpoint-group">
-                    <h4>📊 Reports</h4>
+                    <h4><SvgIcons icon="chart" /> Reports</h4>
                     <div class="endpoint-list">
                       <div class="endpoint-item">
                         <span class="method get">GET</span>
@@ -789,7 +790,7 @@
             <!-- System Info Card -->
             <div class="system-card">
               <div class="card-header">
-                <h3>ℹ️ System Information</h3>
+                <h3><SvgIcons icon="info" /> System Information</h3>
                 <p>Current system status and configuration</p>
               </div>
               <div class="card-content">
@@ -851,11 +852,12 @@ import ReportTable from './ReportTable.vue';
 import FileEditModal from './FileEditModal.vue';
 import FileModalOpener from './FileModalOpener.vue';
 import APIKeyManager from './APIKeyManager.vue';
+import SvgIcons from './SvgIcons.vue';
 import { translations } from '../i18n.js';
 
 export default {
   name: 'AdminDashboard',
-  components: { UserEditModal, ReportTable, FileEditModal, FileModalOpener, APIKeyManager },
+  components: { UserEditModal, ReportTable, FileEditModal, FileModalOpener, APIKeyManager, SvgIcons },
   props: {
     token: { type: String, required: true },
     API_BASE_URL: { type: String, required: true },
@@ -1001,13 +1003,13 @@ export default {
 
     getTabIcon(tab) {
       const icons = {
-        Users: '👥',
-        Files: '📁',
-        Reports: '📊',
-        'API Keys': '🔑',
-        System: '⚙️'
+        Users: 'users',
+        Files: 'folder',
+        Reports: 'chart',
+        'API Keys': 'key',
+        System: 'settings'
       };
-      return icons[tab] || '📄';
+      return icons[tab] || 'document';
     },
     async fetchReports(silent = false) {
       if (!silent) {
@@ -1408,11 +1410,11 @@ export default {
     },
     getFileIcon(file) {
       const filename = file.original_filename || file.filename || '';
-      if (filename.endsWith('.pdf')) return '📄';
+      if (filename.endsWith('.pdf')) return 'document';
       if (filename.endsWith('.doc') || filename.endsWith('.docx')) return '📝';
-      if (filename.endsWith('.txt') || filename.endsWith('.md')) return '📄';
+      if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'document';
       if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return '🖼️';
-      return '📁';
+      return 'folder';
     },
     getFileType(file) {
       const filename = file.original_filename || file.filename || '';
@@ -1680,14 +1682,14 @@ export default {
       return 'partial-access';
     },
     getFileIconByName(filename) {
-      if (!filename) return '📁';
-      if (filename.endsWith('.pdf')) return '📄';
-      if (filename.endsWith('.doc') || filename.endsWith('.docx')) return '📝';
-      if (filename.endsWith('.txt') || filename.endsWith('.md')) return '📄';
-      if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return '🖼️';
-      if (filename.endsWith('.zip') || filename.endsWith('.rar')) return '📦';
-      if (filename.endsWith('.xls') || filename.endsWith('.xlsx')) return '📊';
-      return '📁';
+      if (!filename) return 'folder';
+      if (filename.endsWith('.pdf')) return 'document';
+      if (filename.endsWith('.doc') || filename.endsWith('.docx')) return 'document-text';
+      if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'document';
+      if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return 'inbox';
+      if (filename.endsWith('.zip') || filename.endsWith('.rar')) return 'package';
+      if (filename.endsWith('.xls') || filename.endsWith('.xlsx')) return 'chart';
+      return 'folder';
     },
     getOriginalFilename(filename) {
       // Try to find the file in the files array to get original_filename
@@ -4684,7 +4686,7 @@ body.dark-mode .report-priority.low {
 }
 
 .manual-file-entry .upload-btn::before {
-  content: '📤';
+  content: 'download';
 }
 
 .manual-file-entry .upload-btn:hover {

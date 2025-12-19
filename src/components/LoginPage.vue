@@ -19,7 +19,7 @@
             :title="`Switch to ${language === 'en' ? 'Русский' : 'English'}`"
             aria-label="Language selector"
           >
-            {{ language === 'en' ? '🇷🇺 РУ' : '🇬🇧 EN' }}
+            <SvgIcons :icon="language === 'en' ? 'flag-ru' : 'flag-gb'" /> {{ language === 'en' ? 'РУ' : 'EN' }}
           </button>
           <button class="theme-toggle" @click="toggleTheme" :aria-pressed="isDark" aria-label="Toggle theme">
             <SvgIcons :icon="isDark ? 'sun' : 'moon'" />
@@ -234,7 +234,7 @@ export default {
   },
   methods: {
     goToLanding() {
-      this.$router.push('/');
+      this.$router.push('/landing');
     },
     toggleTheme() {
       this.isDark = !this.isDark;

@@ -2,12 +2,12 @@
   <div class="modal-overlay fullscreen" @click.self="closeModal">
     <div class="modal-content fullscreen-modal" tabindex="0" @keydown.esc="closeModal">
       <button class="modal-close-btn" @click="closeModal" aria-label="Close">×</button>
-      <h2>✏️ Edit User</h2>
+      <h2><SvgIcons icon="user" /> Edit User</h2>
       <form @submit.prevent="saveEditUser" class="user-form">
         <div class="user-fields">
           <div class="form-group">
             <label class="form-label">
-              <span class="label-icon">👤</span>
+              <span class="label-icon"><SvgIcons icon="person" /></span>
               <span class="label-text">Username</span>
             </label>
             <div class="input-wrapper">
@@ -22,12 +22,12 @@
           
           <div class="form-group">
             <label class="form-label">
-              <span class="label-icon">🔒</span>
+              <span class="label-icon"><SvgIcons icon="lock" /></span>
               <span class="label-text">Password</span>
               <span class="label-hint">(leave blank to keep current)</span>
             </label>
             <div class="input-wrapper password-wrapper">
-              <span class="input-icon">🔑</span>
+              <span class="input-icon"><SvgIcons icon="key" /></span>
               <input
                 v-model="editUserData.password"
                 :type="showPassword ? 'text' : 'password'"
@@ -40,19 +40,19 @@
                 @click="showPassword = !showPassword" 
                 :aria-label="showPassword ? 'Hide password' : 'Show password'"
               >
-                <span v-if="showPassword">🙈</span>
-                <span v-else>👁️</span>
+                <span v-if="showPassword"><SvgIcons icon="eye" /></span>
+                <span v-else><SvgIcons icon="eye-closed" /></span>
               </button>
             </div>
           </div>
           
           <div class="form-group">
             <label class="form-label">
-              <span class="label-icon">⚡</span>
+              <span class="label-icon"><SvgIcons icon="lightning" /></span>
               <span class="label-text">Role</span>
             </label>
             <div class="select-wrapper">
-              <span class="input-icon">🎭</span>
+              <span class="input-icon"><SvgIcons icon="role" /></span>
               <select v-model="editUserData.role" class="enhanced-select">
                 <option value="user">User</option>
                 <option value="admin">Admin</option>
@@ -63,7 +63,7 @@
           
           <div class="form-group">
             <label class="form-label">
-              <span class="label-icon">🔐</span>
+              <span class="label-icon"><SvgIcons icon="lock" /></span>
               <span class="label-text">File Permissions</span>
             </label>
           </div>
@@ -71,7 +71,7 @@
           <!-- Current Permissions Preview -->
           <div class="current-permissions-panel">
             <div class="panel-header">
-              <span class="panel-icon">📄</span>
+              <span class="panel-icon"><SvgIcons icon="document" /></span>
               <strong>Current Access</strong>
               <span class="access-badge" :class="getAccessBadgeClass()">
                 {{ getAccessBadgeText() }}
@@ -79,19 +79,19 @@
             </div>
             <div class="panel-content">
               <div v-if="originalAllowedFiles.includes('all')" class="access-info full-access">
-                <div class="access-icon">🌐</div>
+                <div class="access-icon"><SvgIcons icon="world" /></div>
                 <div class="access-details">
                   <div class="access-title">Full Access Granted</div>
                   <div class="access-description">This user can access all files, including future uploads</div>
                 </div>
               </div>
               <div v-else-if="originalAllowedFiles.length > 0" class="access-info partial-access">
-                <div class="access-icon">📁</div>
+                <div class="access-icon"><SvgIcons icon="folder" /></div>
                 <div class="access-details">
                   <div class="access-title">{{ originalAllowedFiles.length }} {{ originalAllowedFiles.length === 1 ? 'File' : 'Files' }} Accessible</div>
                   <div class="access-file-list">
                     <div v-for="filename in originalAllowedFiles.slice(0, 5)" :key="filename" class="access-file-item">
-                      <span class="file-icon-small">{{ getFileIcon({ filename }) }}</span>
+                      <span class="file-icon-small"><SvgIcons :icon="getFileIcon(file)" /></span>
                       <span class="file-name-small">{{ getOriginalFilename(filename) }}</span>
                     </div>
                     <div v-if="originalAllowedFiles.length > 5" class="more-files">
@@ -101,7 +101,7 @@
                 </div>
               </div>
               <div v-else class="access-info no-access">
-                <div class="access-icon">🚫</div>
+                <div class="access-icon"><SvgIcons icon="blocked" /></div>
                 <div class="access-details">
                   <div class="access-title">No Access</div>
                   <div class="access-description">This user cannot access any files</div>
@@ -113,13 +113,13 @@
           <!-- Permission Summary -->
           <div class="permission-summary">
             <div class="summary-item">
-              <span class="summary-icon">📁</span>
+              <span class="summary-icon"><SvgIcons icon="folder" /></span>
               <span class="summary-text">
                 <strong>{{ selectedFilesCount }}</strong> of <strong>{{ files.length }}</strong> files accessible
               </span>
             </div>
             <div v-if="hasChanges" class="summary-badge changed">
-              <span class="badge-icon">⚠️</span>
+              <span class="badge-icon"><SvgIcons icon="danger" /></span>
               Unsaved changes
             </div>
           </div>
@@ -127,7 +127,7 @@
           <!-- File Selection Controls -->
           <div class="file-selection-controls">
             <div class="search-box">
-              <span class="search-icon">🔍</span>
+              <span class="search-icon"><SvgIcons icon="search" /></span>
               <input 
                 v-model="fileSearch" 
                 type="text"
@@ -183,7 +183,7 @@
                 :disabled="editUserData.allowed_files.includes('all')" 
               />
               <span class="file-info">
-                <span class="file-icon">{{ getFileIcon(file) }}</span>
+                <span class="file-icon"><SvgIcons :icon="getFileIcon(file)" /></span>
                 <span class="file-name">{{ file.original_filename || file.filename }}</span>
                 <span v-if="file.size" class="file-size">{{ formatFileSize(file.size) }}</span>
               </span>
@@ -209,9 +209,13 @@
 
 <script>
 import { marked } from 'marked';
+import SvgIcons from './SvgIcons.vue';
 
 export default {
   name: 'UserEditModal',
+  components: {
+    SvgIcons
+  },
   props: {
     editUserData: { type: Object, required: true },
     editUserMsg: { type: String, default: '' },
@@ -310,13 +314,13 @@ export default {
     },
     getFileIcon(file) {
       const filename = file.original_filename || file.filename || '';
-      if (filename.endsWith('.pdf')) return '📄';
-      if (filename.endsWith('.doc') || filename.endsWith('.docx')) return '📝';
-      if (filename.endsWith('.txt') || filename.endsWith('.md')) return '📄';
-      if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return '🖼️';
-      if (filename.endsWith('.zip') || filename.endsWith('.rar')) return '📦';
-      if (filename.endsWith('.xls') || filename.endsWith('.xlsx')) return '📊';
-      return '📁';
+      if (filename.endsWith('.pdf')) return 'document';
+      if (filename.endsWith('.doc') || filename.endsWith('.docx')) return 'document-text';
+      if (filename.endsWith('.txt') || filename.endsWith('.md')) return 'document';
+      if (filename.endsWith('.jpg') || filename.endsWith('.png') || filename.endsWith('.gif')) return 'inbox';
+      if (filename.endsWith('.zip') || filename.endsWith('.rar')) return 'package';
+      if (filename.endsWith('.xls') || filename.endsWith('.xlsx')) return 'chart';
+      return 'folder';
     },
     formatFileSize(bytes) {
       if (!bytes) return '';
@@ -347,10 +351,10 @@ export default {
     },
     getMessageIcon() {
       switch (this.messageType) {
-        case 'success': return '✅';
-        case 'error': return '❌';
-        case 'warning': return '⚠️';
-        default: return 'ℹ️';
+        case 'success': return 'checkmark';
+        case 'error': return 'close';
+        case 'warning': return 'danger';
+        default: return 'info';
       }
     },
     setSaving(value) {
